@@ -5,6 +5,7 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
+    "web": "pnpm --filter web dev",
     "lint": "turbo lint",
     "format": "turbo format",
     "typecheck": "turbo typecheck"
@@ -14,6 +15,7 @@
     "@workspace/typescript-config": "workspace:*",
     "prettier": "^3.8.1",
     "prettier-plugin-tailwindcss": "^0.7.2",
+    "portless": "^0.10.3",
     "turbo": "^2.8.17",
     "typescript": "5.9.3"
   },
