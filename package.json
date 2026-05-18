@@ -5,6 +5,7 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
+    "mobile": "pnpm --filter mobile start",
     "web": "pnpm --filter web dev",
     "lint": "turbo lint",
     "format": "turbo format",

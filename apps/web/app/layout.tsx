@@ -1,4 +1,5 @@
 import { Geist, Geist_Mono, IBM_Plex_Sans, Roboto } from "next/font/google"
+import type { ReactElement, ReactNode } from "react"
 
 import "@workspace/ui/globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
@@ -16,8 +17,8 @@ const fontMono = Geist_Mono({
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
-}>) {
+  children: ReactNode
+}>): ReactElement {
   return (
     <html
       lang="en"
