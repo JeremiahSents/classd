@@ -9,8 +9,8 @@ import { getAnalytics } from "firebase/analytics";
 
 //TODO: Make these env variables
 const firebaseConfig = {
-  apiKey: "AIzaSyAcDiU-_42orcVZcrbiKxvZAuWMHkMGWKo",
-  authDomain: "classd-f6db8.firebaseapp.com",
+  apiKey: process.env.FIREBASE_API_KEY,
+  authDomain: "classd-f6db8.firebaseapp.com", //TODO: Find out if these need to be hidden or not
   projectId: "classd-f6db8",
   storageBucket: "classd-f6db8.firebasestorage.app",
   messagingSenderId: "904584111105",
