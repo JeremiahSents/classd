@@ -22,6 +22,7 @@ export default function Login() {
   function handleLogin() {
     // TODO: wire up to auth backend
     console.log("login", { email, password });
+    router.replace("/(tabs)");
   }
 
   return (
