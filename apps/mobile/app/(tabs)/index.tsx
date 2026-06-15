@@ -15,7 +15,6 @@ import {
   EmptySectionHint,
 } from "@/components/section-header";
 import { AssignmentRow, AnnouncementRow } from "@/components/list-row";
-import { seedAssignments, seedAnnouncements } from "@/lib/dummy-data";
 import { useClasses } from "@/lib/classes-store";
 import { useTabBarScrollHandler } from "@/lib/tab-bar-scroll";
 
@@ -54,7 +53,7 @@ function UserGreeting({ size = "large" }: { size?: "small" | "large" }) {
 
 export default function Home() {
   const router = useRouter();
-  const { classes } = useClasses();
+  const { classes, tasks, announcements, unitName } = useClasses();
   const [modalVisible, setModalVisible] = useState(false);
   const scrollHandler = useTabBarScrollHandler();
 
@@ -102,32 +101,38 @@ export default function Home() {
             onAction={() => router.push("/(tabs)/classes")}
           />
           {classes.slice(0, 3).map((classroom) => (
-            <ClassCard key={classroom.id} classroom={classroom} />
+            <ClassCard
+              key={classroom.id}
+              classroom={classroom}
+              onPress={() =>
+                router.push({ pathname: "/class/[id]", params: { id: classroom.id } })
+              }
+            />
           ))}
 
-          {/* Assignments */}
+          {/* Assignments — recent across all units */}
           <SectionHeader title="Assignments" />
-          {seedAssignments.length > 0 ? (
-            seedAssignments.slice(0, 3).map((a) => (
+          {tasks.length > 0 ? (
+            tasks.slice(0, 3).map((t) => (
               <AssignmentRow
-                key={a.id}
-                title={a.title}
-                className={a.className}
-                dueLabel={a.dueLabel}
+                key={t.id}
+                title={t.title}
+                className={unitName(t.unitId)}
+                dueLabel={t.dueLabel}
               />
             ))
           ) : (
             <EmptySectionHint text="No assignments yet" />
           )}
 
-          {/* Announcements */}
+          {/* Announcements — recent across all units */}
           <SectionHeader title="Announcements" />
-          {seedAnnouncements.length > 0 ? (
-            seedAnnouncements.slice(0, 3).map((n) => (
+          {announcements.length > 0 ? (
+            announcements.slice(0, 3).map((n) => (
               <AnnouncementRow
                 key={n.id}
                 title={n.title}
-                className={n.className}
+                className={unitName(n.unitId)}
                 timeLabel={n.timeLabel}
               />
             ))

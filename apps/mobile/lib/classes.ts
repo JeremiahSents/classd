@@ -5,6 +5,8 @@ export interface Classroom {
   code: string;
   /** Random cover image from a public source. */
   coverUrl: string;
+  /** Member id of the assigned class representative, if any. */
+  classRepId?: string;
 }
 
 /**

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Text, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 import { Plus } from "lucide-react-native";
 import { BooksIcon } from "@/components/ui/books-icon";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { useClasses } from "@/lib/classes-store";
 import { useTabBarScrollHandler } from "@/lib/tab-bar-scroll";
 
 export default function Classes() {
+  const router = useRouter();
   const { classes } = useClasses();
   const [modalVisible, setModalVisible] = useState(false);
   const scrollHandler = useTabBarScrollHandler();
@@ -43,7 +45,13 @@ export default function Classes() {
           showsVerticalScrollIndicator={false}
         >
           {classes.map((classroom) => (
-            <ClassCard key={classroom.id} classroom={classroom} />
+            <ClassCard
+              key={classroom.id}
+              classroom={classroom}
+              onPress={() =>
+                router.push({ pathname: "/class/[id]", params: { id: classroom.id } })
+              }
+            />
           ))}
         </Animated.ScrollView>
       )}
