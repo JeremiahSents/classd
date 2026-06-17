@@ -1,5 +1,5 @@
 import { coverUrlFor, type Classroom } from "@/lib/classes";
-import type { Announcement, Member, Task, Unit } from "@/lib/types";
+import type { Announcement, Material, Member, Task, Unit } from "@/lib/types";
 
 export const seedClasses: Classroom[] = [
   { id: "bio101", name: "Intro to Biology", code: "428193", coverUrl: coverUrlFor("bio101"), classRepId: "m2" },
@@ -44,6 +44,12 @@ export const seedTasks: Task[] = [
   { id: "t3", unitId: "u-cs-1", title: "Binary Trees Problem Set", description: "Problems 1-8 from the handout.", type: "assignment", dueLabel: "Due in 3 days" },
   { id: "t4", unitId: "u-cs-2", title: "Sorting Algorithms Deadline", description: "Final commit for the sorting project.", type: "deadline", dueLabel: "Due next week" },
   { id: "t5", unitId: "u-hist-1", title: "Essay: The Industrial Revolution", description: "1500 words, cite at least 5 sources.", type: "assignment", dueLabel: "Due next week" },
+];
+
+export const seedMaterials: Material[] = [
+  { id: "mat1", unitId: "u-bio-1", name: "Lecture 3 - Cell Membrane.pdf", sizeLabel: "2.4 MB", mimeType: "application/pdf", addedLabel: "2 days ago" },
+  { id: "mat2", unitId: "u-bio-1", name: "Lab Manual.docx", sizeLabel: "840 KB", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", addedLabel: "1 week ago" },
+  { id: "mat3", unitId: "u-cs-1", name: "Tree Traversal Diagrams.png", sizeLabel: "1.1 MB", mimeType: "image/png", addedLabel: "Yesterday" },
 ];
 
 export const seedAnnouncements: Announcement[] = [

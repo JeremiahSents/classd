@@ -13,15 +13,22 @@ import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GoogleIcon } from "@/components/ui/google-icon";
+import { SegmentedTabs } from "@/components/segmented-tabs";
+import { useSession, type Role } from "@/lib/session";
+
+const ROLES: Role[] = ["lecturer", "student"];
 
 export default function Login() {
   const router = useRouter();
+  const { signIn } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [roleIndex, setRoleIndex] = useState(0);
 
   function handleLogin() {
     // TODO: wire up to auth backend
     console.log("login", { email, password });
+    signIn(ROLES[roleIndex]);
     router.replace("/(tabs)");
   }
 
@@ -71,6 +78,18 @@ export default function Login() {
               autoCapitalize="none"
               autoComplete="password"
             />
+
+            {/* Role selector (temporary, until real roles come from auth) */}
+            <View className="gap-2">
+              <Text className="text-center text-sm font-medium text-foreground">
+                I am a
+              </Text>
+              <SegmentedTabs
+                tabs={["Lecturer", "Student"]}
+                active={roleIndex}
+                onChange={setRoleIndex}
+              />
+            </View>
 
             <Button label="Sign in" onPress={handleLogin} />
 

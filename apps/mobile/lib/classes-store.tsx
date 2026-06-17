@@ -1,9 +1,17 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { createClassroom, type Classroom } from "@/lib/classes";
-import type { Announcement, Member, Task, TaskType, Unit } from "@/lib/types";
+import type {
+  Announcement,
+  Material,
+  Member,
+  Task,
+  TaskType,
+  Unit,
+} from "@/lib/types";
 import {
   seedAnnouncements,
   seedClasses,
+  seedMaterials,
   seedMembers,
   seedTasks,
   seedUnits,
@@ -19,10 +27,18 @@ interface ClassesStore {
   membersForClass: (classId: string) => Member[];
   tasksForUnit: (unitId: string) => Task[];
   announcementsForUnit: (unitId: string) => Announcement[];
+  materialsForUnit: (unitId: string) => Material[];
   unitName: (unitId: string) => string;
-  /** Flat recent lists for the dashboard. */
+  /** Flat lists for dashboards/aggregates. */
+  units: Unit[];
   tasks: Task[];
   announcements: Announcement[];
+
+  // Student enrollment + task completion
+  enrolledClassIds: string[];
+  joinClass: (code: string) => Classroom | null;
+  isTaskComplete: (taskId: string) => boolean;
+  toggleTaskComplete: (taskId: string) => void;
 
   // Actions
   addClass: (name: string) => Classroom;
@@ -37,6 +53,10 @@ interface ClassesStore {
     unitId: string,
     input: { title: string; content: string },
   ) => Announcement;
+  addMaterial: (
+    unitId: string,
+    input: { name: string; sizeLabel?: string; mimeType?: string; uri?: string },
+  ) => Material;
 }
 
 const ClassesContext = createContext<ClassesStore | null>(null);
@@ -49,12 +69,21 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>(seedTasks);
   const [announcements, setAnnouncements] =
     useState<Announcement[]>(seedAnnouncements);
+  const [materials, setMaterials] = useState<Material[]>(seedMaterials);
+  // Current student's enrollment + completed tasks (single student for now).
+  const [enrolledClassIds, setEnrolledClassIds] = useState<string[]>([
+    "bio101",
+    "cs204",
+  ]);
+  const [completedTaskIds, setCompletedTaskIds] = useState<string[]>(["t1"]);
 
   const value = useMemo<ClassesStore>(
     () => ({
       classes,
+      units,
       tasks,
       announcements,
+      enrolledClassIds,
 
       getClass: (classId) => classes.find((c) => c.id === classId),
       getUnit: (unitId) => units.find((u) => u.id === unitId),
@@ -63,7 +92,28 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
       tasksForUnit: (unitId) => tasks.filter((t) => t.unitId === unitId),
       announcementsForUnit: (unitId) =>
         announcements.filter((a) => a.unitId === unitId),
+      materialsForUnit: (unitId) =>
+        materials.filter((m) => m.unitId === unitId),
       unitName: (unitId) => units.find((u) => u.id === unitId)?.name ?? "",
+
+      joinClass: (code) => {
+        const match = classes.find((c) => c.code === code.trim());
+        if (!match) return null;
+        setEnrolledClassIds((prev) =>
+          prev.includes(match.id) ? prev : [...prev, match.id],
+        );
+        return match;
+      },
+
+      isTaskComplete: (taskId) => completedTaskIds.includes(taskId),
+
+      toggleTaskComplete: (taskId) => {
+        setCompletedTaskIds((prev) =>
+          prev.includes(taskId)
+            ? prev.filter((t) => t !== taskId)
+            : [...prev, taskId],
+        );
+      },
 
       addClass: (name) => {
         const classroom = createClassroom(name);
@@ -120,8 +170,28 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
         setAnnouncements((prev) => [announcement, ...prev]);
         return announcement;
       },
+
+      addMaterial: (unitId, input) => {
+        const material: Material = {
+          id: `mat-${Date.now()}`,
+          unitId,
+          addedLabel: "Just now",
+          ...input,
+        };
+        setMaterials((prev) => [material, ...prev]);
+        return material;
+      },
     }),
-    [classes, units, membersByClass, tasks, announcements],
+    [
+      classes,
+      units,
+      membersByClass,
+      tasks,
+      announcements,
+      materials,
+      enrolledClassIds,
+      completedTaskIds,
+    ],
   );
 
   return <ClassesContext.Provider value={value}>{children}</ClassesContext.Provider>;

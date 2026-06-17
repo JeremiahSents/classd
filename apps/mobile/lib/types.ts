@@ -34,6 +34,20 @@ export interface Announcement {
   timeLabel: string;
 }
 
+/** A file/resource attached to a unit. */
+export interface Material {
+  id: string;
+  unitId: string;
+  name: string;
+  /** Human-readable size, e.g. "2.4 MB". */
+  sizeLabel?: string;
+  mimeType?: string;
+  /** Local uri from the picker; no cloud upload yet. */
+  uri?: string;
+  /** Human-readable added time, e.g. "Just now" / "2 days ago". */
+  addedLabel: string;
+}
+
 export const TASK_TYPE_LABEL: Record<TaskType, string> = {
   assignment: "Assignment",
   cat: "CAT",
