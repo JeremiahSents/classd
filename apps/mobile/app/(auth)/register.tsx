@@ -7,7 +7,6 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -15,11 +14,11 @@ import Animated, {
 } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Logo } from "@/components/logo";
+import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GoogleIcon } from "@/components/ui/google-icon";
-import { SegmentedTabs } from "@/components/segmented-tabs";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { useSession, type Role } from "@/lib/session";
 import { AppleIcon } from "@/components/ui/apple-icon";
 
