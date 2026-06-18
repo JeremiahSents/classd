@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -11,9 +12,11 @@ import {
   Settings01Icon,
   UserEdit01Icon,
   UserSwitchIcon,
+  Camera02Icon,
 } from "@hugeicons/core-free-icons";
 import { useSession } from "@/lib/session";
 import { useClasses } from "@/lib/classes-store";
+import { AvatarPickerModal } from "@/components/modals/avatar-picker-modal";
 
 interface SettingsItem {
   label: string;
@@ -24,8 +27,10 @@ interface SettingsItem {
 
 export default function Profile() {
   const router = useRouter();
-  const { role, firstName, email, switchRole } = useSession();
+  const { role, name, email, avatarUrl, updateAvatar, switchRole } = useSession();
   const { classes, tasks, enrolledClassIds, isTaskComplete } = useClasses();
+
+  const [avatarPickerVisible, setAvatarPickerVisible] = useState(false);
 
   function handleSignOut() {
     // TODO: clear auth session
@@ -68,20 +73,37 @@ export default function Profile() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
+      <AvatarPickerModal
+        visible={avatarPickerVisible}
+        currentAvatarUrl={avatarUrl}
+        onClose={() => setAvatarPickerVisible(false)}
+        onSelect={updateAvatar}
+      />
       <ScrollView
         contentContainerClassName="px-6 pb-32 pt-8"
         showsVerticalScrollIndicator={false}
       >
         <View className="items-center gap-4">
-          <Image
-            source={`https://api.dicebear.com/7.x/avataaars/png?seed=${firstName}`}
-            style={{ width: 100, height: 100, borderRadius: 50 }}
-            contentFit="cover"
-            className="bg-secondary"
-          />
+          <View className="relative">
+            <View className="h-[100px] w-[100px] items-center justify-center overflow-hidden rounded-full bg-secondary border border-border">
+              <Image
+                source={{ uri: avatarUrl }}
+                style={{ width: "85%", height: "85%" }}
+                contentFit="contain"
+              />
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Edit avatar"
+              onPress={() => setAvatarPickerVisible(true)}
+              className="absolute bottom-0 right-0 h-8 w-8 items-center justify-center rounded-full border-[3px] border-background bg-primary active:opacity-80"
+            >
+              <HugeiconsIcon icon={Camera02Icon} size={14} color="#ffffff" />
+            </Pressable>
+          </View>
           <View className="items-center gap-1">
             <Text className="text-2xl font-bold text-foreground">
-              {firstName}
+              {name}
             </Text>
             <Text className="text-sm font-medium text-muted-foreground">
               {email}

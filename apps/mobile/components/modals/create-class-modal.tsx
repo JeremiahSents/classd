@@ -73,88 +73,93 @@ export function CreateClassModal({ visible, onClose }: CreateClassModalProps) {
         className="flex-1 justify-end bg-black/50"
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View className="gap-6 rounded-t-3xl bg-background p-6 pb-10">
-          {/* Header */}
-          <View className="flex-row items-center justify-between">
-            <Text className="text-xl font-bold text-foreground">
-              {created ? "Class created" : "Create a class"}
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Close"
-              onPress={handleClose}
-              className="h-9 w-9 items-center justify-center rounded-full active:bg-secondary"
-            >
-              <HugeiconsIcon icon={Cancel01Icon} size={22} color="#71717a" />
-            </Pressable>
-          </View>
+        <Pressable className="absolute inset-0" onPress={handleClose} />
+        <View>
+          <View className="gap-6 rounded-t-3xl bg-background p-6 pb-10">
+            {/* Header */}
+            <View className="flex-row items-center justify-between">
+              <Text className="text-xl font-bold text-foreground">
+                {created ? "Class created" : "Create a class"}
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Close"
+                onPress={handleClose}
+                className="h-9 w-9 items-center justify-center rounded-full active:bg-secondary"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={22} color="#71717a" />
+              </Pressable>
+            </View>
 
-          {created ? (
-            <View className="gap-6">
-              <View className="gap-2">
-                <Text className="text-base text-muted-foreground">
-                  Share this code so students can join {created.name}.
-                </Text>
-                <View className="items-center rounded-2xl border border-border bg-card py-6">
-                  <Text className="text-4xl font-bold tracking-[0.3em] text-foreground">
-                    {created.code}
+            {created ? (
+              <View className="gap-6">
+                <View className="gap-2">
+                  <Text className="text-base text-muted-foreground">
+                    Share this code so students can join {created.name}.
                   </Text>
+                  <View className="items-center rounded-2xl border border-border bg-card py-6">
+                    <Text className="text-4xl font-bold tracking-[0.3em] text-foreground">
+                      {created.code}
+                    </Text>
+                  </View>
+                </View>
+
+                <View className="flex-row gap-3">
+                  <Button
+                    className="flex-1"
+                    variant="outline"
+                    label={copied ? "Copied" : "Copy code"}
+                    leftIcon={
+                      copied ? (
+                        <HugeiconsIcon icon={Tick02Icon} size={20} color="#111" />
+                      ) : (
+                        <HugeiconsIcon icon={Copy01Icon} size={20} color="#111" />
+                      )
+                    }
+                    onPress={handleCopy}
+                  />
+                  <Button
+                    className="flex-1"
+                    variant="outline"
+                    label="Share link"
+                    leftIcon={<HugeiconsIcon icon={Share08Icon} size={20} color="#111" />}
+                    onPress={handleShare}
+                  />
+                </View>
+
+                <Button label="Done" onPress={handleClose} />
+              </View>
+            ) : (
+              <View className="gap-6">
+                <Input
+                  label="Class name"
+                  placeholder="e.g. Intro to Biology"
+                  value={name}
+                  onChangeText={setName}
+                  autoFocus
+                  autoCapitalize="words"
+                  returnKeyType="done"
+                  onSubmitEditing={() => name.trim() && handleContinue()}
+                />
+                <View className="flex-row gap-3">
+                  <Button
+                    className="flex-1"
+                    variant="outline"
+                    label="Cancel"
+                    onPress={handleClose}
+                  />
+                  <Button
+                    className="flex-1"
+                    label="Continue"
+                    disabled={!name.trim()}
+                    onPress={handleContinue}
+                  />
                 </View>
               </View>
-
-              <View className="flex-row gap-3">
-                <Button
-                  className="flex-1"
-                  variant="outline"
-                  label={copied ? "Copied" : "Copy code"}
-                  leftIcon={
-                    copied ? (
-                      <HugeiconsIcon icon={Tick02Icon} size={20} color="#111" />
-                    ) : (
-                      <HugeiconsIcon icon={Copy01Icon} size={20} color="#111" />
-                    )
-                  }
-                  onPress={handleCopy}
-                />
-                <Button
-                  className="flex-1"
-                  variant="outline"
-                  label="Share link"
-                  leftIcon={<HugeiconsIcon icon={Share08Icon} size={20} color="#111" />}
-                  onPress={handleShare}
-                />
-              </View>
-
-              <Button label="Done" onPress={handleClose} />
-            </View>
-          ) : (
-            <View className="gap-6">
-              <Input
-                label="Class name"
-                placeholder="e.g. Intro to Biology"
-                value={name}
-                onChangeText={setName}
-                autoFocus
-                autoCapitalize="words"
-                returnKeyType="done"
-                onSubmitEditing={() => name.trim() && handleContinue()}
-              />
-              <View className="flex-row gap-3">
-                <Button
-                  className="flex-1"
-                  variant="outline"
-                  label="Cancel"
-                  onPress={handleClose}
-                />
-                <Button
-                  className="flex-1"
-                  label="Continue"
-                  disabled={!name.trim()}
-                  onPress={handleContinue}
-                />
-              </View>
-            </View>
-          )}
+            )}
+          </View>
+          {/* Solid filler to cover the gap left by keyboard padding */}
+          <View className="absolute left-0 right-0 top-full h-[1000px] bg-background" />
         </View>
       </KeyboardAvoidingView>
     </Modal>

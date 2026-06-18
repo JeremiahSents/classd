@@ -29,20 +29,19 @@ export default function Classes() {
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-6 pb-4 pt-2">
+      <View className="flex-row items-center justify-between px-6 pb-4 pt-8">
         <Text className="text-2xl font-bold text-foreground">Classes</Text>
-        {isLecturer ? (
-          <AddMenu onNewClass={() => setCreateVisible(true)} />
-        ) : (
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Join a class"
-            onPress={() => setJoinVisible(true)}
-            className="h-11 w-11 items-center justify-center rounded-full bg-primary active:opacity-90"
-          >
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => (isLecturer ? setCreateVisible(true) : setJoinVisible(true))}
+          className="h-11 w-11 items-center justify-center rounded-full bg-primary active:opacity-90"
+        >
+          {isLecturer ? (
+            <HugeiconsIcon icon={PlusSignIcon} size={22} color="#fff" />
+          ) : (
             <HugeiconsIcon icon={UserAdd01Icon} size={22} color="#fff" />
-          </Pressable>
-        )}
+          )}
+        </Pressable>
       </View>
 
       {isEmpty ? (

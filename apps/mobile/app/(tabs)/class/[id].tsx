@@ -102,7 +102,7 @@ export default function ClassDetail() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Back"
-              onPress={() => router.back()}
+              onPress={() => router.navigate("/")}
               className="h-10 w-10 items-center justify-center rounded-full bg-black/30 active:bg-black/50"
             >
               <HugeiconsIcon icon={ArrowLeft01Icon} size={26} color="#fff" />

@@ -10,7 +10,6 @@ import { SessionProvider } from "@/lib/session";
 
 // Keep the native splash visible until the first screen is ready.
 SplashScreen.preventAutoHideAsync();
-SplashScreen.setOptions({ duration: 300, fade: true });
 
 export default function RootLayout() {
   useEffect(() => {
