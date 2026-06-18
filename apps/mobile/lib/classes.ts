@@ -1,3 +1,14 @@
+export interface ClassScheduleBlock {
+  /** Where the class meets, e.g. "SCI Lab 1", "Room 4.2". */
+  location?: string;
+  /** Weekday the class meets (0 = Sun … 6 = Sat). */
+  day: number;
+  /** Start time, minutes from midnight (e.g. 8 * 60). */
+  startMinutes: number;
+  /** End time, minutes from midnight. */
+  endMinutes: number;
+}
+
 export interface Classroom {
   id: string;
   name: string;
@@ -7,6 +18,8 @@ export interface Classroom {
   coverUrl: string;
   /** Member id of the assigned class representative, if any. */
   classRepId?: string;
+  /** Weekly schedule blocks */
+  schedules: ClassScheduleBlock[];
 }
 
 /**
@@ -29,5 +42,6 @@ export function createClassroom(name: string): Classroom {
     name: name.trim(),
     code: generateClassCode(),
     coverUrl: coverUrlFor(id),
+    schedules: [], // New classes start with no schedule
   };
 }

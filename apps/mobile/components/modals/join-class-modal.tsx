@@ -38,7 +38,7 @@ export function JoinClassModal({ visible, onClose }: JoinClassModalProps) {
       return;
     }
     handleClose();
-    router.push({ pathname: "/class/[id]", params: { id: match.id } });
+    router.push({ pathname: "/(tabs)/class/[id]", params: { id: match.id } });
   }
 
   return (

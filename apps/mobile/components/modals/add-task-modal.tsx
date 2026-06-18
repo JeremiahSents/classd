@@ -4,30 +4,47 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { TASK_TYPE_LABEL } from "@/lib/types";
+import type { TaskType } from "@/lib/types";
 import { useClasses } from "@/lib/classes-store";
-import { TASK_TYPE_LABEL, type TaskType } from "@/lib/types";
 
 interface AddTaskModalProps {
-  unitId: string;
+  classId: string;
   visible: boolean;
   onClose: () => void;
 }
 
 const TYPES: TaskType[] = ["assignment", "cat", "deadline"];
 
-export function AddTaskModal({ unitId, visible, onClose }: AddTaskModalProps) {
+export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
   const { addTask } = useClasses();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<TaskType>("assignment");
   const [dueLabel, setDueLabel] = useState("");
+
+  function handleSave() {
+    if (!title.trim() || !dueLabel.trim()) return;
+    addTask(classId, {
+      title,
+      description,
+      type,
+      dueLabel,
+    });
+    setTitle("");
+    setDescription("");
+    setType("assignment");
+    setDueLabel("");
+    onClose();
+  }
 
   function handleClose() {
     setTitle("");
@@ -37,112 +54,105 @@ export function AddTaskModal({ unitId, visible, onClose }: AddTaskModalProps) {
     onClose();
   }
 
-  function handleAdd() {
-    addTask(unitId, {
-      title,
-      description,
-      type,
-      dueLabel: dueLabel.trim() || "No due date",
-    });
-    handleClose();
-  }
-
   return (
     <Modal
       visible={visible}
+      animationType="slide"
       transparent
-      animationType="fade"
       onRequestClose={handleClose}
     >
       <KeyboardAvoidingView
-        className="flex-1 justify-end bg-black/50"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1 justify-end bg-black/40"
       >
-        <View className="gap-6 rounded-t-3xl bg-background p-6 pb-10">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-xl font-bold text-foreground">New task</Text>
+        <View className="rounded-t-3xl bg-card">
+          <View className="flex-row items-center justify-between border-b border-border p-4">
+            <View className="w-8" />
+            <Text className="text-base font-bold text-foreground">Add Task</Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Close"
               onPress={handleClose}
-              className="h-9 w-9 items-center justify-center rounded-full active:bg-secondary"
+              className="h-8 w-8 items-center justify-center rounded-full bg-secondary active:opacity-70"
             >
-              <HugeiconsIcon icon={Cancel01Icon} size={22} color="#71717a" />
+              <HugeiconsIcon icon={Cancel01Icon} size={18} color="#64748b" />
             </Pressable>
           </View>
 
-          <View className="gap-4">
-            <Input
-              label="Title"
-              placeholder="e.g. Lab Report 2"
-              value={title}
-              onChangeText={setTitle}
-              autoFocus
-            />
-
-            {/* Type selector */}
-            <View className="gap-2">
-              <Text className="text-center text-sm font-medium text-foreground">
-                Type
-              </Text>
-              <View className="flex-row gap-2">
-                {TYPES.map((t) => {
-                  const selected = t === type;
-                  return (
+          <ScrollView className="px-6 py-4" showsVerticalScrollIndicator={false}>
+            <View className="gap-5 pb-8">
+              <View className="gap-2">
+                <Text className="text-sm font-semibold text-foreground">Type</Text>
+                <View className="flex-row gap-2">
+                  {TYPES.map((t) => (
                     <Pressable
                       key={t}
-                      accessibilityRole="button"
                       onPress={() => setType(t)}
-                      className={`flex-1 items-center rounded-xl border py-3 ${
-                        selected
+                      className={`flex-1 items-center rounded-xl border py-2.5 ${
+                        type === t
                           ? "border-primary bg-primary/10"
-                          : "border-border bg-card"
+                          : "border-border bg-transparent"
                       }`}
                     >
                       <Text
-                        className={
-                          selected
-                            ? "text-sm font-semibold text-primary"
-                            : "text-sm font-medium text-muted-foreground"
-                        }
+                        className={`text-sm font-medium ${
+                          type === t ? "text-primary" : "text-muted-foreground"
+                        }`}
                       >
                         {TASK_TYPE_LABEL[t]}
                       </Text>
                     </Pressable>
-                  );
-                })}
+                  ))}
+                </View>
               </View>
+
+              <View className="gap-2">
+                <Text className="text-sm font-semibold text-foreground">
+                  Title *
+                </Text>
+                <TextInput
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="e.g. Essay Draft"
+                  className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
+                  placeholderTextColor="#9ca3af"
+                />
+              </View>
+
+              <View className="gap-2">
+                <Text className="text-sm font-semibold text-foreground">
+                  Description
+                </Text>
+                <TextInput
+                  value={description}
+                  onChangeText={setDescription}
+                  placeholder="Additional details..."
+                  multiline
+                  textAlignVertical="top"
+                  className="min-h-[80px] rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
+                  placeholderTextColor="#9ca3af"
+                />
+              </View>
+
+              <View className="gap-2">
+                <Text className="text-sm font-semibold text-foreground">
+                  Due Label *
+                </Text>
+                <TextInput
+                  value={dueLabel}
+                  onChangeText={setDueLabel}
+                  placeholder="e.g. Due tomorrow, Due in 2 days"
+                  className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
+                  placeholderTextColor="#9ca3af"
+                />
+              </View>
+
+              <Button
+                label="Save Task"
+                onPress={handleSave}
+                disabled={!title.trim() || !dueLabel.trim()}
+              />
             </View>
-
-            <Input
-              label="Description (optional)"
-              placeholder="Add details"
-              value={description}
-              onChangeText={setDescription}
-              multiline
-            />
-            <Input
-              label="Due"
-              placeholder="e.g. Due Friday 5pm"
-              value={dueLabel}
-              onChangeText={setDueLabel}
-            />
-          </View>
-
-          <View className="flex-row gap-3">
-            <Button
-              className="flex-1"
-              variant="outline"
-              label="Cancel"
-              onPress={handleClose}
-            />
-            <Button
-              className="flex-1"
-              label="Post task"
-              disabled={!title.trim()}
-              onPress={handleAdd}
-            />
-          </View>
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>

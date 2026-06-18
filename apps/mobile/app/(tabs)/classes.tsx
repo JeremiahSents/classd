@@ -70,7 +70,10 @@ export default function Classes() {
               key={classroom.id}
               classroom={classroom}
               onPress={() =>
-                router.push({ pathname: "/class/[id]", params: { id: classroom.id } })
+                router.push({
+                  pathname: "/(tabs)/class/[id]",
+                  params: { id: classroom.id },
+                })
               }
             />
           ))}

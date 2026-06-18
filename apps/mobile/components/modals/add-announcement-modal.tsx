@@ -4,23 +4,24 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useClasses } from "@/lib/classes-store";
 
 interface AddAnnouncementModalProps {
-  unitId: string;
+  classId: string;
   visible: boolean;
   onClose: () => void;
 }
 
 export function AddAnnouncementModal({
-  unitId,
+  classId,
   visible,
   onClose,
 }: AddAnnouncementModalProps) {
@@ -28,74 +29,83 @@ export function AddAnnouncementModal({
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
 
+  function handleSave() {
+    if (!title.trim() || !content.trim()) return;
+    addAnnouncement(classId, { title, content });
+    setTitle("");
+    setContent("");
+    onClose();
+  }
+
   function handleClose() {
     setTitle("");
     setContent("");
     onClose();
   }
 
-  function handleAdd() {
-    addAnnouncement(unitId, { title, content });
-    handleClose();
-  }
-
   return (
     <Modal
       visible={visible}
+      animationType="slide"
       transparent
-      animationType="fade"
       onRequestClose={handleClose}
     >
       <KeyboardAvoidingView
-        className="flex-1 justify-end bg-black/50"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        className="flex-1 justify-end bg-black/40"
       >
-        <View className="gap-6 rounded-t-3xl bg-background p-6 pb-10">
-          <View className="flex-row items-center justify-between">
-            <Text className="text-xl font-bold text-foreground">
-              New announcement
+        <View className="rounded-t-3xl bg-card">
+          <View className="flex-row items-center justify-between border-b border-border p-4">
+            <View className="w-8" />
+            <Text className="text-base font-bold text-foreground">
+              New Announcement
             </Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Close"
               onPress={handleClose}
-              className="h-9 w-9 items-center justify-center rounded-full active:bg-secondary"
+              className="h-8 w-8 items-center justify-center rounded-full bg-secondary active:opacity-70"
             >
-              <HugeiconsIcon icon={Cancel01Icon} size={22} color="#71717a" />
+              <HugeiconsIcon icon={Cancel01Icon} size={18} color="#64748b" />
             </Pressable>
           </View>
 
-          <View className="gap-4">
-            <Input
-              label="Title"
-              placeholder="e.g. Class cancelled Monday"
-              value={title}
-              onChangeText={setTitle}
-              autoFocus
-            />
-            <Input
-              label="Message"
-              placeholder="Write your announcement"
-              value={content}
-              onChangeText={setContent}
-              multiline
-            />
-          </View>
+          <ScrollView className="px-6 py-4" showsVerticalScrollIndicator={false}>
+            <View className="gap-5 pb-8">
+              <View className="gap-2">
+                <Text className="text-sm font-semibold text-foreground">
+                  Title *
+                </Text>
+                <TextInput
+                  value={title}
+                  onChangeText={setTitle}
+                  placeholder="e.g. Midterm moved to Friday"
+                  className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
+                  placeholderTextColor="#9ca3af"
+                />
+              </View>
 
-          <View className="flex-row gap-3">
-            <Button
-              className="flex-1"
-              variant="outline"
-              label="Cancel"
-              onPress={handleClose}
-            />
-            <Button
-              className="flex-1"
-              label="Post"
-              disabled={!title.trim()}
-              onPress={handleAdd}
-            />
-          </View>
+              <View className="gap-2">
+                <Text className="text-sm font-semibold text-foreground">
+                  Message *
+                </Text>
+                <TextInput
+                  value={content}
+                  onChangeText={setContent}
+                  placeholder="Details..."
+                  multiline
+                  textAlignVertical="top"
+                  className="min-h-[120px] rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
+                  placeholderTextColor="#9ca3af"
+                />
+              </View>
+
+              <Button
+                label="Post Announcement"
+                onPress={handleSave}
+                disabled={!title.trim() || !content.trim()}
+              />
+            </View>
+          </ScrollView>
         </View>
       </KeyboardAvoidingView>
     </Modal>

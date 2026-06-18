@@ -1,106 +1,126 @@
 import { Pressable, Text, View } from "react-native";
 import { HugeiconsIcon } from "@hugeicons/react-native";
-import { Location01Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
+import {
+  ArrowRight01Icon,
+  Clock01Icon,
+} from "@hugeicons/core-free-icons";
 import type { Classroom } from "@/lib/classes";
-import type { Unit } from "@/lib/types";
-import { formatTime, unitsToday, type ScheduledUnit } from "@/lib/schedule";
+import { formatTime, classesToday, type TodayClass } from "@/lib/schedule";
 import { SectionTitle } from "./section-title";
 
-function TodayClassRow({
-  unit,
-  classroom,
+/* ------------------------------------------------------------------ */
+/*  Palette — rotate through a set of accent colors per class         */
+/* ------------------------------------------------------------------ */
+const ACCENTS = ["#4f46e5", "#0ea5e9", "#f59e0b", "#10b981", "#f43f5e", "#8b5cf6"];
+
+function accentFor(index: number): string {
+  return ACCENTS[index % ACCENTS.length];
+}
+
+/* ------------------------------------------------------------------ */
+/*  Class row                                                         */
+/* ------------------------------------------------------------------ */
+function ClassRow({
+  todayClass,
+  accent,
   onPress,
 }: {
-  unit: ScheduledUnit;
-  classroom?: Classroom;
+  todayClass: TodayClass;
+  accent: string;
   onPress: () => void;
 }) {
-  const [time, period] = formatTime(unit.startMinutes).split(" ");
+  const { classroom, block } = todayClass;
+  const startTime = formatTime(block.startMinutes);
+  const endTime = formatTime(block.endMinutes);
 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`Open ${unit.name}`}
+      accessibilityLabel={`Open ${classroom.name}`}
       onPress={onPress}
-      className="flex-row overflow-hidden rounded-2xl bg-slate-50 active:opacity-80"
+      className="flex-row items-center active:opacity-80"
     >
-      <View className="w-16 items-center justify-center border-r border-slate-200 py-4">
-        <Text className="text-sm font-black text-slate-900">{time}</Text>
-        <Text className="text-[10px] font-semibold uppercase text-slate-400">
-          {period}
-        </Text>
-      </View>
-      <View className="flex-1 justify-center gap-1.5 px-4 py-4">
-        <Text className="text-sm font-bold text-slate-800" numberOfLines={1}>
-          {unit.name}
+      {/* Colored accent bar */}
+      <View
+        style={{ backgroundColor: accent, width: 4, borderRadius: 4 }}
+        className="self-stretch my-3 ml-3"
+      />
+
+      <View className="flex-1 gap-0.5 px-3 py-3.5">
+        <Text
+          className="text-[15px] font-semibold text-foreground"
+          numberOfLines={1}
+        >
+          {classroom.name}
         </Text>
         <View className="flex-row items-center gap-1.5">
-          <HugeiconsIcon icon={Location01Icon} size={12} color="#94a3b8" />
-          <Text className="flex-1 text-xs text-slate-500" numberOfLines={1}>
-            {unit.location ?? "Class"}
-            {classroom ? ` · ${classroom.name}` : ""}
+          <HugeiconsIcon icon={Clock01Icon} size={13} color="#9ca3af" />
+          <Text className="text-xs text-muted-foreground" numberOfLines={1}>
+            {startTime} – {endTime}{block.location ? ` · ${block.location}` : ""}
           </Text>
         </View>
+      </View>
+
+      {/* Right — chevron */}
+      <View className="pr-4">
+        <HugeiconsIcon icon={ArrowRight01Icon} size={18} color="#9ca3af" />
       </View>
     </Pressable>
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  Separator                                                         */
+/* ------------------------------------------------------------------ */
+function Divider() {
+  return <View className="mx-4 h-px bg-border/60" />;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Section                                                           */
+/* ------------------------------------------------------------------ */
 export function ClassSchedule({
   classes,
-  units,
+  onClassPress,
   onNewClass,
-  onUnitPress,
   onSeeAll,
 }: {
   classes: Classroom[];
-  units: Unit[];
+  onClassPress: (classId: string) => void;
   onNewClass: () => void;
-  onUnitPress: (unit: Unit) => void;
   onSeeAll?: () => void;
 }) {
-  const today = unitsToday(units);
+  const todayClasses = classesToday(classes);
 
   return (
     <View className="gap-4">
       <SectionTitle
-        title="Today classes"
-        count={today.length}
-        onSeeAll={today.length > 0 ? onSeeAll : undefined}
+        title="Today's classes"
+        count={todayClasses.length}
+        onSeeAll={todayClasses.length > 0 ? onSeeAll : undefined}
       />
-      <View className="gap-3">
-        {today.map((unit) => {
-          const classroom = classes.find((item) => item.id === unit.classId);
-          return (
-            <TodayClassRow
-              key={unit.id}
-              unit={unit}
-              classroom={classroom}
-              onPress={() => onUnitPress(unit)}
-            />
-          );
-        })}
-        {today.length === 0 ? (
-          units.length === 0 ? (
-            <Pressable
-              accessibilityRole="button"
-              onPress={onNewClass}
-              className="items-center gap-3 rounded-2xl bg-slate-50 p-6"
-            >
-              <HugeiconsIcon icon={PlusSignIcon} size={24} color="#312e81" />
-              <Text className="text-sm font-bold text-indigo-950">
-                Create your first class
-              </Text>
-            </Pressable>
-          ) : (
-            <View className="rounded-2xl bg-slate-50 p-5">
-              <Text className="text-sm font-medium text-slate-500">
-                No classes scheduled today.
-              </Text>
+
+      {todayClasses.length > 0 ? (
+        <View className="overflow-hidden rounded-2xl">
+          {todayClasses.map((todayClass, index) => (
+            <View key={`${todayClass.classroom.id}-${index}`}>
+              {index > 0 && <Divider />}
+              <ClassRow
+                todayClass={todayClass}
+                accent={accentFor(index)}
+                onPress={() => onClassPress(todayClass.classroom.id)}
+              />
             </View>
-          )
-        ) : null}
-      </View>
+          ))}
+        </View>
+      ) : (
+        <View className="items-center gap-2 rounded-2xl border border-dashed border-border bg-card py-8">
+          <HugeiconsIcon icon={Clock01Icon} size={22} color="#9ca3af" />
+          <Text className="text-sm font-semibold text-muted-foreground">
+            No classes today
+          </Text>
+        </View>
+      )}
     </View>
   );
 }

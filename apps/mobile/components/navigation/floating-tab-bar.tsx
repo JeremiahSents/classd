@@ -36,17 +36,21 @@ const ICONS: Record<string, IconSvgElement> = {
 /*  Theme                                                             */
 /* ------------------------------------------------------------------ */
 const LIGHT = {
-  active: "#4f46e5",
-  inactive: "#9ca3af",
-  fallbackBg: "rgba(255,255,255,0.82)",
+  icon: "#3b82f6",
+  iconInactive: "#94a3b8",
+  glassTint: "rgba(220, 225, 235, 0.55)",
+  fallbackBg: "rgba(230, 233, 240, 0.78)",
   fallbackBorder: "rgba(0,0,0,0.06)",
+  activePill: "rgba(255, 255, 255, 0.9)",
 };
 
 const DARK = {
-  active: "#6366f1",
-  inactive: "#52525b",
+  icon: "#ffffff",
+  iconInactive: "#888888",
+  glassTint: "rgba(40, 40, 40, 0.5)",
   fallbackBg: "rgba(30,30,30,0.78)",
   fallbackBorder: "rgba(255,255,255,0.08)",
+  activePill: "rgba(255, 255, 255, 0.15)",
 };
 
 const SPRING = { damping: 15, stiffness: 400, mass: 0.3 };
@@ -55,10 +59,13 @@ const glass = isLiquidGlassAvailable();
 /* ------------------------------------------------------------------ */
 /*  Tab bar                                                           */
 /* ------------------------------------------------------------------ */
-export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
+export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
   const theme = scheme === "dark" ? DARK : LIGHT;
+
+  // Only show routes that have an explicit icon — hides detail screens like class/[id]
+  const visibleRoutes = state.routes.filter((route) => route.name in ICONS);
 
   return (
     <View
@@ -68,7 +75,11 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
       <View style={styles.pill}>
         {/* Background layer */}
         {glass ? (
-          <GlassView style={styles.fill} glassEffectStyle="regular" isInteractive />
+          <GlassView
+            style={[styles.fill, { backgroundColor: theme.glassTint }]}
+            glassEffectStyle="regular"
+            isInteractive
+          />
         ) : (
           <View
             style={[
@@ -83,17 +94,17 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
         )}
 
         {/* Tabs */}
-        {state.routes.map((route, index) => {
+        {visibleRoutes.map((route) => {
           const icon = ICONS[route.name] ?? Home01Icon;
-          const focused = state.index === index;
+          const focused = state.routes[state.index].key === route.key;
 
           return (
             <TabItem
               key={route.key}
               icon={icon}
               focused={focused}
-              activeColor={theme.active}
-              inactiveColor={theme.inactive}
+              iconColor={focused ? theme.icon : theme.iconInactive}
+              activePillColor={theme.activePill}
               onPress={() => {
                 const event = navigation.emit({
                   type: "tabPress",
@@ -118,8 +129,8 @@ export function FloatingTabBar({ state, navigation }: BottomTabBarProps) {
 interface TabItemProps {
   icon: IconSvgElement;
   focused: boolean;
-  activeColor: string;
-  inactiveColor: string;
+  iconColor: string;
+  activePillColor: string;
   onPress: () => void;
 }
 
@@ -128,8 +139,8 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 function TabItem({
   icon,
   focused,
-  activeColor,
-  inactiveColor,
+  iconColor,
+  activePillColor,
   onPress,
 }: TabItemProps) {
   const scale = useSharedValue(1);
@@ -161,10 +172,16 @@ function TabItem({
       onPressOut={handlePressOut}
       style={[styles.tab, animStyle]}
     >
+      {/* White capsule pill behind the active icon */}
+      {focused && (
+        <View
+          style={[styles.activePill, { backgroundColor: activePillColor }]}
+        />
+      )}
       <HugeiconsIcon
         icon={icon}
         size={24}
-        color={focused ? activeColor : inactiveColor}
+        color={iconColor}
         strokeWidth={focused ? 2.4 : 1.6}
       />
     </AnimatedPressable>
@@ -187,10 +204,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     paddingHorizontal: 6,
     shadowColor: "#000",
-    shadowOpacity: 0.12,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 10 },
+    elevation: 14,
   },
   fill: {
     ...StyleSheet.absoluteFillObject,
@@ -201,5 +218,11 @@ const styles = StyleSheet.create({
     height: 52,
     alignItems: "center",
     justifyContent: "center",
+  },
+  activePill: {
+    position: "absolute",
+    width: 48,
+    height: 36,
+    borderRadius: 999,
   },
 });

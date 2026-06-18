@@ -64,10 +64,13 @@ export function SegmentedTabs({ tabs, active, onChange }: SegmentedTabsProps) {
             className="items-center justify-center py-2"
           >
             <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
               className={
                 focused
-                  ? "text-sm font-semibold text-foreground"
-                  : "text-sm font-medium text-muted-foreground"
+                  ? "text-[13px] font-semibold text-foreground"
+                  : "text-[13px] font-medium text-muted-foreground"
               }
             >
               {tab}

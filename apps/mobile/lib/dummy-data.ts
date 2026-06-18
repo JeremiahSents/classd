@@ -1,21 +1,47 @@
 import { coverUrlFor, type Classroom } from "@/lib/classes";
-import type { Announcement, Material, Member, Task, Unit } from "@/lib/types";
+import type { Announcement, Material, Member, Task } from "@/lib/types";
 
 export const seedClasses: Classroom[] = [
-  { id: "bio101", name: "Intro to Biology", code: "428193", coverUrl: coverUrlFor("bio101"), classRepId: "m2" },
-  { id: "cs204", name: "Data Structures", code: "771204", coverUrl: coverUrlFor("cs204"), classRepId: "m5" },
-  { id: "hist110", name: "World History", code: "560338", coverUrl: coverUrlFor("hist110") },
-  { id: "math150", name: "Calculus I", code: "903517", coverUrl: coverUrlFor("math150") },
-];
-
-// day: 0=Sun … 6=Sat. Times are minutes from midnight.
-export const seedUnits: Unit[] = [
-  { id: "u-bio-1", classId: "bio101", name: "Cell Biology", code: "BIO 1101", location: "SCI Lab 1", day: 4, startMinutes: 8 * 60, endMinutes: 10 * 60 },
-  { id: "u-bio-2", classId: "bio101", name: "Genetics", code: "BIO 1102", location: "SCI 204", day: 4, startMinutes: 10 * 60 + 30, endMinutes: 12 * 60 },
-  { id: "u-cs-1", classId: "cs204", name: "Trees & Graphs", code: "CS 2041", location: "Tech 3.1", day: 4, startMinutes: 13 * 60, endMinutes: 15 * 60 },
-  { id: "u-cs-2", classId: "cs204", name: "Algorithms", code: "CS 2042", location: "Tech 3.4", day: 4, startMinutes: 15 * 60 + 30, endMinutes: 17 * 60 },
-  { id: "u-hist-1", classId: "hist110", name: "Modern Era", code: "HIS 1101", location: "Hum 2.1", day: 3, startMinutes: 11 * 60, endMinutes: 13 * 60 },
-  { id: "u-math-1", classId: "math150", name: "Limits & Derivatives", code: "MAT 1501", location: "Math 1.0", day: 5, startMinutes: 9 * 60, endMinutes: 11 * 60 },
+  {
+    id: "bio101",
+    name: "Intro to Biology",
+    code: "428193",
+    coverUrl: coverUrlFor("bio101"),
+    classRepId: "m2",
+    schedules: [
+      { location: "SCI Lab 1", day: 4, startMinutes: 8 * 60, endMinutes: 10 * 60 },
+      { location: "SCI 204", day: 4, startMinutes: 10 * 60 + 30, endMinutes: 12 * 60 },
+    ],
+  },
+  {
+    id: "cs204",
+    name: "Data Structures",
+    code: "771204",
+    coverUrl: coverUrlFor("cs204"),
+    classRepId: "m5",
+    schedules: [
+      { location: "Tech 3.1", day: 4, startMinutes: 13 * 60, endMinutes: 15 * 60 },
+      { location: "Tech 3.4", day: 4, startMinutes: 15 * 60 + 30, endMinutes: 17 * 60 },
+    ],
+  },
+  {
+    id: "hist110",
+    name: "World History",
+    code: "560338",
+    coverUrl: coverUrlFor("hist110"),
+    schedules: [
+      { location: "Hum 2.1", day: 3, startMinutes: 11 * 60, endMinutes: 13 * 60 },
+    ],
+  },
+  {
+    id: "math150",
+    name: "Calculus I",
+    code: "903517",
+    coverUrl: coverUrlFor("math150"),
+    schedules: [
+      { location: "Math 1.0", day: 5, startMinutes: 9 * 60, endMinutes: 11 * 60 },
+    ],
+  },
 ];
 
 export const seedMembers: Record<string, Member[]> = {
@@ -40,21 +66,21 @@ export const seedMembers: Record<string, Member[]> = {
 };
 
 export const seedTasks: Task[] = [
-  { id: "t1", unitId: "u-bio-1", title: "Cell Structure Lab Report", description: "Submit your write-up on the microscope lab.", type: "assignment", dueLabel: "Due tomorrow" },
-  { id: "t2", unitId: "u-bio-2", title: "Genetics CAT 1", description: "In-class test covering Mendelian inheritance.", type: "cat", dueLabel: "Due in 3 days" },
-  { id: "t3", unitId: "u-cs-1", title: "Binary Trees Problem Set", description: "Problems 1-8 from the handout.", type: "assignment", dueLabel: "Due in 3 days" },
-  { id: "t4", unitId: "u-cs-2", title: "Sorting Algorithms Deadline", description: "Final commit for the sorting project.", type: "deadline", dueLabel: "Due next week" },
-  { id: "t5", unitId: "u-hist-1", title: "Essay: The Industrial Revolution", description: "1500 words, cite at least 5 sources.", type: "assignment", dueLabel: "Due next week" },
+  { id: "t1", classId: "bio101", title: "Cell Structure Lab Report", description: "Submit your write-up on the microscope lab.", type: "assignment", dueLabel: "Due tomorrow" },
+  { id: "t2", classId: "bio101", title: "Genetics CAT 1", description: "In-class test covering Mendelian inheritance.", type: "cat", dueLabel: "Due in 3 days" },
+  { id: "t3", classId: "cs204", title: "Binary Trees Problem Set", description: "Problems 1-8 from the handout.", type: "assignment", dueLabel: "Due in 3 days" },
+  { id: "t4", classId: "cs204", title: "Sorting Algorithms Deadline", description: "Final commit for the sorting project.", type: "deadline", dueLabel: "Due next week" },
+  { id: "t5", classId: "hist110", title: "Essay: The Industrial Revolution", description: "1500 words, cite at least 5 sources.", type: "assignment", dueLabel: "Due next week" },
 ];
 
 export const seedMaterials: Material[] = [
-  { id: "mat1", unitId: "u-bio-1", name: "Lecture 3 - Cell Membrane.pdf", sizeLabel: "2.4 MB", mimeType: "application/pdf", addedLabel: "2 days ago" },
-  { id: "mat2", unitId: "u-bio-1", name: "Lab Manual.docx", sizeLabel: "840 KB", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", addedLabel: "1 week ago" },
-  { id: "mat3", unitId: "u-cs-1", name: "Tree Traversal Diagrams.png", sizeLabel: "1.1 MB", mimeType: "image/png", addedLabel: "Yesterday" },
+  { id: "mat1", classId: "bio101", name: "Lecture 3 - Cell Membrane.pdf", sizeLabel: "2.4 MB", mimeType: "application/pdf", addedLabel: "2 days ago" },
+  { id: "mat2", classId: "bio101", name: "Lab Manual.docx", sizeLabel: "840 KB", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", addedLabel: "1 week ago" },
+  { id: "mat3", classId: "cs204", name: "Tree Traversal Diagrams.png", sizeLabel: "1.1 MB", mimeType: "image/png", addedLabel: "Yesterday" },
 ];
 
 export const seedAnnouncements: Announcement[] = [
-  { id: "n1", unitId: "u-math-1", title: "Midterm moved to Friday", content: "The midterm has been rescheduled to this Friday at 9am.", timeLabel: "2h ago" },
-  { id: "n2", unitId: "u-cs-1", title: "Guest lecture this Thursday", content: "We have an industry guest speaker on graph databases.", timeLabel: "Yesterday" },
-  { id: "n3", unitId: "u-bio-1", title: "Lab safety briefing recap", content: "Reminder to review the lab safety slides before next session.", timeLabel: "2 days ago" },
+  { id: "n1", classId: "math150", title: "Midterm moved to Friday", content: "The midterm has been rescheduled to this Friday at 9am.", timeLabel: "2h ago" },
+  { id: "n2", classId: "cs204", title: "Guest lecture this Thursday", content: "We have an industry guest speaker on graph databases.", timeLabel: "Yesterday" },
+  { id: "n3", classId: "bio101", title: "Lab safety briefing recap", content: "Reminder to review the lab safety slides before next session.", timeLabel: "2 days ago" },
 ];

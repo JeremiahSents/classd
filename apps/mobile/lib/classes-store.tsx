@@ -6,7 +6,6 @@ import type {
   Member,
   Task,
   TaskType,
-  Unit,
 } from "@/lib/types";
 import {
   seedAnnouncements,
@@ -14,7 +13,6 @@ import {
   seedMaterials,
   seedMembers,
   seedTasks,
-  seedUnits,
 } from "@/lib/dummy-data";
 
 interface ClassesStore {
@@ -22,15 +20,12 @@ interface ClassesStore {
 
   // Selectors
   getClass: (classId: string) => Classroom | undefined;
-  getUnit: (unitId: string) => Unit | undefined;
-  unitsForClass: (classId: string) => Unit[];
   membersForClass: (classId: string) => Member[];
-  tasksForUnit: (unitId: string) => Task[];
-  announcementsForUnit: (unitId: string) => Announcement[];
-  materialsForUnit: (unitId: string) => Material[];
-  unitName: (unitId: string) => string;
+  tasksForClass: (classId: string) => Task[];
+  announcementsForClass: (classId: string) => Announcement[];
+  materialsForClass: (classId: string) => Material[];
+  className: (classId: string) => string;
   /** Flat lists for dashboards/aggregates. */
-  units: Unit[];
   tasks: Task[];
   announcements: Announcement[];
 
@@ -42,19 +37,18 @@ interface ClassesStore {
 
   // Actions
   addClass: (name: string) => Classroom;
-  addUnit: (classId: string, name: string, code: string) => Unit;
   assignCR: (classId: string, memberId: string) => void;
   removeMember: (classId: string, memberId: string) => void;
   addTask: (
-    unitId: string,
+    classId: string,
     input: { title: string; description: string; type: TaskType; dueLabel: string },
   ) => Task;
   addAnnouncement: (
-    unitId: string,
+    classId: string,
     input: { title: string; content: string },
   ) => Announcement;
   addMaterial: (
-    unitId: string,
+    classId: string,
     input: { name: string; sizeLabel?: string; mimeType?: string; uri?: string },
   ) => Material;
 }
@@ -63,7 +57,6 @@ const ClassesContext = createContext<ClassesStore | null>(null);
 
 export function ClassesProvider({ children }: { children: ReactNode }) {
   const [classes, setClasses] = useState<Classroom[]>(seedClasses);
-  const [units, setUnits] = useState<Unit[]>(seedUnits);
   const [membersByClass, setMembersByClass] =
     useState<Record<string, Member[]>>(seedMembers);
   const [tasks, setTasks] = useState<Task[]>(seedTasks);
@@ -80,21 +73,18 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
   const value = useMemo<ClassesStore>(
     () => ({
       classes,
-      units,
       tasks,
       announcements,
       enrolledClassIds,
 
       getClass: (classId) => classes.find((c) => c.id === classId),
-      getUnit: (unitId) => units.find((u) => u.id === unitId),
-      unitsForClass: (classId) => units.filter((u) => u.classId === classId),
       membersForClass: (classId) => membersByClass[classId] ?? [],
-      tasksForUnit: (unitId) => tasks.filter((t) => t.unitId === unitId),
-      announcementsForUnit: (unitId) =>
-        announcements.filter((a) => a.unitId === unitId),
-      materialsForUnit: (unitId) =>
-        materials.filter((m) => m.unitId === unitId),
-      unitName: (unitId) => units.find((u) => u.id === unitId)?.name ?? "",
+      tasksForClass: (classId) => tasks.filter((t) => t.classId === classId),
+      announcementsForClass: (classId) =>
+        announcements.filter((a) => a.classId === classId),
+      materialsForClass: (classId) =>
+        materials.filter((m) => m.classId === classId),
+      className: (classId) => classes.find((c) => c.id === classId)?.name ?? "",
 
       joinClass: (code) => {
         const match = classes.find((c) => c.code === code.trim());
@@ -121,17 +111,6 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
         return classroom;
       },
 
-      addUnit: (classId, name, code) => {
-        const unit: Unit = {
-          id: `u-${Date.now()}`,
-          classId,
-          name: name.trim(),
-          code: code.trim(),
-        };
-        setUnits((prev) => [...prev, unit]);
-        return unit;
-      },
-
       assignCR: (classId, memberId) => {
         setClasses((prev) =>
           prev.map((c) =>
@@ -154,16 +133,16 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
         );
       },
 
-      addTask: (unitId, input) => {
-        const task: Task = { id: `t-${Date.now()}`, unitId, ...input };
+      addTask: (classId, input) => {
+        const task: Task = { id: `t-${Date.now()}`, classId, ...input };
         setTasks((prev) => [task, ...prev]);
         return task;
       },
 
-      addAnnouncement: (unitId, input) => {
+      addAnnouncement: (classId, input) => {
         const announcement: Announcement = {
           id: `n-${Date.now()}`,
-          unitId,
+          classId,
           timeLabel: "Just now",
           ...input,
         };
@@ -171,10 +150,10 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
         return announcement;
       },
 
-      addMaterial: (unitId, input) => {
+      addMaterial: (classId, input) => {
         const material: Material = {
           id: `mat-${Date.now()}`,
-          unitId,
+          classId,
           addedLabel: "Just now",
           ...input,
         };
@@ -184,7 +163,6 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
     }),
     [
       classes,
-      units,
       membersByClass,
       tasks,
       announcements,

@@ -5,14 +5,14 @@ import type { Announcement } from "@/lib/types";
 
 function AnnouncementPill({
   announcement,
-  unitName,
+  className,
 }: {
   announcement: Announcement;
-  unitName: (unitId: string) => string;
+  className: (classId: string) => string;
 }) {
   return (
-    <View className="flex-row items-center gap-3 rounded-2xl bg-indigo-50 px-4 py-3">
-      <View className="h-9 w-9 items-center justify-center rounded-full bg-indigo-100">
+    <View className="flex-row items-center gap-3 rounded-2xl px-4 py-3">
+      <View className="h-9 w-9 items-center justify-center rounded-full bg-primary/10">
         <HugeiconsIcon icon={Calendar03Icon} size={17} color="#3730a3" />
       </View>
       <View className="flex-1">
@@ -20,7 +20,7 @@ function AnnouncementPill({
           {announcement.title}
         </Text>
         <Text className="text-xs text-slate-500" numberOfLines={1}>
-          {unitName(announcement.unitId)} · {announcement.timeLabel}
+          {className(announcement.classId)} · {announcement.timeLabel}
         </Text>
       </View>
     </View>
@@ -29,10 +29,10 @@ function AnnouncementPill({
 
 export function UpdatesSection({
   announcements,
-  unitName,
+  className,
 }: {
   announcements: Announcement[];
-  unitName: (unitId: string) => string;
+  className: (classId: string) => string;
 }) {
   if (announcements.length === 0) return null;
 
@@ -48,7 +48,7 @@ export function UpdatesSection({
         <AnnouncementPill
           key={announcement.id}
           announcement={announcement}
-          unitName={unitName}
+          className={className}
         />
       ))}
     </View>

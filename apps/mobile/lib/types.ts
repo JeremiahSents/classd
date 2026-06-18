@@ -1,21 +1,5 @@
 export type TaskType = "assignment" | "cat" | "deadline";
 
-/** A unit (course) inside a class. Tasks/announcements live under a unit. */
-export interface Unit {
-  id: string;
-  classId: string;
-  name: string;
-  code: string;
-  /** Where the class meets, e.g. "SCI Lab 1", "Room 4.2". */
-  location?: string;
-  /** Weekday the class meets (0 = Sun … 6 = Sat). */
-  day?: number;
-  /** Start time, minutes from midnight (e.g. 8 * 60). */
-  startMinutes?: number;
-  /** End time, minutes from midnight. */
-  endMinutes?: number;
-}
-
 /** A user enrolled in a class. */
 export interface Member {
   id: string;
@@ -25,7 +9,7 @@ export interface Member {
 
 export interface Task {
   id: string;
-  unitId: string;
+  classId: string;
   title: string;
   description: string;
   type: TaskType;
@@ -35,17 +19,17 @@ export interface Task {
 
 export interface Announcement {
   id: string;
-  unitId: string;
+  classId: string;
   title: string;
   content: string;
   /** Human-readable relative time for now (e.g. "2h ago"). */
   timeLabel: string;
 }
 
-/** A file/resource attached to a unit. */
+/** A file/resource attached to a class. */
 export interface Material {
   id: string;
-  unitId: string;
+  classId: string;
   name: string;
   /** Human-readable size, e.g. "2.4 MB". */
   sizeLabel?: string;

@@ -15,17 +15,19 @@ export function HomeHeader({ firstName }: { firstName: string }) {
   }).format(new Date());
 
   return (
-    <View className="rounded-[2rem] bg-[#cfe0fa] px-6 pb-7 pt-7">
+    <View className="rounded-3xl bg-primary/8 px-6 pb-6 pt-5">
       <View className="flex-row items-start justify-between">
         <View className="flex-1">
-          <Text className="text-sm font-medium text-slate-600">
+          <Text className="text-sm font-medium text-muted-foreground">
             {greeting()}
           </Text>
-          <Text className="mt-0.5 text-3xl font-black text-indigo-950">
+          <Text className="mt-0.5 text-3xl font-black tracking-tight text-foreground">
             Hi {firstName}
           </Text>
         </View>
-        <Text className="mt-1 text-xs font-bold text-slate-700">{today}</Text>
+        <Text className="mt-1 text-xs font-semibold text-muted-foreground">
+          {today}
+        </Text>
       </View>
     </View>
   );

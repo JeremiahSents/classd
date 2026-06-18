@@ -1,128 +1,146 @@
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { HugeiconsIcon } from "@hugeicons/react-native";
-import type { IconSvgElement } from "@hugeicons/react-native";
 import {
-  Notification01Icon,
   ArrowRight01Icon,
-  HelpCircleIcon,
-  InformationCircleIcon,
+  BookOpen01Icon,
+  CheckmarkCircle02Icon,
   Logout01Icon,
-  PencilEdit01Icon,
-  RepeatIcon,
+  Settings01Icon,
+  UserEdit01Icon,
+  UserSwitchIcon,
 } from "@hugeicons/core-free-icons";
-import { Button } from "@/components/ui/button";
-import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
-
-function initials(name: string): string {
-  return name
-    .split(" ")
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? "")
-    .join("");
-}
+import { useClasses } from "@/lib/classes-store";
 
 interface SettingsItem {
   label: string;
-  Icon: IconSvgElement;
-  onPress?: () => void;
+  icon: any;
+  onPress: () => void;
+  destructive?: boolean;
 }
 
 export default function Profile() {
   const router = useRouter();
-  const { classes, units } = useClasses();
-  const { role, name, email, switchRole } = useSession();
+  const { role, firstName, email, switchRole } = useSession();
+  const { classes, tasks, enrolledClassIds, isTaskComplete } = useClasses();
 
   function handleSignOut() {
     // TODO: clear auth session
-    router.replace("/login");
+    router.replace("/(auth)/register");
   }
 
-  const unitCount = units.length;
   const isLecturer = role === "lecturer";
+
+  // Dummy stats
+  const activeClasses = isLecturer ? classes.length : enrolledClassIds.length;
+  const pendingTasks = isLecturer
+    ? tasks.length // for lecturer, total tasks set
+    : tasks.filter(
+        (t) => enrolledClassIds.includes(t.classId) && !isTaskComplete(t.id),
+      ).length;
 
   const items: SettingsItem[] = [
     {
       label: isLecturer ? "Switch to student view" : "Switch to lecturer view",
-      Icon: RepeatIcon,
-      onPress: switchRole,
+      icon: UserSwitchIcon,
+      onPress: () => switchRole(),
     },
-    { label: "Edit profile", Icon: PencilEdit01Icon },
-    { label: "Notifications", Icon: Notification01Icon },
-    { label: "Help & support", Icon: HelpCircleIcon },
-    { label: "About classd", Icon: InformationCircleIcon },
+    {
+      label: "Edit Profile",
+      icon: UserEdit01Icon,
+      onPress: () => {},
+    },
+    {
+      label: "App Settings",
+      icon: Settings01Icon,
+      onPress: () => {},
+    },
+    {
+      label: "Sign Out",
+      icon: Logout01Icon,
+      onPress: handleSignOut,
+      destructive: true,
+    },
   ];
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       <ScrollView
-        contentContainerClassName="gap-6 px-6 pb-32 pt-2"
+        contentContainerClassName="px-6 pb-32 pt-8"
         showsVerticalScrollIndicator={false}
       >
-        <Text className="text-2xl font-bold text-foreground">Profile</Text>
-
-        {/* Identity */}
-        <View className="items-center gap-4 pt-2">
-          <View className="h-24 w-24 items-center justify-center rounded-full bg-primary">
-            <Text className="text-3xl font-bold text-primary-foreground">
-              {initials(name)}
+        <View className="items-center gap-4">
+          <Image
+            source={`https://api.dicebear.com/7.x/avataaars/png?seed=${firstName}`}
+            style={{ width: 100, height: 100, borderRadius: 50 }}
+            contentFit="cover"
+            className="bg-secondary"
+          />
+          <View className="items-center gap-1">
+            <Text className="text-2xl font-bold text-foreground">
+              {firstName}
             </Text>
-          </View>
-          <View className="items-center gap-1.5">
-            <Text className="text-xl font-semibold text-foreground">{name}</Text>
-            <Text className="text-base text-muted-foreground">{email}</Text>
+            <Text className="text-sm font-medium text-muted-foreground">
+              {email}
+            </Text>
             <View className="mt-1 rounded-full bg-primary/10 px-3 py-1">
-              <Text className="text-xs font-semibold text-primary">
-                {isLecturer ? "Lecturer" : "Student"}
+              <Text className="text-xs font-bold capitalize tracking-wide text-primary">
+                {role} account
               </Text>
             </View>
           </View>
         </View>
 
-        {/* Stats */}
-        <View className="flex-row gap-3">
-          <View className="flex-1 items-center gap-1 rounded-2xl border border-border bg-card py-5">
-            <Text className="text-2xl font-bold text-foreground">{classes.length}</Text>
-            <Text className="text-sm text-muted-foreground">
-              Class{classes.length === 1 ? "" : "es"}
+        <View className="mt-8 flex-row gap-4">
+          <View className="flex-1 items-center justify-center rounded-2xl border border-border bg-card py-5">
+            <HugeiconsIcon icon={BookOpen01Icon} size={28} color="#4f46e5" />
+            <Text className="mt-3 text-2xl font-black text-foreground">
+              {activeClasses}
+            </Text>
+            <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {activeClasses === 1 ? "Active Class" : "Active Classes"}
             </Text>
           </View>
-          <View className="flex-1 items-center gap-1 rounded-2xl border border-border bg-card py-5">
-            <Text className="text-2xl font-bold text-foreground">{unitCount}</Text>
-            <Text className="text-sm text-muted-foreground">
-              Unit{unitCount === 1 ? "" : "s"}
+          <View className="flex-1 items-center justify-center rounded-2xl border border-border bg-card py-5">
+            <HugeiconsIcon icon={CheckmarkCircle02Icon} size={28} color="#22c55e" />
+            <Text className="mt-3 text-2xl font-black text-foreground">
+              {pendingTasks}
+            </Text>
+            <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Pending Tasks
             </Text>
           </View>
         </View>
 
-        {/* Settings list */}
-        <View className="overflow-hidden rounded-2xl border border-border bg-card">
-          {items.map((item, index) => (
+        <View className="mt-8 gap-1.5 rounded-3xl border border-border bg-card p-2">
+          {items.map((item, i) => (
             <Pressable
-              key={item.label}
+              key={i}
               accessibilityRole="button"
               onPress={item.onPress}
-              className={`flex-row items-center gap-3 px-4 py-4 active:bg-secondary ${
-                index > 0 ? "border-t border-border" : ""
-              }`}
+              className="flex-row items-center justify-between rounded-2xl px-4 py-3.5 active:bg-secondary"
             >
-              <HugeiconsIcon icon={item.Icon} size={20} color="#4f46e5" />
-              <Text className="flex-1 text-base font-medium text-foreground">
-                {item.label}
-              </Text>
-              <HugeiconsIcon icon={ArrowRight01Icon} size={18} color="#9ca3af" />
+              <View className="flex-row items-center gap-3">
+                <HugeiconsIcon
+                  icon={item.icon}
+                  size={22}
+                  color={item.destructive ? "#ef4444" : "#64748b"}
+                />
+                <Text
+                  className={`text-base font-medium ${
+                    item.destructive ? "text-red-500" : "text-foreground"
+                  }`}
+                >
+                  {item.label}
+                </Text>
+              </View>
+              <HugeiconsIcon icon={ArrowRight01Icon} size={20} color="#cbd5e1" />
             </Pressable>
           ))}
         </View>
-
-        <Button
-          label="Sign out"
-          variant="outline"
-          leftIcon={<HugeiconsIcon icon={Logout01Icon} size={20} color="#111" />}
-          onPress={handleSignOut}
-        />
       </ScrollView>
     </SafeAreaView>
   );
