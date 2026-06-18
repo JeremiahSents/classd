@@ -89,7 +89,7 @@ export default function Register() {
             </View>
 
             {/* Form */}
-            <View className="relative overflow-hidden" style={{ minHeight: 390 }}>
+            <View className="relative overflow-hidden" style={{ minHeight: 250 }}>
               <Animated.View className="absolute inset-x-0 top-0 gap-4" style={emailStepStyle}>
                 <Input
                   label="University email"
@@ -115,28 +115,6 @@ export default function Register() {
                 </View>
 
                 <Button label="Continue with email" onPress={handleEmailContinue} />
-
-                {/* Separator */}
-                <View className="flex-row items-center gap-4 py-4">
-                  <View className="h-px flex-1 bg-border" />
-                  <Text className="text-sm text-muted-foreground">
-                    Or sign up with
-                  </Text>
-                  <View className="h-px flex-1 bg-border" />
-                </View>
-
-                <Button
-                  label="Continue with Google"
-                  variant="outline"
-                  leftIcon={<GoogleIcon size={20} />}
-                  onPress={() => handleSocialAuth("google")}
-                />
-                <Button
-                  label="Continue with Apple"
-                  variant="outline"
-                  leftIcon={<AppleIcon size={20} />}
-                  onPress={() => handleSocialAuth("apple")}
-                />
               </Animated.View>
 
               <Animated.View
@@ -155,6 +133,30 @@ export default function Register() {
                 />
                 <Button label="Create account" onPress={handleEmailContinue} />
               </Animated.View>
+            </View>
+
+            {/* Social Auth always visible */}
+            <View className="gap-4 pt-2">
+              <View className="flex-row items-center gap-4 py-2">
+                <View className="h-px flex-1 bg-border" />
+                <Text className="text-sm text-muted-foreground">
+                  Or sign up with
+                </Text>
+                <View className="h-px flex-1 bg-border" />
+              </View>
+
+              <Button
+                label="Continue with Google"
+                variant="outline"
+                leftIcon={<GoogleIcon size={20} />}
+                onPress={() => handleSocialAuth("google")}
+              />
+              <Button
+                label="Continue with Apple"
+                variant="outline"
+                leftIcon={<AppleIcon size={20} />}
+                onPress={() => handleSocialAuth("apple")}
+              />
             </View>
           </View>
         </ScrollView>
