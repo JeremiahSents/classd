@@ -1,5 +1,6 @@
 import { Pressable, Text, View } from "react-native";
-import { ChevronRight } from "lucide-react-native";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { ArrowRight01Icon } from "@hugeicons/core-free-icons";
 
 interface SectionHeaderProps {
   title: string;
@@ -23,7 +24,7 @@ export function SectionHeader({
           className="flex-row items-center active:opacity-60"
         >
           <Text className="text-sm font-semibold text-primary">{actionLabel}</Text>
-          <ChevronRight size={16} color="#4f46e5" />
+          <HugeiconsIcon icon={ArrowRight01Icon} size={16} color="#4f46e5" />
         </Pressable>
       ) : null}
     </View>

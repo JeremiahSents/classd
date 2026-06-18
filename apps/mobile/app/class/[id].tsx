@@ -3,11 +3,17 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ChevronLeft, ChevronRight, Hash, UserPlus } from "lucide-react-native";
-import { InviteModal } from "@/components/invite-modal";
-import { AddUnitModal } from "@/components/add-unit-modal";
-import { MemberRow } from "@/components/member-row";
-import { SectionHeader, EmptySectionHint } from "@/components/section-header";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import {
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
+  HashtagIcon,
+  UserAdd01Icon,
+} from "@hugeicons/core-free-icons";
+import { InviteModal } from "@/components/modals/invite-modal";
+import { AddUnitModal } from "@/components/modals/add-unit-modal";
+import { MemberRow } from "@/components/class/member-row";
+import { SectionHeader, EmptySectionHint } from "@/components/ui/section-header";
 import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
 
@@ -56,7 +62,7 @@ export default function ClassDetail() {
               onPress={() => router.back()}
               className="h-10 w-10 items-center justify-center rounded-full bg-black/30 active:bg-black/50"
             >
-              <ChevronLeft size={26} color="#fff" />
+              <HugeiconsIcon icon={ArrowLeft01Icon} size={26} color="#fff" />
             </Pressable>
           </View>
         </SafeAreaView>
@@ -78,7 +84,7 @@ export default function ClassDetail() {
             onPress={() => setInviteVisible(true)}
             className="h-11 flex-row items-center gap-2 rounded-full bg-primary px-4 active:opacity-90"
           >
-            <UserPlus size={18} color="#fff" />
+            <HugeiconsIcon icon={UserAdd01Icon} size={18} color="#fff" />
             <Text className="text-sm font-semibold text-primary-foreground">
               Invite
             </Text>
@@ -110,7 +116,7 @@ export default function ClassDetail() {
                 className="flex-row items-center gap-3 rounded-2xl px-2 py-3 active:bg-secondary"
               >
                 <View className="h-10 w-10 items-center justify-center rounded-xl bg-secondary">
-                  <Hash size={20} color="#4f46e5" />
+                  <HugeiconsIcon icon={HashtagIcon} size={20} color="#4f46e5" />
                 </View>
                 <View className="flex-1">
                   <Text className="text-base font-semibold text-foreground">
@@ -123,7 +129,7 @@ export default function ClassDetail() {
                     {announcementCount === 1 ? "" : "s"}
                   </Text>
                 </View>
-                <ChevronRight size={20} color="#9ca3af" />
+                <HugeiconsIcon icon={ArrowRight01Icon} size={20} color="#9ca3af" />
               </Pressable>
             );
           })

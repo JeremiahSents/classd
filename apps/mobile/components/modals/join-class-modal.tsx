@@ -8,7 +8,8 @@ import {
   View,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { X } from "lucide-react-native";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useClasses } from "@/lib/classes-store";
@@ -60,7 +61,7 @@ export function JoinClassModal({ visible, onClose }: JoinClassModalProps) {
               onPress={handleClose}
               className="h-9 w-9 items-center justify-center rounded-full active:bg-secondary"
             >
-              <X size={22} color="#71717a" />
+              <HugeiconsIcon icon={Cancel01Icon} size={22} color="#71717a" />
             </Pressable>
           </View>
 

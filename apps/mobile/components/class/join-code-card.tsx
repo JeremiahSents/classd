@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Share, Text, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { Check, Copy, Share2 } from "lucide-react-native";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { Tick02Icon, Copy01Icon, Share08Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 
 interface JoinCodeCardProps {
@@ -41,9 +42,9 @@ export function JoinCodeCard({ className, code }: JoinCodeCardProps) {
           label={copied ? "Copied" : "Copy code"}
           leftIcon={
             copied ? (
-              <Check size={20} color="#111" />
+              <HugeiconsIcon icon={Tick02Icon} size={20} color="#111" />
             ) : (
-              <Copy size={20} color="#111" />
+              <HugeiconsIcon icon={Copy01Icon} size={20} color="#111" />
             )
           }
           onPress={handleCopy}
@@ -52,7 +53,7 @@ export function JoinCodeCard({ className, code }: JoinCodeCardProps) {
           className="flex-1"
           variant="outline"
           label="Share link"
-          leftIcon={<Share2 size={20} color="#111" />}
+          leftIcon={<HugeiconsIcon icon={Share08Icon} size={20} color="#111" />}
           onPress={handleShare}
         />
       </View>

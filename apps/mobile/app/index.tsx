@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { Logo } from "@/components/logo";
+import { Logo } from "@/components/ui/logo";
 
 export default function Splash() {
   const router = useRouter();

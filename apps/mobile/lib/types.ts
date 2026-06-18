@@ -6,6 +6,14 @@ export interface Unit {
   classId: string;
   name: string;
   code: string;
+  /** Where the class meets, e.g. "SCI Lab 1", "Room 4.2". */
+  location?: string;
+  /** Weekday the class meets (0 = Sun … 6 = Sat). */
+  day?: number;
+  /** Start time, minutes from midnight (e.g. 8 * 60). */
+  startMinutes?: number;
+  /** End time, minutes from midnight. */
+  endMinutes?: number;
 }
 
 /** A user enrolled in a class. */

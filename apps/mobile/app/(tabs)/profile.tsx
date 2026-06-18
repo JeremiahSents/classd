@@ -1,17 +1,17 @@
-import type { ComponentType } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import type { IconSvgElement } from "@hugeicons/react-native";
 import {
-  Bell,
-  ChevronRight,
-  HelpCircle,
-  Info,
-  LogOut,
-  Pencil,
-  Repeat,
-  type LucideProps,
-} from "lucide-react-native";
+  Notification01Icon,
+  ArrowRight01Icon,
+  HelpCircleIcon,
+  InformationCircleIcon,
+  Logout01Icon,
+  PencilEdit01Icon,
+  RepeatIcon,
+} from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
@@ -26,7 +26,7 @@ function initials(name: string): string {
 
 interface SettingsItem {
   label: string;
-  Icon: ComponentType<LucideProps>;
+  Icon: IconSvgElement;
   onPress?: () => void;
 }
 
@@ -46,13 +46,13 @@ export default function Profile() {
   const items: SettingsItem[] = [
     {
       label: isLecturer ? "Switch to student view" : "Switch to lecturer view",
-      Icon: Repeat,
+      Icon: RepeatIcon,
       onPress: switchRole,
     },
-    { label: "Edit profile", Icon: Pencil },
-    { label: "Notifications", Icon: Bell },
-    { label: "Help & support", Icon: HelpCircle },
-    { label: "About classd", Icon: Info },
+    { label: "Edit profile", Icon: PencilEdit01Icon },
+    { label: "Notifications", Icon: Notification01Icon },
+    { label: "Help & support", Icon: HelpCircleIcon },
+    { label: "About classd", Icon: InformationCircleIcon },
   ];
 
   return (
@@ -108,11 +108,11 @@ export default function Profile() {
                 index > 0 ? "border-t border-border" : ""
               }`}
             >
-              <item.Icon size={20} color="#4f46e5" />
+              <HugeiconsIcon icon={item.Icon} size={20} color="#4f46e5" />
               <Text className="flex-1 text-base font-medium text-foreground">
                 {item.label}
               </Text>
-              <ChevronRight size={18} color="#9ca3af" />
+              <HugeiconsIcon icon={ArrowRight01Icon} size={18} color="#9ca3af" />
             </Pressable>
           ))}
         </View>
@@ -120,7 +120,7 @@ export default function Profile() {
         <Button
           label="Sign out"
           variant="outline"
-          leftIcon={<LogOut size={20} color="#111" />}
+          leftIcon={<HugeiconsIcon icon={Logout01Icon} size={20} color="#111" />}
           onPress={handleSignOut}
         />
       </ScrollView>

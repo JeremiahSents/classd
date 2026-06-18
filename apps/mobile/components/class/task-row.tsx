@@ -1,5 +1,10 @@
 import { Pressable, Text, View } from "react-native";
-import { CalendarClock, CheckCircle2, Circle } from "lucide-react-native";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import {
+  Appointment01Icon,
+  CheckmarkCircle02Icon,
+  CircleIcon,
+} from "@hugeicons/core-free-icons";
 import { TASK_TYPE_LABEL, type TaskType } from "@/lib/types";
 
 interface TaskRowProps {
@@ -43,9 +48,9 @@ export function TaskRow({
           className="pt-0.5"
         >
           {completed ? (
-            <CheckCircle2 size={22} color="#4f46e5" />
+            <HugeiconsIcon icon={CheckmarkCircle02Icon} size={22} color="#4f46e5" />
           ) : (
-            <Circle size={22} color="#9ca3af" />
+            <HugeiconsIcon icon={CircleIcon} size={22} color="#9ca3af" />
           )}
         </Pressable>
       ) : null}
@@ -71,7 +76,7 @@ export function TaskRow({
           </Text>
         ) : null}
         <View className="flex-row items-center gap-1.5">
-          <CalendarClock size={14} color="#71717a" />
+          <HugeiconsIcon icon={Appointment01Icon} size={14} color="#71717a" />
           <Text className="text-xs font-medium text-muted-foreground">{dueLabel}</Text>
         </View>
       </View>

@@ -8,13 +8,14 @@ export const seedClasses: Classroom[] = [
   { id: "math150", name: "Calculus I", code: "903517", coverUrl: coverUrlFor("math150") },
 ];
 
+// day: 0=Sun … 6=Sat. Times are minutes from midnight.
 export const seedUnits: Unit[] = [
-  { id: "u-bio-1", classId: "bio101", name: "Cell Biology", code: "BIO 1101" },
-  { id: "u-bio-2", classId: "bio101", name: "Genetics", code: "BIO 1102" },
-  { id: "u-cs-1", classId: "cs204", name: "Trees & Graphs", code: "CS 2041" },
-  { id: "u-cs-2", classId: "cs204", name: "Algorithms", code: "CS 2042" },
-  { id: "u-hist-1", classId: "hist110", name: "Modern Era", code: "HIS 1101" },
-  { id: "u-math-1", classId: "math150", name: "Limits & Derivatives", code: "MAT 1501" },
+  { id: "u-bio-1", classId: "bio101", name: "Cell Biology", code: "BIO 1101", location: "SCI Lab 1", day: 4, startMinutes: 8 * 60, endMinutes: 10 * 60 },
+  { id: "u-bio-2", classId: "bio101", name: "Genetics", code: "BIO 1102", location: "SCI 204", day: 4, startMinutes: 10 * 60 + 30, endMinutes: 12 * 60 },
+  { id: "u-cs-1", classId: "cs204", name: "Trees & Graphs", code: "CS 2041", location: "Tech 3.1", day: 4, startMinutes: 13 * 60, endMinutes: 15 * 60 },
+  { id: "u-cs-2", classId: "cs204", name: "Algorithms", code: "CS 2042", location: "Tech 3.4", day: 4, startMinutes: 15 * 60 + 30, endMinutes: 17 * 60 },
+  { id: "u-hist-1", classId: "hist110", name: "Modern Era", code: "HIS 1101", location: "Hum 2.1", day: 3, startMinutes: 11 * 60, endMinutes: 13 * 60 },
+  { id: "u-math-1", classId: "math150", name: "Limits & Derivatives", code: "MAT 1501", location: "Math 1.0", day: 5, startMinutes: 9 * 60, endMinutes: 11 * 60 },
 ];
 
 export const seedMembers: Record<string, Member[]> = {

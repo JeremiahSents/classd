@@ -3,17 +3,18 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
-import { ChevronLeft, Plus } from "lucide-react-native";
-import { SegmentedTabs } from "@/components/segmented-tabs";
-import { TaskRow } from "@/components/task-row";
-import { MaterialRow } from "@/components/material-row";
-import { AddTaskModal } from "@/components/add-task-modal";
-import { AddAnnouncementModal } from "@/components/add-announcement-modal";
-import { EmptySectionHint } from "@/components/section-header";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { ArrowLeft01Icon, PlusSignIcon } from "@hugeicons/core-free-icons";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { TaskRow } from "@/components/class/task-row";
+import { MaterialRow } from "@/components/class/material-row";
+import { AddTaskModal } from "@/components/modals/add-task-modal";
+import { AddAnnouncementModal } from "@/components/modals/add-announcement-modal";
+import { EmptySectionHint } from "@/components/ui/section-header";
 import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
 
-const TABS = ["To-do", "Announcements", "Materials"];
+const TABS = ["Tasks", "Announcements", "Materials"];
 
 function formatSize(bytes?: number): string | undefined {
   if (!bytes && bytes !== 0) return undefined;
@@ -88,7 +89,7 @@ export default function UnitDetail() {
           onPress={() => router.back()}
           className="h-10 w-10 items-center justify-center rounded-full active:bg-secondary"
         >
-          <ChevronLeft size={26} color="#111" />
+          <HugeiconsIcon icon={ArrowLeft01Icon} size={26} color="#111" />
         </Pressable>
         <View className="flex-1">
           <Text className="text-xl font-bold text-foreground" numberOfLines={1}>
@@ -107,7 +108,7 @@ export default function UnitDetail() {
             onPress={handleAdd}
             className="h-10 w-10 items-center justify-center rounded-full bg-primary active:opacity-90"
           >
-            <Plus size={22} color="#fff" />
+            <HugeiconsIcon icon={PlusSignIcon} size={22} color="#fff" />
           </Pressable>
         ) : (
           <View className="h-10 w-10" />

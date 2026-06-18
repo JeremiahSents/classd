@@ -9,7 +9,13 @@ import {
   View,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
-import { Check, Copy, Share2, X } from "lucide-react-native";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import {
+  Tick02Icon,
+  Copy01Icon,
+  Share08Icon,
+  Cancel01Icon,
+} from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useClasses } from "@/lib/classes-store";
@@ -79,7 +85,7 @@ export function CreateClassModal({ visible, onClose }: CreateClassModalProps) {
               onPress={handleClose}
               className="h-9 w-9 items-center justify-center rounded-full active:bg-secondary"
             >
-              <X size={22} color="#71717a" />
+              <HugeiconsIcon icon={Cancel01Icon} size={22} color="#71717a" />
             </Pressable>
           </View>
 
@@ -103,9 +109,9 @@ export function CreateClassModal({ visible, onClose }: CreateClassModalProps) {
                   label={copied ? "Copied" : "Copy code"}
                   leftIcon={
                     copied ? (
-                      <Check size={20} color="#111" />
+                      <HugeiconsIcon icon={Tick02Icon} size={20} color="#111" />
                     ) : (
-                      <Copy size={20} color="#111" />
+                      <HugeiconsIcon icon={Copy01Icon} size={20} color="#111" />
                     )
                   }
                   onPress={handleCopy}
@@ -114,7 +120,7 @@ export function CreateClassModal({ visible, onClose }: CreateClassModalProps) {
                   className="flex-1"
                   variant="outline"
                   label="Share link"
-                  leftIcon={<Share2 size={20} color="#111" />}
+                  leftIcon={<HugeiconsIcon icon={Share08Icon} size={20} color="#111" />}
                   onPress={handleShare}
                 />
               </View>

@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Modal, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import type { IconSvgElement } from "@hugeicons/react-native";
 import {
-  GraduationCap,
-  Megaphone,
-  Plus,
-  ClipboardList,
-  type LucideIcon,
-} from "lucide-react-native";
+  Mortarboard02Icon,
+  Megaphone01Icon,
+  PlusSignIcon,
+  TaskDone01Icon,
+} from "@hugeicons/core-free-icons";
 
 interface AddMenuProps {
   onNewClass: () => void;
@@ -17,7 +18,7 @@ interface AddMenuProps {
 
 interface MenuItem {
   label: string;
-  Icon: LucideIcon;
+  Icon: IconSvgElement;
   onPress?: () => void;
 }
 
@@ -30,9 +31,9 @@ export function AddMenu({
   const [open, setOpen] = useState(false);
 
   const items: MenuItem[] = [
-    { label: "New class", Icon: GraduationCap, onPress: onNewClass },
-    { label: "New announcement", Icon: Megaphone, onPress: onNewAnnouncement },
-    { label: "New task", Icon: ClipboardList, onPress: onNewTask },
+    { label: "New class", Icon: Mortarboard02Icon, onPress: onNewClass },
+    { label: "New announcement", Icon: Megaphone01Icon, onPress: onNewAnnouncement },
+    { label: "New task", Icon: TaskDone01Icon, onPress: onNewTask },
   ];
 
   function select(item: MenuItem) {
@@ -48,7 +49,7 @@ export function AddMenu({
         onPress={() => setOpen(true)}
         className="h-11 w-11 items-center justify-center rounded-full bg-primary active:opacity-90"
       >
-        <Plus size={22} color="#fff" />
+        <HugeiconsIcon icon={PlusSignIcon} size={22} color="#fff" />
       </Pressable>
 
       <Modal
@@ -72,7 +73,7 @@ export function AddMenu({
                   index > 0 ? "border-t border-border" : ""
                 }`}
               >
-                <item.Icon size={20} color="#4f46e5" />
+                <HugeiconsIcon icon={item.Icon} size={20} color="#4f46e5" />
                 <Text className="text-base font-medium text-popover-foreground">
                   {item.label}
                 </Text>

@@ -1,18 +1,17 @@
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
-import Animated from "react-native-reanimated";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { Plus, UserPlus } from "lucide-react-native";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { PlusSignIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { BooksIcon } from "@/components/ui/books-icon";
 import { Button } from "@/components/ui/button";
-import { ClassCard } from "@/components/class-card";
-import { CreateClassModal } from "@/components/create-class-modal";
-import { JoinClassModal } from "@/components/join-class-modal";
-import { AddMenu } from "@/components/add-menu";
+import { ClassCard } from "@/components/class/class-card";
+import { CreateClassModal } from "@/components/modals/create-class-modal";
+import { JoinClassModal } from "@/components/modals/join-class-modal";
+import { AddMenu } from "@/components/modals/add-menu";
 import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
-import { useTabBarScrollHandler } from "@/lib/tab-bar-scroll";
 
 export default function Classes() {
   const router = useRouter();
@@ -20,7 +19,6 @@ export default function Classes() {
   const { role } = useSession();
   const [createVisible, setCreateVisible] = useState(false);
   const [joinVisible, setJoinVisible] = useState(false);
-  const scrollHandler = useTabBarScrollHandler();
 
   const isLecturer = role === "lecturer";
   const visibleClasses = isLecturer
@@ -42,7 +40,7 @@ export default function Classes() {
             onPress={() => setJoinVisible(true)}
             className="h-11 w-11 items-center justify-center rounded-full bg-primary active:opacity-90"
           >
-            <UserPlus size={22} color="#fff" />
+            <HugeiconsIcon icon={UserAdd01Icon} size={22} color="#fff" />
           </Pressable>
         )}
       </View>
@@ -54,18 +52,16 @@ export default function Classes() {
             label={isLecturer ? "Create your first class" : "Join your first class"}
             leftIcon={
               isLecturer ? (
-                <Plus size={20} color="#fff" />
+                <HugeiconsIcon icon={PlusSignIcon} size={20} color="#fff" />
               ) : (
-                <UserPlus size={20} color="#fff" />
+                <HugeiconsIcon icon={UserAdd01Icon} size={20} color="#fff" />
               )
             }
             onPress={() => (isLecturer ? setCreateVisible(true) : setJoinVisible(true))}
           />
         </View>
       ) : (
-        <Animated.ScrollView
-          onScroll={scrollHandler}
-          scrollEventThrottle={16}
+        <ScrollView
           contentContainerClassName="gap-4 px-6 pb-32"
           showsVerticalScrollIndicator={false}
         >
@@ -78,7 +74,7 @@ export default function Classes() {
               }
             />
           ))}
-        </Animated.ScrollView>
+        </ScrollView>
       )}
 
       <CreateClassModal
