@@ -14,15 +14,16 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
   return (
     <View className={cn("gap-2", containerClassName)}>
       {label ? (
-        <Text className="text-sm text-center font-medium text-foreground">
+        <Text className="text-sm text-left font-bold text-foreground">
           {label}
         </Text>
       ) : null}
       <TextInput
         ref={ref}
+        textAlignVertical="center"
         placeholderTextColor="#9CA3AF"
         className={cn(
-          "h-14 rounded-xl border border-input bg-card px-4 text-base text-foreground",
+          "h-14 rounded-xl border border-input bg-card px-4 py-0 text-base leading-5 text-foreground",
           className as string,
         )}
         {...props}

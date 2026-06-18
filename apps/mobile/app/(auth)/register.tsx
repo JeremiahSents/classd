@@ -2,26 +2,62 @@ import { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   Text,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Link, useRouter } from "expo-router";
+import { useRouter } from "expo-router";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GoogleIcon } from "@/components/ui/google-icon";
+import { SegmentedTabs } from "@/components/segmented-tabs";
+import { useSession, type Role } from "@/lib/session";
+import { AppleIcon } from "@/components/ui/apple-icon";
+
+const ROLES: Role[] = ["lecturer", "student"];
 
 export default function Register() {
   const router = useRouter();
+  const { signIn } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [roleIndex, setRoleIndex] = useState(0);
+  const [showPassword, setShowPassword] = useState(false);
+  const passwordReveal = useSharedValue(0);
 
-  function handleRegister() {
+  const passwordStyle = useAnimatedStyle(() => ({
+    opacity: passwordReveal.value,
+    transform: [{ translateY: (1 - passwordReveal.value) * -10 }],
+  }));
+
+  function enterApp() {
+    signIn(ROLES[roleIndex]);
+    router.replace("/(tabs)");
+  }
+
+  function handleEmailContinue() {
+    if (!showPassword) {
+      setShowPassword(true);
+      passwordReveal.value = withTiming(1, { duration: 220 });
+      return;
+    }
+
     // TODO: wire up to auth backend
     console.log("register", { email, password });
+    enterApp();
+  }
+
+  function handleSocialAuth(provider: "google" | "apple") {
+    console.log(`${provider} sign-in`);
+    enterApp();
   }
 
   return (
@@ -31,19 +67,17 @@ export default function Register() {
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
-          contentContainerClassName="grow px-6 pb-8"
+          contentContainerClassName="grow justify-center px-6 py-8"
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          <View className="w-full max-w-md self-center">
           {/* Header */}
-          <View className="gap-6 pb-8 pt-6">
-            <Logo size={64} style={{ alignSelf: "center" }} />
+          <View className="gap-6 pb-8">
+            <Logo size={96} style={{ alignSelf: "center" }} />
             <View className="gap-1.5">
               <Text className="text-2xl font-bold text-foreground text-center">
                 Create your Account
-              </Text>
-              <Text className="text-base text-muted-foreground text-center">
-                Sign up with your university email to get started.
               </Text>
             </View>
           </View>
@@ -61,17 +95,35 @@ export default function Register() {
               autoCorrect={false}
               inputMode="email"
             />
-            <Input
-              label="Password"
-              placeholder="Create a password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              autoComplete="password-new"
-            />
+            {showPassword ? (
+              <Animated.View style={passwordStyle}>
+                <Input
+                  label="Password"
+                  placeholder="Create a password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete="password-new"
+                />
+              </Animated.View>
+            ) : null}
 
-            <Button label="Create account" onPress={handleRegister} />
+            <View className="gap-2">
+              <Text className="text-center text-sm font-medium text-foreground">
+                I am a
+              </Text>
+              <SegmentedTabs
+                tabs={["Lecturer", "Student"]}
+                active={roleIndex}
+                onChange={setRoleIndex}
+              />
+            </View>
+
+            <Button
+              label={showPassword ? "Create account" : "Continue with email"}
+              onPress={handleEmailContinue}
+            />
 
             {/* Separator */}
             <View className="flex-row items-center gap-4 py-2">
@@ -86,22 +138,15 @@ export default function Register() {
               label="Continue with Google"
               variant="outline"
               leftIcon={<GoogleIcon size={20} />}
-              onPress={() => console.log("google sign-in")}
+              onPress={() => handleSocialAuth("google")}
+            />
+            <Button
+              label="Continue with Apple"
+              variant="outline"
+              leftIcon={<AppleIcon size={20} />}
+              onPress={() => handleSocialAuth("apple")}
             />
           </View>
-
-          {/* Footer */}
-          <View className="mt-auto flex-row justify-center gap-1 pt-8">
-            <Text className="text-base text-muted-foreground">
-              Already have an account?
-            </Text>
-            <Link href="/login" asChild>
-              <Pressable>
-                <Text className="text-base font-semibold text-primary">
-                  Sign in
-                </Text>
-              </Pressable>
-            </Link>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
