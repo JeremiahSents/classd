@@ -1,3 +1,9 @@
+// MIGRATION NOTE (backend): this is fake auth — it just swaps between two
+// hardcoded profiles. To go live, drive this from `@/lib/api` auth methods:
+// `api.onAuthStateChanged` to populate the session, `api.signInWithEmail` /
+// `signInWithGoogle` / `signUpWithEmail` from the auth screens, `api.signOut`
+// from profile, and `api.updateProfile` for avatar changes. `switchRole` is a
+// dev-only convenience and should be dropped once real roles come from auth.
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { NOTION_FACES } from "./avatars";
 

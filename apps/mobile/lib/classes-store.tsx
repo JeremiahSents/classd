@@ -1,3 +1,9 @@
+// MIGRATION NOTE (backend): this store currently holds all class/task/member/
+// announcement/material state in memory, seeded from `@/lib/dummy-data`. To go
+// live, replace the local mutations below with calls to `@/lib/api` (the typed
+// `ClassdApi`). Each selector maps to one api method — e.g. `tasksForClass` →
+// `api.listTasks(classId)`, `addTask` → `api.createTask(...)`. See
+// BACKEND_INTEGRATION.md for the recommended order and async/loading pattern.
 import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import { createClassroom, type Classroom } from "@/lib/classes";
 import type {
