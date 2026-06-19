@@ -13,13 +13,13 @@ Cloud Storage, with optional Cloud Functions for server-side logic.
 ## 1. The big picture
 
 The whole app talks to the backend through **one typed interface**:
-[`ClassdApi`](apps/mobile/lib/api/contract.ts). There are two implementations:
+[`ClassdApi`](lib/api/contract.ts). There are two implementations:
 
 | File | What it is | Status |
 |---|---|---|
-| [`lib/api/mock-impl.ts`](apps/mobile/lib/api/mock-impl.ts) | In-memory seed data (current prototype) | ✅ done |
-| [`lib/api/firebase-impl.ts`](apps/mobile/lib/api/firebase-impl.ts) | Real Firebase | ⬜ **you build this** |
-| [`lib/api/index.ts`](apps/mobile/lib/api/index.ts) | Picks the impl via `EXPO_PUBLIC_API_BACKEND` | ✅ done |
+| [`lib/api/mock-impl.ts`](lib/api/mock-impl.ts) | In-memory seed data (current prototype) | ✅ done |
+| [`lib/api/firebase-impl.ts`](lib/api/firebase-impl.ts) | Real Firebase | ⬜ **you build this** |
+| [`lib/api/index.ts`](lib/api/index.ts) | Picks the impl via `EXPO_PUBLIC_API_BACKEND` | ✅ done |
 
 **You implement every method in `firebase-impl.ts`** so it satisfies the
 contract. Use `mock-impl.ts` as the behavioural reference — it shows exactly
@@ -27,8 +27,8 @@ what each method should return. When a method works, flip the env flag and the
 UI uses it with zero UI changes.
 
 > The UI currently reads from two React Context stores —
-> [`classes-store.tsx`](apps/mobile/lib/classes-store.tsx) and
-> [`session.tsx`](apps/mobile/lib/session.tsx) — that still hold local state.
+> [`classes-store.tsx`](lib/classes-store.tsx) and
+> [`session.tsx`](lib/session.tsx) — that still hold local state.
 > The last step (Section 7) is rewiring those stores to call `api.*`. Do the
 > contract first; rewire the stores last.
 
@@ -48,17 +48,17 @@ UI uses it with zero UI changes.
 
 ## 2. Environment setup
 
-1. Copy [`apps/mobile/.env.example`](apps/mobile/.env.example) → `apps/mobile/.env`.
+1. Copy [`.env.example`](.env.example) → `.env`.
 2. Fill `EXPO_PUBLIC_FIREBASE_API_KEY` from the Firebase console
    (Project settings → General → Your apps → SDK config). The others are
    pre-filled for `classd-f6db8`.
 3. Keep `EXPO_PUBLIC_API_BACKEND=mock` while building; switch to `firebase`
    to test against the real backend.
-4. Restart with `pnpm mobile` (runs `expo start --clear`) after env changes —
+4. Restart with `pnpm start` (runs `expo start --clear`) after env changes —
    Expo only reads `EXPO_PUBLIC_*` at bundle time.
 
 Firebase singletons are already set up in
-[`apps/mobile/lib/firebase.ts`](apps/mobile/lib/firebase.ts) and export
+[`lib/firebase.ts`](lib/firebase.ts) and export
 `auth`, `db`, `storage`. Uncomment the import at the top of `firebase-impl.ts`.
 
 > **Auth persistence:** to keep users signed in across restarts, install
@@ -98,7 +98,7 @@ users/{uid}/completions/{taskId}
 
 ### Field shapes
 The exact TypeScript shapes are the entity interfaces in
-[`contract.ts`](apps/mobile/lib/api/contract.ts) (`UserProfile`, `Class`,
+[`contract.ts`](lib/api/contract.ts) (`UserProfile`, `Class`,
 `Member`, `Task`, `Announcement`, `Material`, `ScheduleBlock`). Store native
 Firestore `Timestamp`s in the DB; convert to ISO strings on read.
 
@@ -190,11 +190,11 @@ Build bottom-up; the app keeps running on mock data the whole time.
 
 1. **Env + smoke test.** Do Section 2. Confirm `import { auth, db, storage } from "@/lib/firebase"` resolves and the app still boots on `mock`.
 2. **Auth.** Implement the auth methods in `firebase-impl.ts`. Wire
-   [`session.tsx`](apps/mobile/lib/session.tsx) to `api.onAuthStateChanged` /
+   [`session.tsx`](lib/session.tsx) to `api.onAuthStateChanged` /
    `signIn*` / `signOut`, and the auth screens
-   ([`register.tsx`](apps/mobile/app/(auth)/register.tsx) — see the
+   ([`register.tsx`](app/(auth)/register.tsx) — see the
    `// TODO: wire up to auth backend`) and profile sign-out
-   ([`profile.tsx`](apps/mobile/app/(tabs)/profile.tsx) — `// TODO: clear auth session`).
+   ([`profile.tsx`](app/(tabs)/profile.tsx) — `// TODO: clear auth session`).
    This is the foundation everything else needs.
 3. **Classes read path.** `listClasses`, `getClass`. Seed one class manually in
    the console to test.
@@ -205,9 +205,9 @@ Build bottom-up; the app keeps running on mock data the whole time.
 7. **Security rules** (Section 5) — write and emulator-test as you go, harden
    before any real users.
 8. **Rewire the stores.** Replace the in-memory mutations in
-   [`classes-store.tsx`](apps/mobile/lib/classes-store.tsx) with `api.*` calls,
+   [`classes-store.tsx`](lib/classes-store.tsx) with `api.*` calls,
    adding `loading`/`error` state per the pattern below. Then delete
-   [`dummy-data.ts`](apps/mobile/lib/dummy-data.ts).
+   [`dummy-data.ts`](lib/dummy-data.ts).
 9. Flip `EXPO_PUBLIC_API_BACKEND=firebase` and run the full app.
 
 ### Async rewire pattern (step 8)
@@ -241,4 +241,4 @@ optimistically update local state.
 - [ ] Sign up → create class → join by code (2nd account) → post task/
       announcement → upload material → mark complete, all persist across reload.
 - [ ] `dummy-data.ts` deleted; stores read from `api`.
-- [ ] `pnpm --filter mobile typecheck` passes.
+- [ ] `pnpm typecheck` passes.
