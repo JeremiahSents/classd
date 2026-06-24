@@ -10,7 +10,13 @@
 // throws in React Native. Use a native analytics SDK later if needed.
 
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getAuth, type Auth } from "firebase/auth";
+import { getAuth, initializeAuth, type Auth } from "firebase/auth";
+// getReactNativePersistence ships only in firebase's React Native build, so the
+// browser type definitions TypeScript resolves don't list it. The import is
+// valid at runtime under Metro/Expo.
+// @ts-ignore
+import { getReactNativePersistence } from "firebase/auth";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFirestore, type Firestore } from "firebase/firestore";
 import { getStorage, type FirebaseStorage } from "firebase/storage";
 
@@ -26,10 +32,20 @@ const firebaseConfig = {
 // Avoid re-initializing on Fast Refresh.
 const app: FirebaseApp = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
-// TODO(backend): for persisted auth across app restarts, install
-// `@react-native-async-storage/async-storage` and switch to
-// `initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) })`.
-export const auth: Auth = getAuth(app);
+// Persist the auth session across app restarts using AsyncStorage on native.
+// `initializeAuth` may only be called once per app; on Fast Refresh (or on web,
+// where getReactNativePersistence is undefined) we fall back to getAuth().
+function resolveAuth(): Auth {
+  try {
+    return initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch {
+    return getAuth(app);
+  }
+}
+
+export const auth: Auth = resolveAuth();
 export const db: Firestore = getFirestore(app);
 export const storage: FirebaseStorage = getStorage(app);
 
