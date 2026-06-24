@@ -20,7 +20,7 @@
  *    never passes a userId for the caller.
  */
 
-export type Role = "lecturer" | "student";
+export type Role = "classRep" | "student";
 export type TaskType = "assignment" | "cat" | "deadline";
 
 /** Standard error the UI knows how to display. */
@@ -70,7 +70,7 @@ export interface Class {
   /** 6-digit join code, unique, issued by the backend on create. */
   code: string;
   coverUrl: string;
-  /** uid of the lecturer who owns the class. */
+  /** uid of the class representative who owns the class. */
   ownerId: string;
   /** member id (uid) of the assigned class rep, if any. */
   classRepId?: string;
@@ -189,23 +189,23 @@ export interface ClassdApi {
   updateProfile(patch: Partial<Pick<UserProfile, "name" | "avatarUrl">>): Promise<UserProfile>;
 
   // ---- Classes ----
-  /** Lecturer: classes they own. Student: classes they're enrolled in. */
+  /** Class rep: classes they own. Student: classes they're enrolled in. */
   listClasses(): Promise<Class[]>;
   getClass(classId: string): Promise<Class>;
-  createClass(input: CreateClassInput): Promise<Class>; // lecturer only
+  createClass(input: CreateClassInput): Promise<Class>; // class rep only
   joinClassByCode(code: string): Promise<Class>; // student
   leaveClass(classId: string): Promise<void>; // student
-  assignClassRep(classId: string, memberId: string): Promise<void>; // lecturer
+  assignClassRep(classId: string, memberId: string): Promise<void>; // class rep
 
   // ---- Members ----
   listMembers(classId: string): Promise<Member[]>;
-  removeMember(classId: string, memberId: string): Promise<void>; // lecturer
+  removeMember(classId: string, memberId: string): Promise<void>; // class rep
 
   // ---- Tasks ----
   listTasks(classId: string): Promise<Task[]>;
   /** All tasks across the caller's classes (home dashboard). */
   listMyTasks(): Promise<Task[]>;
-  createTask(classId: string, input: CreateTaskInput): Promise<Task>; // lecturer
+  createTask(classId: string, input: CreateTaskInput): Promise<Task>; // class rep
   /** Per-user completion state. */
   listCompletedTaskIds(): Promise<string[]>;
   setTaskComplete(taskId: string, complete: boolean): Promise<void>;

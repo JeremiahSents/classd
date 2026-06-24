@@ -292,7 +292,7 @@ export const firebaseApi: ClassdApi = {
   },
 
   // ---- Classes ----
-  // Lecturer: query classes where ownerId == uid.
+  // Class rep: query classes where ownerId == uid.
   // Student: query collectionGroup("members") where uid, then load classes.
   async listClasses(): Promise<Class[]> {
     return notImplemented("listClasses");

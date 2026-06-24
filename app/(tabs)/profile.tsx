@@ -11,7 +11,6 @@ import {
   Logout01Icon,
   Settings01Icon,
   UserEdit01Icon,
-  UserSwitchIcon,
   Camera02Icon,
 } from "@hugeicons/core-free-icons";
 import { useSession } from "@/lib/session";
@@ -27,32 +26,35 @@ interface SettingsItem {
 
 export default function Profile() {
   const router = useRouter();
-  const { role, name, email, avatarUrl, updateAvatar, switchRole } = useSession();
+  const { role, name, email, avatarUrl, updateAvatar, signOut } = useSession();
   const { classes, tasks, enrolledClassIds, isTaskComplete } = useClasses();
 
   const [avatarPickerVisible, setAvatarPickerVisible] = useState(false);
 
-  function handleSignOut() {
-    // TODO: clear auth session
-    router.replace("/(auth)/register");
+  async function handleSignOut() {
+    try {
+      await signOut();
+    } finally {
+      router.replace("/(auth)/register");
+    }
   }
 
-  const isLecturer = role === "lecturer";
+  function handleAvatarSelect(url: string) {
+    updateAvatar(url).catch(() => {});
+  }
+
+  const isClassRep = role === "classRep";
+  const roleLabel = isClassRep ? "Class Representative" : "Student";
 
   // Dummy stats
-  const activeClasses = isLecturer ? classes.length : enrolledClassIds.length;
-  const pendingTasks = isLecturer
-    ? tasks.length // for lecturer, total tasks set
+  const activeClasses = isClassRep ? classes.length : enrolledClassIds.length;
+  const pendingTasks = isClassRep
+    ? tasks.length // for class rep, total tasks set
     : tasks.filter(
         (t) => enrolledClassIds.includes(t.classId) && !isTaskComplete(t.id),
       ).length;
 
   const items: SettingsItem[] = [
-    {
-      label: isLecturer ? "Switch to student view" : "Switch to lecturer view",
-      icon: UserSwitchIcon,
-      onPress: () => switchRole(),
-    },
     {
       label: "Edit Profile",
       icon: UserEdit01Icon,
@@ -77,7 +79,7 @@ export default function Profile() {
         visible={avatarPickerVisible}
         currentAvatarUrl={avatarUrl}
         onClose={() => setAvatarPickerVisible(false)}
-        onSelect={updateAvatar}
+        onSelect={handleAvatarSelect}
       />
       <ScrollView
         contentContainerClassName="px-6 pb-32 pt-8"
@@ -110,7 +112,7 @@ export default function Profile() {
             </Text>
             <View className="mt-1 rounded-full bg-primary/10 px-3 py-1">
               <Text className="text-xs font-bold capitalize tracking-wide text-primary">
-                {role} account
+                {roleLabel} account
               </Text>
             </View>
           </View>

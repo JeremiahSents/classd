@@ -1,11 +1,11 @@
 # classd
 
-classd is a mobile-first classroom management app built with Expo and React Native. It helps lecturers create classes and share class activity, while students can join classes, view their schedule, track tasks, and keep up with announcements.
+classd is a mobile-first classroom management app built with Expo and React Native. It helps class representatives create classes and share class activity, while students can join classes, view their schedule, track tasks, and keep up with announcements.
 
 ## What it does
 
-- **Class management**: Lecturers can create classes, and students can join the classes they are enrolled in.
-- **Role-based experience**: Lecturer and student views show the right actions for each role.
+- **Class management**: Class representatives can create classes, and students can join the classes they are enrolled in.
+- **Role-based experience**: Class representative and student views show the right actions for each role.
 - **Home dashboard**: Users can see today's classes, upcoming tasks, and recent updates in one place.
 - **Task tracking**: Students can mark tasks as complete from the app.
 - **Announcements**: Classes can surface updates and announcements for enrolled users.

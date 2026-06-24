@@ -1,76 +1,97 @@
-// MIGRATION NOTE (backend): this is fake auth — it just swaps between two
-// hardcoded profiles. To go live, drive this from `@/lib/api` auth methods:
-// `api.onAuthStateChanged` to populate the session, `api.signInWithEmail` /
-// `signInWithGoogle` / `signUpWithEmail` from the auth screens, `api.signOut`
-// from profile, and `api.updateProfile` for avatar changes. `switchRole` is a
-// dev-only convenience and should be dropped once real roles come from auth.
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import { NOTION_FACES } from "./avatars";
+// Real auth session, driven by `@/lib/api`.
+//
+// `api.onAuthStateChanged` is the source of truth: it fires on launch (restoring
+// a persisted session) and on every sign-in / sign-out. The auth screens call
+// the sign-in/up methods, profile calls signOut/updateAvatar, and the rest of
+// the UI just reads role/name/avatarUrl off the current user.
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  api,
+  type Role,
+  type SignInInput,
+  type SignUpInput,
+  type UserProfile,
+} from "@/lib/api";
 
-export type Role = "lecturer" | "student";
-
-interface Profile {
-  name: string;
-  email: string;
-  avatarUrl: string;
-}
-
-/** Hardcoded identities per role until real auth lands. */
-const PROFILES: Record<Role, Profile> = {
-  lecturer: { 
-    name: "Jeremiah Sentomero", 
-    email: "sentomerojeremy@gmail.com",
-    avatarUrl: NOTION_FACES[0],
-  },
-  student: { 
-    name: "Brian Otieno", 
-    email: "brian.otieno@strathmore.edu",
-    avatarUrl: NOTION_FACES[1],
-  },
-};
+export type { Role };
 
 interface Session {
+  /** True until the first auth-state callback resolves on launch. */
+  loading: boolean;
+  isAuthenticated: boolean;
+  user: UserProfile | null;
+
+  // Convenience accessors (safe defaults while signed out).
   role: Role;
   name: string;
   email: string;
   firstName: string;
   avatarUrl: string;
-  updateAvatar: (url: string) => void;
-  signIn: (role: Role) => void;
-  signOut: () => void;
-  /** Quick role swap (dev convenience to preview the other view). */
-  switchRole: () => void;
+
+  // Actions — all async, all throw ApiError on failure for the UI to display.
+  signUpWithEmail: (input: SignUpInput) => Promise<void>;
+  signInWithEmail: (input: SignInInput) => Promise<void>;
+  signInWithGoogle: (idToken: string, role?: Role) => Promise<void>;
+  signInWithApple: (identityToken: string, role?: Role) => Promise<void>;
+  signOut: () => Promise<void>;
+  updateAvatar: (url: string) => Promise<void>;
 }
 
 const SessionContext = createContext<Session | null>(null);
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [role, setRole] = useState<Role>("lecturer");
-  // Store custom avatars per role so they don't reset when switching roles
-  const [customAvatars, setCustomAvatars] = useState<Record<Role, string>>({
-    lecturer: PROFILES.lecturer.avatarUrl,
-    student: PROFILES.student.avatarUrl,
-  });
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const value = useMemo<Session>(() => {
-    const profile = PROFILES[role];
-    const avatarUrl = customAvatars[role];
-    
-    return {
-      role,
-      name: profile.name,
-      email: profile.email,
-      firstName: profile.name.split(" ")[0],
-      avatarUrl,
-      updateAvatar: (url: string) => {
-        setCustomAvatars((prev) => ({ ...prev, [role]: url }));
+  useEffect(() => {
+    const unsubscribe = api.onAuthStateChanged((u) => {
+      setUser(u);
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  const value = useMemo<Session>(
+    () => ({
+      loading,
+      isAuthenticated: !!user,
+      user,
+      role: user?.role ?? "student",
+      name: user?.name ?? "",
+      email: user?.email ?? "",
+      firstName: user?.name?.split(" ")[0] ?? "",
+      avatarUrl: user?.avatarUrl ?? "",
+
+      signUpWithEmail: async (input) => {
+        await api.signUpWithEmail(input);
       },
-      signIn: setRole,
-      signOut: () => setRole("lecturer"),
-      switchRole: () =>
-        setRole((prev) => (prev === "lecturer" ? "student" : "lecturer")),
-    };
-  }, [role, customAvatars]);
+      signInWithEmail: async (input) => {
+        await api.signInWithEmail(input);
+      },
+      signInWithGoogle: async (idToken, role) => {
+        await api.signInWithGoogle(idToken, role);
+      },
+      signInWithApple: async (identityToken, role) => {
+        await api.signInWithApple(identityToken, role);
+      },
+      signOut: async () => {
+        await api.signOut();
+      },
+      updateAvatar: async (url) => {
+        // profile-doc change won't refire onAuthStateChanged, so update locally.
+        const updated = await api.updateProfile({ avatarUrl: url });
+        setUser(updated);
+      },
+    }),
+    [user, loading],
+  );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }

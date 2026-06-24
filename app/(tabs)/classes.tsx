@@ -20,8 +20,8 @@ export default function Classes() {
   const [createVisible, setCreateVisible] = useState(false);
   const [joinVisible, setJoinVisible] = useState(false);
 
-  const isLecturer = role === "lecturer";
-  const visibleClasses = isLecturer
+  const isClassRep = role === "classRep";
+  const visibleClasses = isClassRep
     ? classes
     : classes.filter((c) => enrolledClassIds.includes(c.id));
   const isEmpty = visibleClasses.length === 0;
@@ -33,10 +33,10 @@ export default function Classes() {
         <Text className="text-2xl font-bold text-foreground">Classes</Text>
         <Pressable
           accessibilityRole="button"
-          onPress={() => (isLecturer ? setCreateVisible(true) : setJoinVisible(true))}
+          onPress={() => (isClassRep ? setCreateVisible(true) : setJoinVisible(true))}
           className="h-11 w-11 items-center justify-center rounded-full bg-primary active:opacity-90"
         >
-          {isLecturer ? (
+          {isClassRep ? (
             <HugeiconsIcon icon={PlusSignIcon} size={22} color="#fff" />
           ) : (
             <HugeiconsIcon icon={UserAdd01Icon} size={22} color="#fff" />
@@ -48,15 +48,15 @@ export default function Classes() {
         <View className="flex-1 items-center justify-center gap-8 px-6 pb-24">
           <BooksIcon size={120} />
           <Button
-            label={isLecturer ? "Create your first class" : "Join your first class"}
+            label={isClassRep ? "Create your first class" : "Join your first class"}
             leftIcon={
-              isLecturer ? (
+              isClassRep ? (
                 <HugeiconsIcon icon={PlusSignIcon} size={20} color="#fff" />
               ) : (
                 <HugeiconsIcon icon={UserAdd01Icon} size={20} color="#fff" />
               )
             }
-            onPress={() => (isLecturer ? setCreateVisible(true) : setJoinVisible(true))}
+            onPress={() => (isClassRep ? setCreateVisible(true) : setJoinVisible(true))}
           />
         </View>
       ) : (

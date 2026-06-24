@@ -21,17 +21,20 @@ import { GoogleIcon } from "@/components/ui/google-icon";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { useSession, type Role } from "@/lib/session";
 import { AppleIcon } from "@/components/ui/apple-icon";
+import { ApiError } from "@/lib/api";
 
-const ROLES: Role[] = ["lecturer", "student"];
+const ROLES: Role[] = ["classRep", "student"];
 
 export default function Register() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const { signIn } = useSession();
+  const { signUpWithEmail, signInWithEmail } = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [roleIndex, setRoleIndex] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const stepProgress = useSharedValue(0);
 
   const emailStepStyle = useAnimatedStyle(() => ({
@@ -44,26 +47,50 @@ export default function Register() {
     transform: [{ translateX: width * (1 - stepProgress.value) }],
   }));
 
-  function enterApp() {
-    signIn(ROLES[roleIndex]);
-    router.replace("/(tabs)");
+  async function submitCredentials() {
+    setError(null);
+    setSubmitting(true);
+    const role = ROLES[roleIndex];
+    try {
+      try {
+        await signUpWithEmail({ email: email.trim(), password, role });
+      } catch (e) {
+        // Returning user: the account already exists, so sign in instead. This
+        // lets the single register screen handle both new and existing users.
+        if (e instanceof ApiError && e.code === "already-exists") {
+          await signInWithEmail({ email: email.trim(), password });
+        } else {
+          throw e;
+        }
+      }
+      router.replace("/(tabs)");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function handleEmailContinue() {
     if (!showPassword) {
+      if (!email.trim()) {
+        setError("Please enter your email.");
+        return;
+      }
+      setError(null);
       setShowPassword(true);
       stepProgress.value = withTiming(1, { duration: 260 });
       return;
     }
-
-    // TODO: wire up to auth backend
-    console.log("register", { email, password });
-    enterApp();
+    submitCredentials();
   }
 
   function handleSocialAuth(provider: "google" | "apple") {
-    console.log(`${provider} sign-in`);
-    enterApp();
+    // Google/Apple sign-in needs OAuth client setup (expo-auth-session) to get
+    // an idToken before api.signInWithGoogle/Apple can run. Not wired up yet.
+    setError(
+      `${provider === "google" ? "Google" : "Apple"} sign-in isn't set up yet — please use email.`,
+    );
   }
 
   return (
@@ -108,7 +135,7 @@ export default function Register() {
                     I am a
                   </Text>
                   <SegmentedTabs
-                    tabs={["Lecturer", "Student"]}
+                    tabs={["Class Rep", "Student"]}
                     active={roleIndex}
                     onChange={setRoleIndex}
                   />
@@ -131,9 +158,19 @@ export default function Register() {
                   autoCapitalize="none"
                   autoComplete="password-new"
                 />
-                <Button label="Create account" onPress={handleEmailContinue} />
+                <Button
+                  label="Create account"
+                  onPress={handleEmailContinue}
+                  loading={submitting}
+                />
               </Animated.View>
             </View>
+
+            {error ? (
+              <Text className="pt-3 text-center text-sm font-medium text-red-500">
+                {error}
+              </Text>
+            ) : null}
 
             {/* Social Auth always visible */}
             <View className="gap-4 pt-2">

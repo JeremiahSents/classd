@@ -50,7 +50,7 @@ export default function ClassDetail() {
   const [addTaskVisible, setAddTaskVisible] = useState(false);
   const [addAnnouncementVisible, setAddAnnouncementVisible] = useState(false);
 
-  const isLecturer = role === "lecturer";
+  const isClassRep = role === "classRep";
   const classroom = getClass(id);
 
   if (!classroom) {
@@ -121,7 +121,7 @@ export default function ClassDetail() {
             {members.length} member{members.length === 1 ? "" : "s"}
           </Text>
         </View>
-        {isLecturer ? (
+        {isClassRep ? (
           <Pressable
             accessibilityRole="button"
             onPress={handleAdd}
@@ -155,13 +155,13 @@ export default function ClassDetail() {
                 description={t.description}
                 type={t.type}
                 dueLabel={t.dueLabel}
-                completed={isLecturer ? undefined : isTaskComplete(t.id)}
-                onToggle={isLecturer ? undefined : () => toggleTaskComplete(t.id)}
+                completed={isClassRep ? undefined : isTaskComplete(t.id)}
+                onToggle={isClassRep ? undefined : () => toggleTaskComplete(t.id)}
               />
             ))
           ) : (
             <EmptySectionHint
-              text={isLecturer ? "No tasks yet — tap Add to post one" : "No tasks yet"}
+              text={isClassRep ? "No tasks yet — tap Add to post one" : "No tasks yet"}
             />
           )
         ) : null}
@@ -181,7 +181,7 @@ export default function ClassDetail() {
           ) : (
             <EmptySectionHint
               text={
-                isLecturer
+                isClassRep
                   ? "No materials yet — tap Add to upload a file"
                   : "No materials yet"
               }
@@ -213,7 +213,7 @@ export default function ClassDetail() {
           ) : (
             <EmptySectionHint
               text={
-                isLecturer
+                isClassRep
                   ? "No announcements yet — tap Add to post one"
                   : "No announcements yet"
               }

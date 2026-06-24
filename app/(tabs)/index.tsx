@@ -74,23 +74,23 @@ export default function Home() {
   const [createVisible, setCreateVisible] = useState(false);
   const [joinVisible, setJoinVisible] = useState(false);
 
-  const isLecturer = role === "lecturer";
+  const isClassRep = role === "classRep";
 
-  // Lecturers see everything; students see only what they're enrolled in.
-  const visibleClasses = isLecturer
+  // Class reps see everything; students see only what they're enrolled in.
+  const visibleClasses = isClassRep
     ? classes
     : classes.filter((c) => enrolledClassIds.includes(c.id));
-  const visibleTasks = isLecturer
+  const visibleTasks = isClassRep
     ? tasks
     : tasks.filter((t) => enrolledClassIds.includes(t.classId));
-  const visibleAnnouncements = isLecturer
+  const visibleAnnouncements = isClassRep
     ? announcements
     : announcements.filter((a) => enrolledClassIds.includes(a.classId));
 
   const isEmpty = visibleClasses.length === 0;
 
   function openPrimary() {
-    if (isLecturer) setCreateVisible(true);
+    if (isClassRep) setCreateVisible(true);
     else setJoinVisible(true);
   }
 
@@ -107,7 +107,7 @@ export default function Home() {
             <View className="flex-1">
               <UserGreeting size="small" />
             </View>
-            {isLecturer ? (
+            {isClassRep ? (
               <AddMenu onNewClass={() => setCreateVisible(true)} />
             ) : (
               <JoinButton onPress={() => setJoinVisible(true)} />
@@ -118,12 +118,12 @@ export default function Home() {
             <BooksIcon size={140} />
             <Button
               label={
-                isLecturer
+                isClassRep
                   ? "Create your first class"
                   : "Join your first class"
               }
               leftIcon={
-                isLecturer ? (
+                isClassRep ? (
                   <HugeiconsIcon icon={PlusSignIcon} size={20} color="#fff" />
                 ) : (
                   <HugeiconsIcon icon={UserAdd01Icon} size={20} color="#fff" />

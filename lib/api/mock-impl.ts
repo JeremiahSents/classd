@@ -33,24 +33,24 @@ const coverFor = (seed: string) => `https://picsum.photos/seed/${seed}/600/400`;
 
 /* ---- seed state ---- */
 
-const LECTURER: UserProfile = {
-  id: "u-lecturer",
+const CLASS_REP: UserProfile = {
+  id: "u-classrep",
   name: "Jeremiah Sentomero",
   email: "sentomerojeremy@gmail.com",
-  role: "lecturer",
+  role: "classRep",
   avatarUrl: "https://www.notion.so/icons/user-circle-filled_gray.svg",
   createdAt: now(),
 };
 
-let currentUser: UserProfile | null = LECTURER;
+let currentUser: UserProfile | null = CLASS_REP;
 const authListeners = new Set<(u: UserProfile | null) => void>();
 const emitAuth = () => authListeners.forEach((cb) => cb(currentUser));
 
 let classes: Class[] = [
-  { id: "bio101", name: "Intro to Biology", code: "428193", coverUrl: coverFor("bio101"), ownerId: "u-lecturer", classRepId: "m2", createdAt: now(), schedules: [{ location: "SCI Lab 1", day: 4, startMinutes: 480, endMinutes: 600 }, { location: "SCI 204", day: 4, startMinutes: 630, endMinutes: 720 }] },
-  { id: "cs204", name: "Data Structures", code: "771204", coverUrl: coverFor("cs204"), ownerId: "u-lecturer", classRepId: "m5", createdAt: now(), schedules: [{ location: "Tech 3.1", day: 4, startMinutes: 780, endMinutes: 900 }] },
-  { id: "hist110", name: "World History", code: "560338", coverUrl: coverFor("hist110"), ownerId: "u-lecturer", createdAt: now(), schedules: [{ location: "Hum 2.1", day: 3, startMinutes: 660, endMinutes: 780 }] },
-  { id: "math150", name: "Calculus I", code: "903517", coverUrl: coverFor("math150"), ownerId: "u-lecturer", createdAt: now(), schedules: [{ location: "Math 1.0", day: 5, startMinutes: 540, endMinutes: 660 }] },
+  { id: "bio101", name: "Intro to Biology", code: "428193", coverUrl: coverFor("bio101"), ownerId: "u-classrep", classRepId: "m2", createdAt: now(), schedules: [{ location: "SCI Lab 1", day: 4, startMinutes: 480, endMinutes: 600 }, { location: "SCI 204", day: 4, startMinutes: 630, endMinutes: 720 }] },
+  { id: "cs204", name: "Data Structures", code: "771204", coverUrl: coverFor("cs204"), ownerId: "u-classrep", classRepId: "m5", createdAt: now(), schedules: [{ location: "Tech 3.1", day: 4, startMinutes: 780, endMinutes: 900 }] },
+  { id: "hist110", name: "World History", code: "560338", coverUrl: coverFor("hist110"), ownerId: "u-classrep", createdAt: now(), schedules: [{ location: "Hum 2.1", day: 3, startMinutes: 660, endMinutes: 780 }] },
+  { id: "math150", name: "Calculus I", code: "903517", coverUrl: coverFor("math150"), ownerId: "u-classrep", createdAt: now(), schedules: [{ location: "Math 1.0", day: 5, startMinutes: 540, endMinutes: 660 }] },
 ];
 
 const membersByClass: Record<string, Member[]> = {
@@ -65,17 +65,17 @@ const membersByClass: Record<string, Member[]> = {
 };
 
 let tasks: Task[] = [
-  { id: "t1", classId: "bio101", title: "Cell Structure Lab Report", description: "Submit your write-up on the microscope lab.", type: "assignment", dueAt: now(), createdBy: "u-lecturer", createdAt: now() },
-  { id: "t3", classId: "cs204", title: "Binary Trees Problem Set", description: "Problems 1-8 from the handout.", type: "assignment", dueAt: now(), createdBy: "u-lecturer", createdAt: now() },
+  { id: "t1", classId: "bio101", title: "Cell Structure Lab Report", description: "Submit your write-up on the microscope lab.", type: "assignment", dueAt: now(), createdBy: "u-classrep", createdAt: now() },
+  { id: "t3", classId: "cs204", title: "Binary Trees Problem Set", description: "Problems 1-8 from the handout.", type: "assignment", dueAt: now(), createdBy: "u-classrep", createdAt: now() },
 ];
 
 let announcements: Announcement[] = [
-  { id: "n1", classId: "math150", title: "Midterm moved to Friday", content: "Rescheduled to Friday 9am.", createdBy: "u-lecturer", createdAt: now() },
-  { id: "n2", classId: "cs204", title: "Guest lecture Thursday", content: "Industry speaker on graph databases.", createdBy: "u-lecturer", createdAt: now() },
+  { id: "n1", classId: "math150", title: "Midterm moved to Friday", content: "Rescheduled to Friday 9am.", createdBy: "u-classrep", createdAt: now() },
+  { id: "n2", classId: "cs204", title: "Guest lecture Thursday", content: "Industry speaker on graph databases.", createdBy: "u-classrep", createdAt: now() },
 ];
 
 let materials: Material[] = [
-  { id: "mat1", classId: "bio101", name: "Lecture 3 - Cell Membrane.pdf", sizeBytes: 2_400_000, mimeType: "application/pdf", url: "", storagePath: "materials/bio101/mat1", uploadedBy: "u-lecturer", createdAt: now() },
+  { id: "mat1", classId: "bio101", name: "Lecture 3 - Cell Membrane.pdf", sizeBytes: 2_400_000, mimeType: "application/pdf", url: "", storagePath: "materials/bio101/mat1", uploadedBy: "u-classrep", createdAt: now() },
 ];
 
 let enrolledClassIds = ["bio101", "cs204"];
@@ -89,29 +89,29 @@ const requireAuth = () => {
 /** Classes visible to the caller given their role. */
 const visibleClasses = () => {
   const u = requireAuth();
-  return u.role === "lecturer"
+  return u.role === "classRep"
     ? classes.filter((c) => c.ownerId === u.id)
     : classes.filter((c) => enrolledClassIds.includes(c.id));
 };
 
 export const mockApi: ClassdApi = {
   async signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
-    currentUser = { id: id("u"), name: input.name ?? input.email.split("@")[0], email: input.email, role: input.role, avatarUrl: LECTURER.avatarUrl, createdAt: now() };
+    currentUser = { id: id("u"), name: input.name ?? input.email.split("@")[0], email: input.email, role: input.role, avatarUrl: CLASS_REP.avatarUrl, createdAt: now() };
     emitAuth();
     return { user: currentUser, isNewUser: true };
   },
   async signInWithEmail(input: SignInInput): Promise<AuthResult> {
-    currentUser = { ...LECTURER, email: input.email };
+    currentUser = { ...CLASS_REP, email: input.email };
     emitAuth();
     return { user: currentUser, isNewUser: false };
   },
-  async signInWithGoogle(_idToken, role: Role = "lecturer"): Promise<AuthResult> {
-    currentUser = { ...LECTURER, role };
+  async signInWithGoogle(_idToken, role: Role = "classRep"): Promise<AuthResult> {
+    currentUser = { ...CLASS_REP, role };
     emitAuth();
     return { user: currentUser, isNewUser: false };
   },
-  async signInWithApple(_token, role: Role = "lecturer"): Promise<AuthResult> {
-    currentUser = { ...LECTURER, role };
+  async signInWithApple(_token, role: Role = "classRep"): Promise<AuthResult> {
+    currentUser = { ...CLASS_REP, role };
     emitAuth();
     return { user: currentUser, isNewUser: false };
   },

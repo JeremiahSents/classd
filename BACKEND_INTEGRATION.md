@@ -111,7 +111,7 @@ Firestore `Timestamp`s in the DB; convert to ISO strings on read.
   the class. `listClasses` for a student = `collectionGroup("members")` where
   the doc id is their uid, then load the parent classes.
 - **`coverUrl`** — currently `https://picsum.photos/seed/{id}/600/400`. Keep
-  that as a default, or let lecturers upload a cover later.
+  that as a default, or let class representatives upload a cover later.
 
 ---
 
@@ -126,17 +126,17 @@ Full signatures + payload types are in `contract.ts`. Summary:
 - `signOut()`, `getCurrentUser()`, `onAuthStateChanged(cb)`, `updateProfile(patch)`
 
 **Classes**
-- `listClasses()` — lecturer: owned; student: enrolled.
-- `getClass(id)`, `createClass({name, schedules?})` (lecturer),
+- `listClasses()` — class rep: owned; student: enrolled.
+- `getClass(id)`, `createClass({name, schedules?})` (class rep),
   `joinClassByCode(code)` (student), `leaveClass(id)`,
-  `assignClassRep(classId, memberId)` (lecturer)
+  `assignClassRep(classId, memberId)` (class rep)
 
 **Members**
-- `listMembers(classId)`, `removeMember(classId, memberId)` (lecturer)
+- `listMembers(classId)`, `removeMember(classId, memberId)` (class rep)
 
 **Tasks**
 - `listTasks(classId)`, `listMyTasks()` (home dashboard, all classes),
-  `createTask(classId, {title, description, type, dueAt})` (lecturer),
+  `createTask(classId, {title, description, type, dueAt})` (class rep),
   `listCompletedTaskIds()`, `setTaskComplete(taskId, complete)` (per-user)
 
 **Announcements**
