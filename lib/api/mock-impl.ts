@@ -134,6 +134,13 @@ export const mockApi: ClassdApi = {
     return currentUser;
   },
 
+  async registerPushToken() {
+    /* no-op in mock */
+  },
+  async unregisterPushToken() {
+    /* no-op in mock */
+  },
+
   async listClasses() {
     return visibleClasses();
   },

@@ -188,6 +188,12 @@ export interface ClassdApi {
   onAuthStateChanged(cb: (user: UserProfile | null) => void): () => void;
   updateProfile(patch: Partial<Pick<UserProfile, "name" | "avatarUrl">>): Promise<UserProfile>;
 
+  // ---- Push notifications ----
+  /** Save an Expo push token for the current user's device. */
+  registerPushToken(token: string): Promise<void>;
+  /** Remove an Expo push token (on sign-out or token refresh). */
+  unregisterPushToken(token: string): Promise<void>;
+
   // ---- Classes ----
   /** Class rep: classes they own. Student: classes they're enrolled in. */
   listClasses(): Promise<Class[]>;

@@ -43,6 +43,8 @@ import {
   updateDoc,
   deleteDoc,
   deleteField,
+  arrayUnion,
+  arrayRemove,
   query,
   where,
   limit,
@@ -387,6 +389,25 @@ export const firebaseApi: ClassdApi = {
       const user = await loadProfile(current.uid);
       if (!user) throw new ApiError("not-found", "Profile not found");
       return user;
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  // ---- Push notifications ----
+  async registerPushToken(token: string): Promise<void> {
+    const uid = requireUid();
+    try {
+      await updateDoc(doc(db, "users", uid), { expoPushTokens: arrayUnion(token) });
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async unregisterPushToken(token: string): Promise<void> {
+    const uid = requireUid();
+    try {
+      await updateDoc(doc(db, "users", uid), { expoPushTokens: arrayRemove(token) });
     } catch (e) {
       throw toApiError(e);
     }
