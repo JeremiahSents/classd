@@ -5,9 +5,58 @@ service cloud.firestore {
     match /users/{uid} {
     	//read rule
       allow read: if request.auth != null && request.auth.uid == uid;
-      
+
       //write rule
       allow write: if request.auth != null && request.auth.uid == uid;
+
+      // a user's own task-completion records
+      match /completions/{taskId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // Collection-group read of member docs: a user may read their OWN membership
+    // records across all classes. This is what authorizes the student's
+    // collectionGroup("members") query in listClasses (a path-nested rule does
+    // not cover collection-group queries).
+    match /{path=**}/members/{memberId} {
+      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
+    match /classes/{classId} {
+      // any signed-in user can read a class (to view it or join by code)
+      allow read: if request.auth != null;
+      // the creator must set themselves as the owner
+      allow create: if request.auth != null
+                    && request.resource.data.ownerId == request.auth.uid;
+      // only the owner can edit/delete the class (e.g. assign class rep)
+      allow update, delete: if request.auth != null
+                            && resource.data.ownerId == request.auth.uid;
+
+      match /members/{memberId} {
+        allow read: if request.auth != null;
+        // a user can add themselves (join); the class owner can add anyone
+        allow create: if request.auth != null
+                      && (memberId == request.auth.uid
+                          || get(/databases/$(database)/documents/classes/$(classId)).data.ownerId == request.auth.uid);
+        // a user can remove themselves (leave); the class owner can remove anyone
+        allow delete: if request.auth != null
+                      && (memberId == request.auth.uid
+                          || get(/databases/$(database)/documents/classes/$(classId)).data.ownerId == request.auth.uid);
+      }
+
+      // tasks & announcements: anyone signed in can read; only the class owner writes
+      match /tasks/{taskId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null
+                     && get(/databases/$(database)/documents/classes/$(classId)).data.ownerId == request.auth.uid;
+      }
+
+      match /announcements/{announcementId} {
+        allow read: if request.auth != null;
+        allow write: if request.auth != null
+                     && get(/databases/$(database)/documents/classes/$(classId)).data.ownerId == request.auth.uid;
+      }
     }
   }
 }

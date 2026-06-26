@@ -34,10 +34,18 @@ import {
   type AuthCredential,
 } from "firebase/auth";
 import {
+  collection,
+  collectionGroup,
   doc,
   getDoc,
+  getDocs,
   setDoc,
   updateDoc,
+  deleteDoc,
+  deleteField,
+  query,
+  where,
+  limit,
   serverTimestamp,
   Timestamp,
   type DocumentData,
@@ -168,6 +176,99 @@ function toApiError(e: unknown): ApiError {
   return new ApiError("unknown", "Something went wrong. Please try again.");
 }
 
+/* ------------------------------------------------------------------ *
+ * Class / Member helpers
+ * ------------------------------------------------------------------ */
+
+const coverFor = (seed: string) => `https://picsum.photos/seed/${seed}/600/400`;
+
+/** Current user's uid, or throw. */
+function requireUid(): string {
+  const u = auth.currentUser;
+  if (!u) throw new ApiError("unauthenticated", "Not signed in");
+  return u.uid;
+}
+
+/** Shape a classes/{id} document into a Class. */
+function toClass(id: string, data: DocumentData): Class {
+  return {
+    id,
+    name: data.name ?? "",
+    code: data.code ?? "",
+    coverUrl: data.coverUrl ?? coverFor(id),
+    ownerId: data.ownerId ?? "",
+    classRepId: data.classRepId ?? undefined,
+    schedules: data.schedules ?? [],
+    createdAt: tsToIso(data.createdAt),
+  };
+}
+
+/** Shape a classes/{id}/members/{uid} document into a Member. */
+function toMember(uid: string, data: DocumentData): Member {
+  return {
+    id: uid,
+    name: data.name ?? "",
+    email: data.email ?? "",
+    avatarUrl: data.avatarUrl ?? undefined,
+    role: (data.role as Role) ?? "student",
+    joinedAt: tsToIso(data.joinedAt),
+  };
+}
+
+/** A 6-digit class join code, unique across the classes collection. */
+async function uniqueClassCode(): Promise<string> {
+  for (let i = 0; i < 5; i++) {
+    const candidate = Math.floor(100000 + Math.random() * 900000).toString();
+    const existing = await getDocs(
+      query(collection(db, "classes"), where("code", "==", candidate), limit(1)),
+    );
+    if (existing.empty) return candidate;
+  }
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+/** Ids of the classes the current user can see (owned for class rep, joined for student). */
+async function visibleClassIds(): Promise<string[]> {
+  const uid = requireUid();
+  const profile = await loadProfile(uid);
+  if (profile?.role === "classRep") {
+    const snap = await getDocs(query(collection(db, "classes"), where("ownerId", "==", uid)));
+    return snap.docs.map((d) => d.id);
+  }
+  const memberSnap = await getDocs(
+    query(collectionGroup(db, "members"), where("uid", "==", uid)),
+  );
+  return memberSnap.docs
+    .map((d) => d.ref.parent.parent?.id)
+    .filter((id): id is string => !!id);
+}
+
+/** Shape a classes/{id}/tasks/{taskId} document into a Task. */
+function toTask(id: string, classId: string, data: DocumentData): Task {
+  return {
+    id,
+    classId,
+    title: data.title ?? "",
+    description: data.description ?? "",
+    type: data.type ?? "assignment",
+    dueAt: tsToIso(data.dueAt),
+    createdBy: data.createdBy ?? "",
+    createdAt: tsToIso(data.createdAt),
+  };
+}
+
+/** Shape a classes/{id}/announcements/{id} document into an Announcement. */
+function toAnnouncement(id: string, classId: string, data: DocumentData): Announcement {
+  return {
+    id,
+    classId,
+    title: data.title ?? "",
+    content: data.content ?? "",
+    createdBy: data.createdBy ?? "",
+    createdAt: tsToIso(data.createdAt),
+  };
+}
+
 export const firebaseApi: ClassdApi = {
   // ---- Auth ----
   async signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
@@ -292,69 +393,267 @@ export const firebaseApi: ClassdApi = {
   },
 
   // ---- Classes ----
-  // Class rep: query classes where ownerId == uid.
-  // Student: query collectionGroup("members") where uid, then load classes.
   async listClasses(): Promise<Class[]> {
-    return notImplemented("listClasses");
+    const uid = requireUid();
+    try {
+      const profile = await loadProfile(uid);
+      if (profile?.role === "classRep") {
+        // classes this user owns
+        const snap = await getDocs(
+          query(collection(db, "classes"), where("ownerId", "==", uid)),
+        );
+        return snap.docs.map((d) => toClass(d.id, d.data()));
+      }
+      // student: classes where a members/{uid} doc exists
+      const memberSnap = await getDocs(
+        query(collectionGroup(db, "members"), where("uid", "==", uid)),
+      );
+      const classRefs = memberSnap.docs
+        .map((d) => d.ref.parent.parent)
+        .filter((ref): ref is NonNullable<typeof ref> => ref !== null);
+      const classDocs = await Promise.all(classRefs.map((ref) => getDoc(ref)));
+      return classDocs.filter((d) => d.exists()).map((d) => toClass(d.id, d.data()!));
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
-  async getClass(_classId: string): Promise<Class> {
-    return notImplemented("getClass");
+
+  async getClass(classId: string): Promise<Class> {
+    try {
+      const snap = await getDoc(doc(db, "classes", classId));
+      if (!snap.exists()) throw new ApiError("not-found", "Class not found");
+      return toClass(snap.id, snap.data());
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
-  // Generate unique 6-digit code; setDoc classes/{id} with ownerId, createdAt.
-  async createClass(_input: CreateClassInput): Promise<Class> {
-    return notImplemented("createClass");
+
+  async createClass(input: CreateClassInput): Promise<Class> {
+    const uid = requireUid();
+    try {
+      const ref = doc(collection(db, "classes")); // pre-generate the id
+      const joinCode = await uniqueClassCode();
+      const name = input.name.trim();
+      const coverUrl = coverFor(ref.id);
+      const schedules = input.schedules ?? [];
+
+      await setDoc(ref, {
+        name,
+        code: joinCode,
+        coverUrl,
+        ownerId: uid,
+        schedules,
+        createdAt: serverTimestamp(),
+      });
+
+      return {
+        id: ref.id,
+        name,
+        code: joinCode,
+        coverUrl,
+        ownerId: uid,
+        schedules,
+        createdAt: new Date().toISOString(),
+      };
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
-  // Find class by code; add caller to classes/{id}/members/{uid}.
-  async joinClassByCode(_code: string): Promise<Class> {
-    return notImplemented("joinClassByCode");
+
+  async joinClassByCode(joinCode: string): Promise<Class> {
+    const uid = requireUid();
+    try {
+      const found = await getDocs(
+        query(collection(db, "classes"), where("code", "==", joinCode.trim()), limit(1)),
+      );
+      if (found.empty) throw new ApiError("not-found", "No class with that code");
+      const classDoc = found.docs[0];
+
+      const profile = await loadProfile(uid);
+      await setDoc(doc(db, "classes", classDoc.id, "members", uid), {
+        uid,
+        name: profile?.name ?? "",
+        email: profile?.email ?? "",
+        avatarUrl: profile?.avatarUrl ?? "",
+        role: profile?.role ?? "student",
+        joinedAt: serverTimestamp(),
+      });
+      return toClass(classDoc.id, classDoc.data());
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
-  async leaveClass(_classId: string): Promise<void> {
-    return notImplemented("leaveClass");
+
+  async leaveClass(classId: string): Promise<void> {
+    const uid = requireUid();
+    try {
+      await deleteDoc(doc(db, "classes", classId, "members", uid));
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
-  // updateDoc(classes/{id}, { classRepId }).
-  async assignClassRep(_classId: string, _memberId: string): Promise<void> {
-    return notImplemented("assignClassRep");
+
+  async assignClassRep(classId: string, memberId: string): Promise<void> {
+    requireUid();
+    try {
+      await updateDoc(doc(db, "classes", classId), { classRepId: memberId });
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
 
   // ---- Members ----
-  async listMembers(_classId: string): Promise<Member[]> {
-    return notImplemented("listMembers");
+  async listMembers(classId: string): Promise<Member[]> {
+    try {
+      const snap = await getDocs(collection(db, "classes", classId, "members"));
+      return snap.docs.map((d) => toMember(d.id, d.data()));
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
-  async removeMember(_classId: string, _memberId: string): Promise<void> {
-    return notImplemented("removeMember");
+
+  async removeMember(classId: string, memberId: string): Promise<void> {
+    requireUid();
+    try {
+      await deleteDoc(doc(db, "classes", classId, "members", memberId));
+      // if the removed member was the assigned class rep, clear it
+      const classSnap = await getDoc(doc(db, "classes", classId));
+      if (classSnap.exists() && classSnap.data().classRepId === memberId) {
+        await updateDoc(doc(db, "classes", classId), { classRepId: deleteField() });
+      }
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
 
   // ---- Tasks ----
-  async listTasks(_classId: string): Promise<Task[]> {
-    return notImplemented("listTasks");
+  async listTasks(classId: string): Promise<Task[]> {
+    try {
+      const snap = await getDocs(collection(db, "classes", classId, "tasks"));
+      return snap.docs.map((d) => toTask(d.id, classId, d.data()));
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
+
   async listMyTasks(): Promise<Task[]> {
-    return notImplemented("listMyTasks");
+    try {
+      const classIds = await visibleClassIds();
+      const perClass = await Promise.all(
+        classIds.map((cid) =>
+          getDocs(collection(db, "classes", cid, "tasks")).then((snap) =>
+            snap.docs.map((d) => toTask(d.id, cid, d.data())),
+          ),
+        ),
+      );
+      return perClass.flat();
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
-  async createTask(_classId: string, _input: CreateTaskInput): Promise<Task> {
-    return notImplemented("createTask");
+
+  async createTask(classId: string, input: CreateTaskInput): Promise<Task> {
+    const uid = requireUid();
+    try {
+      const ref = doc(collection(db, "classes", classId, "tasks"));
+      const dueAtIso = new Date(input.dueAt).toISOString();
+      await setDoc(ref, {
+        title: input.title.trim(),
+        description: input.description,
+        type: input.type,
+        dueAt: Timestamp.fromDate(new Date(input.dueAt)),
+        createdBy: uid,
+        createdAt: serverTimestamp(),
+      });
+      return {
+        id: ref.id,
+        classId,
+        title: input.title.trim(),
+        description: input.description,
+        type: input.type,
+        dueAt: dueAtIso,
+        createdBy: uid,
+        createdAt: new Date().toISOString(),
+      };
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
-  // Read users/{uid}/completions where exists.
+
   async listCompletedTaskIds(): Promise<string[]> {
-    return notImplemented("listCompletedTaskIds");
+    const uid = requireUid();
+    try {
+      const snap = await getDocs(collection(db, "users", uid, "completions"));
+      return snap.docs.map((d) => d.id);
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
-  // setDoc/deleteDoc users/{uid}/completions/{taskId}.
-  async setTaskComplete(_taskId: string, _complete: boolean): Promise<void> {
-    return notImplemented("setTaskComplete");
+
+  async setTaskComplete(taskId: string, complete: boolean): Promise<void> {
+    const uid = requireUid();
+    try {
+      const ref = doc(db, "users", uid, "completions", taskId);
+      if (complete) {
+        await setDoc(ref, { completedAt: serverTimestamp() });
+      } else {
+        await deleteDoc(ref);
+      }
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
 
   // ---- Announcements ----
-  async listAnnouncements(_classId: string): Promise<Announcement[]> {
-    return notImplemented("listAnnouncements");
+  async listAnnouncements(classId: string): Promise<Announcement[]> {
+    try {
+      const snap = await getDocs(collection(db, "classes", classId, "announcements"));
+      return snap.docs.map((d) => toAnnouncement(d.id, classId, d.data()));
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
+
   async listMyAnnouncements(): Promise<Announcement[]> {
-    return notImplemented("listMyAnnouncements");
+    try {
+      const classIds = await visibleClassIds();
+      const perClass = await Promise.all(
+        classIds.map((cid) =>
+          getDocs(collection(db, "classes", cid, "announcements")).then((snap) =>
+            snap.docs.map((d) => toAnnouncement(d.id, cid, d.data())),
+          ),
+        ),
+      );
+      return perClass.flat();
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
+
   async createAnnouncement(
-    _classId: string,
-    _input: CreateAnnouncementInput,
+    classId: string,
+    input: CreateAnnouncementInput,
   ): Promise<Announcement> {
-    return notImplemented("createAnnouncement");
+    const uid = requireUid();
+    try {
+      const ref = doc(collection(db, "classes", classId, "announcements"));
+      await setDoc(ref, {
+        title: input.title.trim(),
+        content: input.content,
+        createdBy: uid,
+        createdAt: serverTimestamp(),
+      });
+      return {
+        id: ref.id,
+        classId,
+        title: input.title.trim(),
+        content: input.content,
+        createdBy: uid,
+        createdAt: new Date().toISOString(),
+      };
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
 
   // ---- Materials ----
