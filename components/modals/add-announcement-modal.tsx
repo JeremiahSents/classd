@@ -12,34 +12,49 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { useClasses } from "@/lib/classes-store";
+import { api, type Announcement } from "@/lib/api";
 
 interface AddAnnouncementModalProps {
   classId: string;
   visible: boolean;
   onClose: () => void;
+  /** Called after the announcement is successfully posted. */
+  onCreated?: (announcement: Announcement) => void;
 }
 
 export function AddAnnouncementModal({
   classId,
   visible,
   onClose,
+  onCreated,
 }: AddAnnouncementModalProps) {
-  const { addAnnouncement } = useClasses();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  function handleSave() {
+  async function handleSave() {
     if (!title.trim() || !content.trim()) return;
-    addAnnouncement(classId, { title, content });
-    setTitle("");
-    setContent("");
-    onClose();
+    setLoading(true);
+    setError(null);
+    try {
+      const announcement = await api.createAnnouncement(classId, {
+        title: title.trim(),
+        content,
+      });
+      onCreated?.(announcement);
+      handleClose();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to post announcement.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   function handleClose() {
     setTitle("");
     setContent("");
+    setError(null);
     onClose();
   }
 
@@ -99,9 +114,16 @@ export function AddAnnouncementModal({
                 />
               </View>
 
+              {error ? (
+                <Text className="text-center text-sm text-destructive">
+                  {error}
+                </Text>
+              ) : null}
+
               <Button
                 label="Post Announcement"
                 onPress={handleSave}
+                loading={loading}
                 disabled={!title.trim() || !content.trim()}
               />
             </View>

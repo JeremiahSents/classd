@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { HugeiconsIcon } from "@hugeicons/react-native";
@@ -13,8 +13,10 @@ import { HomeHeader } from "@/components/home/home-header";
 import { ClassSchedule } from "@/components/home/class-schedule";
 import { TasksSection } from "@/components/home/tasks-section";
 import { UpdatesSection } from "@/components/home/updates-section";
-import { useClasses } from "@/lib/classes-store";
+import { useHomeData } from "@/lib/hooks/use-home-data";
 import { useSession } from "@/lib/session";
+import { api } from "@/lib/api";
+import type { Class } from "@/lib/api";
 
 /* ------------------------------------------------------------------ */
 /*  Small helpers                                                     */
@@ -64,38 +66,50 @@ export default function Home() {
     classes,
     tasks,
     announcements,
-    className,
-    getClass,
-    enrolledClassIds,
-    isTaskComplete,
-    toggleTaskComplete,
-  } = useClasses();
+    completedTaskIds,
+    loading,
+    reload,
+    reloadCompletions,
+  } = useHomeData();
   const { role, firstName } = useSession();
   const [createVisible, setCreateVisible] = useState(false);
   const [joinVisible, setJoinVisible] = useState(false);
 
   const isClassRep = role === "classRep";
+  const isEmpty = classes.length === 0;
 
-  // Class reps see everything; students see only what they're enrolled in.
-  const visibleClasses = isClassRep
-    ? classes
-    : classes.filter((c) => enrolledClassIds.includes(c.id));
-  const visibleTasks = isClassRep
-    ? tasks
-    : tasks.filter((t) => enrolledClassIds.includes(t.classId));
-  const visibleAnnouncements = isClassRep
-    ? announcements
-    : announcements.filter((a) => enrolledClassIds.includes(a.classId));
+  // className helper: map classId → class name for display
+  const classNameMap = Object.fromEntries(classes.map((c) => [c.id, c.name]));
+  const className = (classId: string) => classNameMap[classId] ?? "";
 
-  const isEmpty = visibleClasses.length === 0;
-
-  function openPrimary() {
-    if (isClassRep) setCreateVisible(true);
-    else setJoinVisible(true);
+  async function handleToggleTask(taskId: string) {
+    const isDone = completedTaskIds.includes(taskId);
+    try {
+      await api.setTaskComplete(taskId, !isDone);
+      reloadCompletions();
+    } catch {
+      // silently ignore
+    }
   }
 
   function navigateToClass(classId: string) {
     router.push({ pathname: "/(tabs)/class/[id]", params: { id: classId } });
+  }
+
+  function handleClassCreated(_cls: Class) {
+    reload();
+  }
+
+  function handleClassJoined(_cls: Class) {
+    reload();
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-background" edges={["top"]}>
+        <ActivityIndicator size="large" />
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -129,7 +143,9 @@ export default function Home() {
                   <HugeiconsIcon icon={UserAdd01Icon} size={20} color="#fff" />
                 )
               }
-              onPress={openPrimary}
+              onPress={() =>
+                isClassRep ? setCreateVisible(true) : setJoinVisible(true)
+              }
             />
           </View>
         </View>
@@ -143,7 +159,7 @@ export default function Home() {
 
           {/* 2. Today's classes */}
           <ClassSchedule
-            classes={visibleClasses}
+            classes={classes}
             onClassPress={navigateToClass}
             onNewClass={() => setCreateVisible(true)}
             onSeeAll={() => router.push("/(tabs)/classes")}
@@ -151,15 +167,15 @@ export default function Home() {
 
           {/* 3. Tasks checklist */}
           <TasksSection
-            tasks={visibleTasks}
+            tasks={tasks}
             className={className}
-            isTaskComplete={isTaskComplete}
-            toggleTaskComplete={toggleTaskComplete}
+            completedTaskIds={completedTaskIds}
+            onToggle={handleToggleTask}
           />
 
           {/* 4. Announcements summary */}
           <UpdatesSection
-            announcements={visibleAnnouncements}
+            announcements={announcements}
             className={className}
           />
         </ScrollView>
@@ -168,10 +184,12 @@ export default function Home() {
       <CreateClassModal
         visible={createVisible}
         onClose={() => setCreateVisible(false)}
+        onCreated={handleClassCreated}
       />
       <JoinClassModal
         visible={joinVisible}
         onClose={() => setJoinVisible(false)}
+        onJoined={handleClassJoined}
       />
     </SafeAreaView>
   );

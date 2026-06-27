@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { HugeiconsIcon } from "@hugeicons/react-native";
@@ -9,22 +9,27 @@ import { Button } from "@/components/ui/button";
 import { ClassCard } from "@/components/class/class-card";
 import { CreateClassModal } from "@/components/modals/create-class-modal";
 import { JoinClassModal } from "@/components/modals/join-class-modal";
-import { AddMenu } from "@/components/modals/add-menu";
-import { useClasses } from "@/lib/classes-store";
+import { useApiClasses } from "@/lib/hooks/use-api-classes";
 import { useSession } from "@/lib/session";
+import type { Class } from "@/lib/api";
 
 export default function Classes() {
   const router = useRouter();
-  const { classes, enrolledClassIds } = useClasses();
+  const { classes, loading, reload } = useApiClasses();
   const { role } = useSession();
   const [createVisible, setCreateVisible] = useState(false);
   const [joinVisible, setJoinVisible] = useState(false);
 
   const isClassRep = role === "classRep";
-  const visibleClasses = isClassRep
-    ? classes
-    : classes.filter((c) => enrolledClassIds.includes(c.id));
-  const isEmpty = visibleClasses.length === 0;
+  const isEmpty = classes.length === 0;
+
+  function handleClassCreated(_cls: Class) {
+    reload();
+  }
+
+  function handleClassJoined(_cls: Class) {
+    reload();
+  }
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
@@ -44,7 +49,11 @@ export default function Classes() {
         </Pressable>
       </View>
 
-      {isEmpty ? (
+      {loading ? (
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" />
+        </View>
+      ) : isEmpty ? (
         <View className="flex-1 items-center justify-center gap-8 px-6 pb-24">
           <BooksIcon size={120} />
           <Button
@@ -64,7 +73,7 @@ export default function Classes() {
           contentContainerClassName="gap-4 px-6 pb-32"
           showsVerticalScrollIndicator={false}
         >
-          {visibleClasses.map((classroom) => (
+          {classes.map((classroom) => (
             <ClassCard
               key={classroom.id}
               classroom={classroom}
@@ -82,10 +91,12 @@ export default function Classes() {
       <CreateClassModal
         visible={createVisible}
         onClose={() => setCreateVisible(false)}
+        onCreated={handleClassCreated}
       />
       <JoinClassModal
         visible={joinVisible}
         onClose={() => setJoinVisible(false)}
+        onJoined={handleClassJoined}
       />
     </SafeAreaView>
   );

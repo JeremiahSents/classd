@@ -2,10 +2,10 @@ import { Pressable, Text, View, type PressableProps } from "react-native";
 import { Image } from "expo-image";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Folder01Icon, ChartHistogramIcon, MoreVerticalIcon } from "@hugeicons/core-free-icons";
-import type { Classroom } from "@/lib/classes";
+import type { Class } from "@/lib/api";
 
 interface ClassCardProps extends Omit<PressableProps, "children"> {
-  classroom: Classroom;
+  classroom: Class;
 }
 
 export function ClassCard({ classroom, ...props }: ClassCardProps) {

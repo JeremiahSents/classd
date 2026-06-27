@@ -14,7 +14,7 @@ import {
   Camera02Icon,
 } from "@hugeicons/core-free-icons";
 import { useSession } from "@/lib/session";
-import { useClasses } from "@/lib/classes-store";
+import { useHomeData } from "@/lib/hooks/use-home-data";
 import { AvatarPickerModal } from "@/components/modals/avatar-picker-modal";
 
 interface SettingsItem {
@@ -27,7 +27,7 @@ interface SettingsItem {
 export default function Profile() {
   const router = useRouter();
   const { role, name, email, avatarUrl, updateAvatar, signOut } = useSession();
-  const { classes, tasks, enrolledClassIds, isTaskComplete } = useClasses();
+  const { classes, tasks, completedTaskIds } = useHomeData();
 
   const [avatarPickerVisible, setAvatarPickerVisible] = useState(false);
 
@@ -46,13 +46,10 @@ export default function Profile() {
   const isClassRep = role === "classRep";
   const roleLabel = isClassRep ? "Class Representative" : "Student";
 
-  // Dummy stats
-  const activeClasses = isClassRep ? classes.length : enrolledClassIds.length;
+  const activeClasses = classes.length;
   const pendingTasks = isClassRep
-    ? tasks.length // for class rep, total tasks set
-    : tasks.filter(
-        (t) => enrolledClassIds.includes(t.classId) && !isTaskComplete(t.id),
-      ).length;
+    ? tasks.length
+    : tasks.filter((t) => !completedTaskIds.includes(t.id)).length;
 
   const items: SettingsItem[] = [
     {

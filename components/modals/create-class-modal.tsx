@@ -18,24 +18,31 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useClasses } from "@/lib/classes-store";
-import type { Classroom } from "@/lib/classes";
+import { api, type Class } from "@/lib/api";
 
 interface CreateClassModalProps {
   visible: boolean;
   onClose: () => void;
+  /** Called with the newly created class so parent screens can refresh. */
+  onCreated?: (cls: Class) => void;
 }
 
-export function CreateClassModal({ visible, onClose }: CreateClassModalProps) {
-  const { addClass } = useClasses();
+export function CreateClassModal({
+  visible,
+  onClose,
+  onCreated,
+}: CreateClassModalProps) {
   const [name, setName] = useState("");
-  const [created, setCreated] = useState<Classroom | null>(null);
+  const [created, setCreated] = useState<Class | null>(null);
   const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function reset() {
     setName("");
     setCreated(null);
     setCopied(false);
+    setError(null);
   }
 
   function handleClose() {
@@ -43,9 +50,19 @@ export function CreateClassModal({ visible, onClose }: CreateClassModalProps) {
     onClose();
   }
 
-  function handleContinue() {
-    const classroom = addClass(name);
-    setCreated(classroom);
+  async function handleContinue() {
+    if (!name.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const cls = await api.createClass({ name: name.trim() });
+      setCreated(cls);
+      onCreated?.(cls);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to create class.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleCopy() {
@@ -141,6 +158,11 @@ export function CreateClassModal({ visible, onClose }: CreateClassModalProps) {
                   returnKeyType="done"
                   onSubmitEditing={() => name.trim() && handleContinue()}
                 />
+                {error ? (
+                  <Text className="text-center text-sm text-destructive">
+                    {error}
+                  </Text>
+                ) : null}
                 <View className="flex-row gap-3">
                   <Button
                     className="flex-1"
@@ -152,6 +174,7 @@ export function CreateClassModal({ visible, onClose }: CreateClassModalProps) {
                     className="flex-1"
                     label="Continue"
                     disabled={!name.trim()}
+                    loading={loading}
                     onPress={handleContinue}
                   />
                 </View>

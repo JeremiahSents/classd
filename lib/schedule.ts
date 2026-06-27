@@ -1,4 +1,4 @@
-import type { Classroom, ClassScheduleBlock } from "./classes";
+import type { Class } from "@/lib/api";
 
 export function formatTime(minutesFromMidnight: number): string {
   const h = Math.floor(minutesFromMidnight / 60);
@@ -10,14 +10,14 @@ export function formatTime(minutesFromMidnight: number): string {
 }
 
 export interface TodayClass {
-  classroom: Classroom;
-  block: ClassScheduleBlock;
+  classroom: Class;
+  block: Class["schedules"][number];
 }
 
 /**
  * Returns all class schedule blocks occurring today, sorted by start time.
  */
-export function classesToday(classes: Classroom[]): TodayClass[] {
+export function classesToday(classes: Class[]): TodayClass[] {
   const todayDay = new Date().getDay(); // 0 = Sun, 6 = Sat
   const results: TodayClass[] = [];
 

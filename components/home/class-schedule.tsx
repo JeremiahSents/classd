@@ -4,7 +4,7 @@ import {
   ArrowRight01Icon,
   Clock01Icon,
 } from "@hugeicons/core-free-icons";
-import type { Classroom } from "@/lib/classes";
+import type { Class } from "@/lib/api";
 import { formatTime, classesToday, type TodayClass } from "@/lib/schedule";
 import { SectionTitle } from "./section-title";
 
@@ -85,7 +85,7 @@ export function ClassSchedule({
   onNewClass,
   onSeeAll,
 }: {
-  classes: Classroom[];
+  classes: Class[];
   onClassPress: (classId: string) => void;
   onNewClass: () => void;
   onSeeAll?: () => void;

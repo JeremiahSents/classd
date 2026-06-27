@@ -21,57 +21,63 @@
  *    `wrap()` helper that maps Firebase error codes is a good idea.
  */
 
+import { getFaceFor } from "@/lib/avatars";
+import { auth, db, storage } from "@/lib/firebase";
 import { FirebaseError } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signInWithCredential,
+  onAuthStateChanged as fbOnAuthStateChanged,
+  signOut as fbSignOut,
+  updateProfile as fbUpdateProfile,
   GoogleAuthProvider,
   OAuthProvider,
-  signOut as fbSignOut,
-  onAuthStateChanged as fbOnAuthStateChanged,
-  updateProfile as fbUpdateProfile,
+  signInWithCredential,
+  signInWithEmailAndPassword,
   type AuthCredential,
 } from "firebase/auth";
 import {
+  arrayRemove,
+  arrayUnion,
   collection,
   collectionGroup,
+  deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  deleteField,
-  arrayUnion,
-  arrayRemove,
-  query,
-  where,
   limit,
+  query,
   serverTimestamp,
+  setDoc,
   Timestamp,
+  updateDoc,
+  where,
   type DocumentData,
 } from "firebase/firestore";
 import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
+import {
   ApiError,
-  type ClassdApi,
+  type Announcement,
   type AuthResult,
   type Class,
+  type ClassdApi,
+  type CreateAnnouncementInput,
   type CreateClassInput,
   type CreateTaskInput,
-  type CreateAnnouncementInput,
-  type Member,
-  type Task,
-  type Announcement,
   type Material,
+  type Member,
   type Role,
   type SignInInput,
   type SignUpInput,
+  type Task,
   type UploadFileInput,
   type UserProfile,
 } from "./contract";
-import { auth, db } from "@/lib/firebase";
-import { getFaceFor } from "@/lib/avatars";
 
 function notImplemented(method: string): never {
   throw new ApiError("unknown", `firebase-impl: ${method} not implemented yet`);
@@ -267,6 +273,21 @@ function toAnnouncement(id: string, classId: string, data: DocumentData): Announ
     title: data.title ?? "",
     content: data.content ?? "",
     createdBy: data.createdBy ?? "",
+    createdAt: tsToIso(data.createdAt),
+  };
+}
+
+/** Shape a classes/{id}/materials/{id} document into a Material. */
+function toMaterial(id: string, classId: string, data: DocumentData): Material {
+  return {
+    id,
+    classId,
+    name: data.name ?? "",
+    sizeBytes: data.sizeBytes ?? undefined,
+    mimeType: data.mimeType ?? undefined,
+    url: data.url ?? "",
+    storagePath: data.storagePath ?? "",
+    uploadedBy: data.uploadedBy ?? "",
     createdAt: tsToIso(data.createdAt),
   };
 }
@@ -678,16 +699,78 @@ export const firebaseApi: ClassdApi = {
   },
 
   // ---- Materials ----
-  async listMaterials(_classId: string): Promise<Material[]> {
-    return notImplemented("listMaterials");
+  async listMaterials(classId: string): Promise<Material[]> {
+    try {
+      const snap = await getDocs(collection(db, "classes", classId, "materials"));
+      return snap.docs.map((d) => toMaterial(d.id, classId, d.data()));
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
-  // uploadBytes to storage at materials/{classId}/{id}-{name}; getDownloadURL;
-  // then write the metadata doc.
-  async uploadMaterial(_classId: string, _file: UploadFileInput): Promise<Material> {
-    return notImplemented("uploadMaterial");
+
+  async uploadMaterial(classId: string, file: UploadFileInput): Promise<Material> {
+    const uid = requireUid();
+    try {
+      // 1. Create a Firestore doc ref to get a stable id.
+      const docRef = doc(collection(db, "classes", classId, "materials"));
+      const storagePath = `materials/${classId}/${docRef.id}-${file.name}`;
+
+      // 2. Fetch the local file as a blob and upload to Cloud Storage.
+      const response = await fetch(file.uri);
+      const blob = await response.blob();
+      const storageRef = ref(storage, storagePath);
+      await uploadBytes(storageRef, blob, {
+        contentType: file.mimeType ?? "application/octet-stream",
+      });
+
+      // 3. Get the public download URL.
+      const url = await getDownloadURL(storageRef);
+
+      // 4. Write the Firestore metadata document.
+      await setDoc(docRef, {
+        name: file.name,
+        sizeBytes: file.sizeBytes ?? null,
+        mimeType: file.mimeType ?? null,
+        url,
+        storagePath,
+        uploadedBy: uid,
+        createdAt: serverTimestamp(),
+      });
+
+      return {
+        id: docRef.id,
+        classId,
+        name: file.name,
+        sizeBytes: file.sizeBytes,
+        mimeType: file.mimeType,
+        url,
+        storagePath,
+        uploadedBy: uid,
+        createdAt: new Date().toISOString(),
+      };
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
-  // delete the doc + the storage object at material.storagePath.
-  async deleteMaterial(_classId: string, _materialId: string): Promise<void> {
-    return notImplemented("deleteMaterial");
+
+  async deleteMaterial(classId: string, materialId: string): Promise<void> {
+    try {
+      // Fetch the doc to get the storagePath before deleting.
+      const docRef = doc(db, "classes", classId, "materials", materialId);
+      const snap = await getDoc(docRef);
+      if (snap.exists()) {
+        const storagePath = snap.data().storagePath as string | undefined;
+        if (storagePath) {
+          try {
+            await deleteObject(ref(storage, storagePath));
+          } catch {
+            // Storage object may already be gone — don't block Firestore delete.
+          }
+        }
+      }
+      await deleteDoc(docRef);
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
 };

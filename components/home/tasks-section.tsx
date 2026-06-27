@@ -1,7 +1,8 @@
 import { Pressable, Text, View } from "react-native";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
-import type { Task } from "@/lib/types";
+import type { Task } from "@/lib/api";
+import { formatDueDate } from "@/lib/utils";
 import { SectionTitle } from "./section-title";
 
 /* ------------------------------------------------------------------ */
@@ -29,7 +30,8 @@ function TaskRow({
   completed: boolean;
   onToggle: () => void;
 }) {
-  const dotColor = urgencyColor(task.dueLabel);
+  const dueLabel = formatDueDate(task.dueAt);
+  const dotColor = urgencyColor(dueLabel);
 
   return (
     <View className="flex-row items-center gap-3 px-4 py-3.5">
@@ -53,7 +55,7 @@ function TaskRow({
             />
           )}
           <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-            {task.dueLabel}
+            {dueLabel}
             {classLabel ? ` · ${classLabel}` : ""}
           </Text>
         </View>
@@ -96,13 +98,13 @@ function Divider() {
 export function TasksSection({
   tasks,
   className,
-  isTaskComplete,
-  toggleTaskComplete,
+  completedTaskIds,
+  onToggle,
 }: {
   tasks: Task[];
   className: (classId: string) => string;
-  isTaskComplete: (taskId: string) => boolean;
-  toggleTaskComplete: (taskId: string) => void;
+  completedTaskIds: string[];
+  onToggle: (taskId: string) => void;
 }) {
   if (tasks.length === 0) {
     return (
@@ -128,8 +130,8 @@ export function TasksSection({
             <TaskRow
               task={task}
               classLabel={className(task.classId)}
-              completed={isTaskComplete(task.id)}
-              onToggle={() => toggleTaskComplete(task.id)}
+              completed={completedTaskIds.includes(task.id)}
+              onToggle={() => onToggle(task.id)}
             />
           </View>
         ))}

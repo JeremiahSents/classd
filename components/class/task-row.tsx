@@ -6,12 +6,14 @@ import {
   CircleIcon,
 } from "@hugeicons/core-free-icons";
 import { TASK_TYPE_LABEL, type TaskType } from "@/lib/types";
+import { formatDueDate } from "@/lib/utils";
 
 interface TaskRowProps {
   title: string;
   description: string;
   type: TaskType;
-  dueLabel: string;
+  /** ISO timestamp — formatted to a due label internally. */
+  dueAt: string;
   /** When provided, shows a completion toggle (student view). */
   completed?: boolean;
   onToggle?: () => void;
@@ -27,11 +29,12 @@ export function TaskRow({
   title,
   description,
   type,
-  dueLabel,
+  dueAt,
   completed,
   onToggle,
 }: TaskRowProps) {
   const checkable = !!onToggle;
+  const dueLabel = formatDueDate(dueAt);
 
   return (
     <View

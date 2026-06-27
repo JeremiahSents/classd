@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -18,53 +24,49 @@ import { TaskRow } from "@/components/class/task-row";
 import { MaterialRow } from "@/components/class/material-row";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { EmptySectionHint } from "@/components/ui/section-header";
-import { useClasses } from "@/lib/classes-store";
+import { useClassDetail } from "@/lib/hooks/use-class-detail";
 import { useSession } from "@/lib/session";
+import { api } from "@/lib/api";
+import { formatTimeAgo } from "@/lib/utils";
+import type { Task, Announcement } from "@/lib/api";
 
 const TABS = ["Tasks", "Materials", "Updates", "Members"];
-
-function formatSize(bytes?: number): string | undefined {
-  if (!bytes && bytes !== 0) return undefined;
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 export default function ClassDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const {
-    getClass,
-    membersForClass,
-    tasksForClass,
-    announcementsForClass,
-    materialsForClass,
-    addMaterial,
-    isTaskComplete,
-    toggleTaskComplete,
-  } = useClasses();
+    classroom,
+    members,
+    tasks,
+    announcements,
+    materials,
+    completedTaskIds,
+    loading,
+    error,
+    reloadTasks,
+    reloadAnnouncements,
+    reloadMaterials,
+    reloadCompletions,
+  } = useClassDetail(id);
   const { role } = useSession();
-  
+
   const [tab, setTab] = useState(0);
   const [inviteVisible, setInviteVisible] = useState(false);
   const [addTaskVisible, setAddTaskVisible] = useState(false);
   const [addAnnouncementVisible, setAddAnnouncementVisible] = useState(false);
 
   const isClassRep = role === "classRep";
-  const classroom = getClass(id);
 
-  if (!classroom) {
-    return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-background">
-        <Text className="text-base text-muted-foreground">Class not found.</Text>
-      </SafeAreaView>
-    );
+  async function handleToggleTask(taskId: string) {
+    const isDone = completedTaskIds.includes(taskId);
+    try {
+      await api.setTaskComplete(taskId, !isDone);
+      reloadCompletions();
+    } catch {
+      // silently ignore
+    }
   }
-
-  const members = membersForClass(id);
-  const tasks = tasksForClass(id);
-  const announcements = announcementsForClass(id);
-  const materials = materialsForClass(id);
 
   async function pickFile() {
     const result = await DocumentPicker.getDocumentAsync({
@@ -73,12 +75,17 @@ export default function ClassDetail() {
     });
     if (result.canceled) return;
     const asset = result.assets[0];
-    addMaterial(id, {
-      name: asset.name,
-      sizeLabel: formatSize(asset.size),
-      mimeType: asset.mimeType,
-      uri: asset.uri,
-    });
+    try {
+      await api.uploadMaterial(id, {
+        uri: asset.uri,
+        name: asset.name,
+        mimeType: asset.mimeType ?? undefined,
+        sizeBytes: asset.size ?? undefined,
+      });
+      reloadMaterials();
+    } catch (e) {
+      // Could surface an error toast here in the future
+    }
   }
 
   function handleAdd() {
@@ -86,6 +93,24 @@ export default function ClassDetail() {
     else if (tab === 1) pickFile();
     else if (tab === 2) setAddAnnouncementVisible(true);
     else setInviteVisible(true);
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator size="large" />
+      </SafeAreaView>
+    );
+  }
+
+  if (error || !classroom) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-background">
+        <Text className="text-base text-muted-foreground">
+          {error ?? "Class not found."}
+        </Text>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -127,7 +152,11 @@ export default function ClassDetail() {
             onPress={handleAdd}
             className="h-11 flex-row items-center gap-2 rounded-full bg-primary px-4 active:opacity-90"
           >
-            <HugeiconsIcon icon={tab === 3 ? UserAdd01Icon : PlusSignIcon} size={18} color="#fff" />
+            <HugeiconsIcon
+              icon={tab === 3 ? UserAdd01Icon : PlusSignIcon}
+              size={18}
+              color="#fff"
+            />
             <Text className="text-sm font-semibold text-primary-foreground">
               {tab === 3 ? "Invite" : "Add"}
             </Text>
@@ -148,15 +177,15 @@ export default function ClassDetail() {
         {/* Tasks */}
         {tab === 0 ? (
           tasks.length > 0 ? (
-            tasks.map((t) => (
+            tasks.map((t: Task) => (
               <TaskRow
                 key={t.id}
                 title={t.title}
                 description={t.description}
                 type={t.type}
-                dueLabel={t.dueLabel}
-                completed={isClassRep ? undefined : isTaskComplete(t.id)}
-                onToggle={isClassRep ? undefined : () => toggleTaskComplete(t.id)}
+                dueAt={t.dueAt}
+                completed={isClassRep ? undefined : completedTaskIds.includes(t.id)}
+                onToggle={isClassRep ? undefined : () => handleToggleTask(t.id)}
               />
             ))
           ) : (
@@ -173,8 +202,8 @@ export default function ClassDetail() {
               <MaterialRow
                 key={m.id}
                 name={m.name}
-                sizeLabel={m.sizeLabel}
-                addedLabel={m.addedLabel}
+                sizeBytes={m.sizeBytes}
+                createdAt={m.createdAt}
                 mimeType={m.mimeType}
               />
             ))
@@ -192,7 +221,7 @@ export default function ClassDetail() {
         {/* Announcements */}
         {tab === 2 ? (
           announcements.length > 0 ? (
-            announcements.map((a) => (
+            announcements.map((a: Announcement) => (
               <View
                 key={a.id}
                 className="gap-1.5 rounded-2xl border border-border bg-card p-4"
@@ -202,7 +231,7 @@ export default function ClassDetail() {
                     {a.title}
                   </Text>
                   <Text className="text-xs text-muted-foreground">
-                    {a.timeLabel}
+                    {formatTimeAgo(a.createdAt)}
                   </Text>
                 </View>
                 {a.content ? (
@@ -250,11 +279,13 @@ export default function ClassDetail() {
         classId={id}
         visible={addTaskVisible}
         onClose={() => setAddTaskVisible(false)}
+        onCreated={() => reloadTasks()}
       />
       <AddAnnouncementModal
         classId={id}
         visible={addAnnouncementVisible}
         onClose={() => setAddAnnouncementVisible(false)}
+        onCreated={() => reloadAnnouncements()}
       />
     </View>
   );

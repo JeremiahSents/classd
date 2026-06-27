@@ -16,8 +16,8 @@
  * that package is installed; calling the function before setup throws clearly.
  */
 
-import { Platform } from "react-native";
 import { api } from "@/lib/api";
+import { Platform } from "react-native";
 
 let cachedToken: string | null = null;
 
