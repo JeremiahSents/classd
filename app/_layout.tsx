@@ -23,6 +23,8 @@ export default function RootLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="profile/edit" />
+          <Stack.Screen name="profile/settings" />
         </Stack>
       </SessionProvider>
     </SafeAreaProvider>

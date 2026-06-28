@@ -55,12 +55,12 @@ export default function Profile() {
     {
       label: "Edit Profile",
       icon: UserEdit01Icon,
-      onPress: () => {},
+      onPress: () => router.push("/profile/edit"),
     },
     {
       label: "App Settings",
       icon: Settings01Icon,
-      onPress: () => {},
+      onPress: () => router.push("/profile/settings"),
     },
     {
       label: "Sign Out",

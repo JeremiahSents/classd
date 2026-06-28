@@ -27,6 +27,7 @@ import { EmptySectionHint } from "@/components/ui/section-header";
 import { useClassDetail } from "@/lib/hooks/use-class-detail";
 import { useSession } from "@/lib/session";
 import { api } from "@/lib/api";
+import { goBackOrHome } from "@/lib/navigation";
 import { formatTimeAgo } from "@/lib/utils";
 import type { Task, Announcement } from "@/lib/api";
 
@@ -130,7 +131,7 @@ export default function ClassDetail() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Back"
-              onPress={() => router.navigate("/")}
+              onPress={() => goBackOrHome(router)}
               className="h-10 w-10 items-center justify-center rounded-full bg-black/30 active:bg-black/50"
             >
               <HugeiconsIcon icon={ArrowLeft01Icon} size={26} color="#fff" />

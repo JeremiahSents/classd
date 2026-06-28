@@ -17,6 +17,7 @@
     "eas:android": "eas build --platform android --profile production",
     "eas:ios": "eas build --platform ios --profile production",
     "eas:update": "eas update --branch production",
+    "deploy:ios": "eas update --branch preview --platform ios --message \"iOS preview update\"",
     "eas:submit:android": "eas submit --platform android --profile production",
     "eas:submit:ios": "eas submit --platform ios --profile production",
     "lint": "expo lint",
