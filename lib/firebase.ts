@@ -40,7 +40,11 @@ function resolveAuth(): Auth {
     return initializeAuth(app, {
       persistence: getReactNativePersistence(AsyncStorage),
     });
-  } catch {
+  } catch (e: any) {
+    // Expected during Fast Refresh, but if it happens on fresh launch, persistence drops!
+    if (e.code !== "auth/already-initialized") {
+      console.error("Firebase Auth persistence failed to initialize:", e);
+    }
     return getAuth(app);
   }
 }

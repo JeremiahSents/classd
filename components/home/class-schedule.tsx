@@ -97,7 +97,7 @@ export function ClassSchedule({
       <SectionTitle
         title="Today's classes"
         count={todayClasses.length}
-        onSeeAll={todayClasses.length > 0 ? onSeeAll : undefined}
+        onSeeAll={onSeeAll}
       />
 
       {todayClasses.length > 0 ? (

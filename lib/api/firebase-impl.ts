@@ -1,9 +1,9 @@
 /**
  * Firebase implementation of ClassdApi — THE FILE THE BACKEND DEV BUILDS.
  *
- * Every method below currently throws `notImplemented()`. Replace each body
- * with real Firebase Auth / Firestore / Storage calls. The `db`, `auth`, and
- * `storage` singletons are exported from `@/lib/firebase`.
+ * Real Firebase Auth / Firestore / Storage calls behind the ClassdApi
+ * contract. The `db`, `auth`, and `storage` singletons are exported from
+ * `@/lib/firebase`.
  *
  * Firestore data model (see BACKEND_INTEGRATION.md for full detail):
  *   users/{uid}
@@ -78,10 +78,6 @@ import {
   type UploadFileInput,
   type UserProfile,
 } from "./contract";
-
-function notImplemented(method: string): never {
-  throw new ApiError("unknown", `firebase-impl: ${method} not implemented yet`);
-}
 
 /* ------------------------------------------------------------------ *
  * Auth helpers
@@ -175,13 +171,11 @@ function toApiError(e: unknown): ApiError {
         return new ApiError("unknown", "Too many attempts. Please try again later.");
       case "auth/network-request-failed":
         return new ApiError("unknown", "Network error. Check your connection and try again.");
-      case "auth/operation-not-allowed":
-        return new ApiError("permission-denied", "This sign-in method is not enabled.");
       default:
-        return new ApiError("unknown", "Something went wrong. Please try again.");
+        return new ApiError("unknown", `Firebase error: ${e.message}`);
     }
   }
-  return new ApiError("unknown", "Something went wrong. Please try again.");
+  return new ApiError("unknown", e instanceof Error ? e.message : "Something went wrong. Please try again.");
 }
 
 /* ------------------------------------------------------------------ *
@@ -308,7 +302,7 @@ export const firebaseApi: ClassdApi = {
       await setDoc(doc(db, "users", uid), {
         name,
         email: input.email,
-        role: input.role,
+        role: "student",
         avatarUrl,
         createdAt: serverTimestamp(),
       });
@@ -317,7 +311,7 @@ export const firebaseApi: ClassdApi = {
         id: uid,
         name,
         email: input.email,
-        role: input.role,
+        role: "student",
         avatarUrl,
         createdAt: new Date().toISOString(),
       };
@@ -486,6 +480,16 @@ export const firebaseApi: ClassdApi = {
         ownerId: uid,
         schedules,
         createdAt: serverTimestamp(),
+      });
+
+      const profile = await loadProfile(uid);
+      await setDoc(doc(db, "classes", ref.id, "members", uid), {
+        uid,
+        name: profile?.name ?? "",
+        email: profile?.email ?? "",
+        avatarUrl: profile?.avatarUrl ?? "",
+        role: profile?.role ?? "classRep",
+        joinedAt: serverTimestamp(),
       });
 
       return {

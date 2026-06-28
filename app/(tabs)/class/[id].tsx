@@ -55,16 +55,18 @@ export default function ClassDetail() {
   const [inviteVisible, setInviteVisible] = useState(false);
   const [addTaskVisible, setAddTaskVisible] = useState(false);
   const [addAnnouncementVisible, setAddAnnouncementVisible] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const isClassRep = role === "classRep";
 
   async function handleToggleTask(taskId: string) {
     const isDone = completedTaskIds.includes(taskId);
+    setActionError(null);
     try {
       await api.setTaskComplete(taskId, !isDone);
       reloadCompletions();
-    } catch {
-      // silently ignore
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to update task.");
     }
   }
 
@@ -75,6 +77,7 @@ export default function ClassDetail() {
     });
     if (result.canceled) return;
     const asset = result.assets[0];
+    setActionError(null);
     try {
       await api.uploadMaterial(id, {
         uri: asset.uri,
@@ -84,7 +87,7 @@ export default function ClassDetail() {
       });
       reloadMaterials();
     } catch (e) {
-      // Could surface an error toast here in the future
+      setActionError(e instanceof Error ? e.message : "Failed to upload material.");
     }
   }
 
@@ -174,6 +177,12 @@ export default function ClassDetail() {
         contentContainerClassName="gap-4 px-6 pb-32 pt-3"
         showsVerticalScrollIndicator={false}
       >
+        {actionError ? (
+          <Text className="text-center text-sm font-medium text-red-500">
+            {actionError}
+          </Text>
+        ) : null}
+
         {/* Tasks */}
         {tab === 0 ? (
           tasks.length > 0 ? (

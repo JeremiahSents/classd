@@ -15,7 +15,7 @@ import type { Class } from "@/lib/api";
 
 export default function Classes() {
   const router = useRouter();
-  const { classes, loading, reload } = useApiClasses();
+  const { classes, loading, error, reload } = useApiClasses();
   const { role } = useSession();
   const [createVisible, setCreateVisible] = useState(false);
   const [joinVisible, setJoinVisible] = useState(false);
@@ -53,6 +53,13 @@ export default function Classes() {
         <View className="flex-1 items-center justify-center">
           <ActivityIndicator size="large" />
         </View>
+      ) : error ? (
+        <View className="flex-1 items-center justify-center gap-3 px-6 pb-24">
+          <Text className="text-center text-sm font-medium text-red-500">
+            {error}
+          </Text>
+          <Button label="Try again" variant="outline" onPress={reload} />
+        </View>
       ) : isEmpty ? (
         <View className="flex-1 items-center justify-center gap-8 px-6 pb-24">
           <BooksIcon size={120} />
@@ -77,12 +84,7 @@ export default function Classes() {
             <ClassCard
               key={classroom.id}
               classroom={classroom}
-              onPress={() =>
-                router.push({
-                  pathname: "/(tabs)/class/[id]",
-                  params: { id: classroom.id },
-                })
-              }
+              onPress={() => router.push(`/(tabs)/class/${classroom.id}`)}
             />
           ))}
         </ScrollView>

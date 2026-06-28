@@ -78,6 +78,19 @@ npm run serve
 
 Use `npm run deploy` inside `functions` when you are ready to deploy functions to Firebase.
 
+## Temporary class representative setup
+
+All public signups are created as students. Until the invitation/promotion flow
+is implemented, create a class representative for testing by:
+
+1. Signing up normally in the app.
+2. Opening Firebase Console for the active project.
+3. Editing `users/{uid}.role` from `student` to `classRep`.
+4. Signing out and back in, or restarting the app, so the session reloads the
+   updated profile.
+
+Do not add a hidden promotion code in the app for this phase.
+
 ## Project structure
 
 - **`app`**: Expo Router screens and navigation routes.

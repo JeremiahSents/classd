@@ -68,12 +68,14 @@ export default function Home() {
     announcements,
     completedTaskIds,
     loading,
+    error,
     reload,
     reloadCompletions,
   } = useHomeData();
   const { role, firstName } = useSession();
   const [createVisible, setCreateVisible] = useState(false);
   const [joinVisible, setJoinVisible] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const isClassRep = role === "classRep";
   const isEmpty = classes.length === 0;
@@ -84,16 +86,17 @@ export default function Home() {
 
   async function handleToggleTask(taskId: string) {
     const isDone = completedTaskIds.includes(taskId);
+    setActionError(null);
     try {
       await api.setTaskComplete(taskId, !isDone);
       reloadCompletions();
-    } catch {
-      // silently ignore
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : "Failed to update task.");
     }
   }
 
   function navigateToClass(classId: string) {
-    router.push({ pathname: "/(tabs)/class/[id]", params: { id: classId } });
+    router.push(`/(tabs)/class/${classId}`);
   }
 
   function handleClassCreated(_cls: Class) {
@@ -127,6 +130,11 @@ export default function Home() {
               <JoinButton onPress={() => setJoinVisible(true)} />
             )}
           </View>
+          {error || actionError ? (
+            <Text className="px-6 pt-4 text-center text-sm font-medium text-red-500">
+              {error ?? actionError}
+            </Text>
+          ) : null}
 
           <View className="flex-1 items-center justify-center gap-8 px-6">
             <BooksIcon size={140} />
@@ -154,6 +162,12 @@ export default function Home() {
           contentContainerClassName="gap-8 px-6 pb-32 pt-2"
           showsVerticalScrollIndicator={false}
         >
+          {error || actionError ? (
+            <Text className="text-center text-sm font-medium text-red-500">
+              {error ?? actionError}
+            </Text>
+          ) : null}
+
           {/* 1. Greeting */}
           <HomeHeader firstName={firstName} />
 

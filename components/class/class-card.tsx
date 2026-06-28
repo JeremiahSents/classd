@@ -1,7 +1,5 @@
 import { Pressable, Text, View, type PressableProps } from "react-native";
 import { Image } from "expo-image";
-import { HugeiconsIcon } from "@hugeicons/react-native";
-import { Folder01Icon, ChartHistogramIcon, MoreVerticalIcon } from "@hugeicons/core-free-icons";
 import type { Class } from "@/lib/api";
 
 interface ClassCardProps extends Omit<PressableProps, "children"> {

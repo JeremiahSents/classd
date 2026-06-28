@@ -96,7 +96,7 @@ const visibleClasses = () => {
 
 export const mockApi: ClassdApi = {
   async signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
-    currentUser = { id: id("u"), name: input.name ?? input.email.split("@")[0], email: input.email, role: input.role, avatarUrl: CLASS_REP.avatarUrl, createdAt: now() };
+    currentUser = { id: id("u"), name: input.name ?? input.email.split("@")[0], email: input.email, role: "student", avatarUrl: CLASS_REP.avatarUrl, createdAt: now() };
     emitAuth();
     return { user: currentUser, isNewUser: true };
   },
@@ -105,12 +105,12 @@ export const mockApi: ClassdApi = {
     emitAuth();
     return { user: currentUser, isNewUser: false };
   },
-  async signInWithGoogle(_idToken, role: Role = "classRep"): Promise<AuthResult> {
+  async signInWithGoogle(_idToken, role: Role = "student"): Promise<AuthResult> {
     currentUser = { ...CLASS_REP, role };
     emitAuth();
     return { user: currentUser, isNewUser: false };
   },
-  async signInWithApple(_token, role: Role = "classRep"): Promise<AuthResult> {
+  async signInWithApple(_token, role: Role = "student"): Promise<AuthResult> {
     currentUser = { ...CLASS_REP, role };
     emitAuth();
     return { user: currentUser, isNewUser: false };

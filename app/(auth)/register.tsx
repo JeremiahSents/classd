@@ -17,21 +17,16 @@ import { useRouter } from "expo-router";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { GoogleIcon } from "@/components/ui/google-icon";
-import { SegmentedTabs } from "@/components/ui/segmented-tabs";
-import { useSession, type Role } from "@/lib/session";
-import { AppleIcon } from "@/components/ui/apple-icon";
+import { useSession } from "@/lib/session";
 import { ApiError } from "@/lib/api";
-
-const ROLES: Role[] = ["classRep", "student"];
 
 export default function Register() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const { signUpWithEmail, signInWithEmail } = useSession();
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [roleIndex, setRoleIndex] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,10 +45,14 @@ export default function Register() {
   async function submitCredentials() {
     setError(null);
     setSubmitting(true);
-    const role = ROLES[roleIndex];
     try {
       try {
-        await signUpWithEmail({ email: email.trim(), password, role });
+        await signUpWithEmail({
+          email: email.trim(),
+          password,
+          name: name.trim(),
+          role: "student",
+        });
       } catch (e) {
         // Returning user: the account already exists, so sign in instead. This
         // lets the single register screen handle both new and existing users.
@@ -73,6 +72,10 @@ export default function Register() {
 
   function handleEmailContinue() {
     if (!showPassword) {
+      if (!name.trim()) {
+        setError("Please enter your full name.");
+        return;
+      }
       if (!email.trim()) {
         setError("Please enter your email.");
         return;
@@ -83,14 +86,6 @@ export default function Register() {
       return;
     }
     submitCredentials();
-  }
-
-  function handleSocialAuth(provider: "google" | "apple") {
-    // Google/Apple sign-in needs OAuth client setup (expo-auth-session) to get
-    // an idToken before api.signInWithGoogle/Apple can run. Not wired up yet.
-    setError(
-      `${provider === "google" ? "Google" : "Apple"} sign-in isn't set up yet — please use email.`,
-    );
   }
 
   return (
@@ -105,7 +100,6 @@ export default function Register() {
           showsVerticalScrollIndicator={false}
         >
           <View className="w-full max-w-md self-center">
-            {/* Header */}
             <View className="gap-6 pb-8">
               <Logo size={96} style={{ alignSelf: "center" }} />
               <View className="gap-1.5">
@@ -115,9 +109,18 @@ export default function Register() {
               </View>
             </View>
 
-            {/* Form */}
             <View className="relative overflow-hidden" style={{ minHeight: 250 }}>
               <Animated.View className="absolute inset-x-0 top-0 gap-4" style={emailStepStyle}>
+                <Input
+                  label="Full Name"
+                  placeholder="John Doe"
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                  autoComplete="name"
+                  autoCorrect={false}
+                />
+
                 <Input
                   label="University email"
                   placeholder="you@university.edu"
@@ -129,17 +132,6 @@ export default function Register() {
                   autoCorrect={false}
                   inputMode="email"
                 />
-
-                <View className="gap-2">
-                  <Text className="text-center text-sm font-medium text-foreground">
-                    I am a
-                  </Text>
-                  <SegmentedTabs
-                    tabs={["Class Rep", "Student"]}
-                    active={roleIndex}
-                    onChange={setRoleIndex}
-                  />
-                </View>
 
                 <Button label="Continue with email" onPress={handleEmailContinue} />
               </Animated.View>
@@ -172,29 +164,9 @@ export default function Register() {
               </Text>
             ) : null}
 
-            {/* Social Auth always visible */}
-            <View className="gap-4 pt-2">
-              <View className="flex-row items-center gap-4 py-2">
-                <View className="h-px flex-1 bg-border" />
-                <Text className="text-sm text-muted-foreground">
-                  Or sign up with
-                </Text>
-                <View className="h-px flex-1 bg-border" />
-              </View>
-
-              <Button
-                label="Continue with Google"
-                variant="outline"
-                leftIcon={<GoogleIcon size={20} />}
-                onPress={() => handleSocialAuth("google")}
-              />
-              <Button
-                label="Continue with Apple"
-                variant="outline"
-                leftIcon={<AppleIcon size={20} />}
-                onPress={() => handleSocialAuth("apple")}
-              />
-            </View>
+            <Text className="pt-4 text-center text-xs leading-5 text-muted-foreground">
+              Class representative access is assigned after signup.
+            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
