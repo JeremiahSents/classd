@@ -91,6 +91,18 @@ is implemented, create a class representative for testing by:
 
 Do not add a hidden promotion code in the app for this phase.
 
+## Google sign-in setup
+
+Google sign-in is wired through Expo AuthSession and Firebase Auth. To make the
+button work in a local build, add Google OAuth client IDs to `.env`:
+
+- `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
+- `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
+- `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`
+
+New Google users are created as students. Class representative access is still
+assigned manually in Firebase for this phase.
+
 ## Project structure
 
 - **`app`**: Expo Router screens and navigation routes.
