@@ -222,7 +222,7 @@ export default function Register() {
             </View>
 
             <Text className="pt-4 text-center text-xs leading-5 text-muted-foreground">
-              Class representative access is assigned after signup.
+              Create a class to become its rep, or join with a code as a member.
             </Text>
           </View>
         </ScrollView>

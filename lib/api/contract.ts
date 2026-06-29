@@ -70,9 +70,9 @@ export interface Class {
   /** 6-digit join code, unique, issued by the backend on create. */
   code: string;
   coverUrl: string;
-  /** uid of the class representative who owns the class. */
+  /** uid of the user who created the class. */
   ownerId: string;
-  /** member id (uid) of the assigned class rep, if any. */
+  /** uid of the appointed class rep for this class. */
   classRepId?: string;
   schedules: ScheduleBlock[];
   createdAt: string; // ISO
@@ -195,12 +195,12 @@ export interface ClassdApi {
   unregisterPushToken(token: string): Promise<void>;
 
   // ---- Classes ----
-  /** Class rep: classes they own. Student: classes they're enrolled in. */
+  /** Classes the caller created as rep or joined as a member. */
   listClasses(): Promise<Class[]>;
   getClass(classId: string): Promise<Class>;
-  createClass(input: CreateClassInput): Promise<Class>; // class rep only
-  joinClassByCode(code: string): Promise<Class>; // student
-  leaveClass(classId: string): Promise<void>; // student
+  createClass(input: CreateClassInput): Promise<Class>; // creator becomes class rep
+  joinClassByCode(code: string): Promise<Class>; // joins as member
+  leaveClass(classId: string): Promise<void>; // member
   assignClassRep(classId: string, memberId: string): Promise<void>; // class rep
 
   // ---- Members ----

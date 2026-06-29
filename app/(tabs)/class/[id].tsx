@@ -50,7 +50,7 @@ export default function ClassDetail() {
     reloadMaterials,
     reloadCompletions,
   } = useClassDetail(id);
-  const { role } = useSession();
+  const { user } = useSession();
 
   const [tab, setTab] = useState(0);
   const [inviteVisible, setInviteVisible] = useState(false);
@@ -58,7 +58,8 @@ export default function ClassDetail() {
   const [addAnnouncementVisible, setAddAnnouncementVisible] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const isClassRep = role === "classRep";
+  const canManageClass =
+    !!user && !!classroom && (classroom.ownerId === user.id || classroom.classRepId === user.id);
 
   async function handleToggleTask(taskId: string) {
     const isDone = completedTaskIds.includes(taskId);
@@ -150,7 +151,7 @@ export default function ClassDetail() {
             {members.length} member{members.length === 1 ? "" : "s"}
           </Text>
         </View>
-        {isClassRep ? (
+        {canManageClass ? (
           <Pressable
             accessibilityRole="button"
             onPress={handleAdd}
@@ -194,13 +195,13 @@ export default function ClassDetail() {
                 description={t.description}
                 type={t.type}
                 dueAt={t.dueAt}
-                completed={isClassRep ? undefined : completedTaskIds.includes(t.id)}
-                onToggle={isClassRep ? undefined : () => handleToggleTask(t.id)}
+                completed={canManageClass ? undefined : completedTaskIds.includes(t.id)}
+                onToggle={canManageClass ? undefined : () => handleToggleTask(t.id)}
               />
             ))
           ) : (
             <EmptySectionHint
-              text={isClassRep ? "No tasks yet — tap Add to post one" : "No tasks yet"}
+              text={canManageClass ? "No tasks yet - tap Add to post one" : "No tasks yet"}
             />
           )
         ) : null}
@@ -220,8 +221,8 @@ export default function ClassDetail() {
           ) : (
             <EmptySectionHint
               text={
-                isClassRep
-                  ? "No materials yet — tap Add to upload a file"
+                canManageClass
+                  ? "No materials yet - tap Add to upload a file"
                   : "No materials yet"
               }
             />
@@ -252,8 +253,8 @@ export default function ClassDetail() {
           ) : (
             <EmptySectionHint
               text={
-                isClassRep
-                  ? "No announcements yet — tap Add to post one"
+                canManageClass
+                  ? "No announcements yet - tap Add to post one"
                   : "No announcements yet"
               }
             />

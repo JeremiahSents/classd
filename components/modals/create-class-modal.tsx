@@ -112,7 +112,7 @@ export function CreateClassModal({
               <View className="gap-6">
                 <View className="gap-2">
                   <Text className="text-base text-muted-foreground">
-                    Share this code so students can join {created.name}.
+                    You are now the class rep for {created.name}. Share this code so classmates can join as members.
                   </Text>
                   <View className="items-center rounded-2xl border border-border bg-card py-6">
                     <Text className="text-4xl font-bold tracking-[0.3em] text-foreground">
@@ -158,6 +158,9 @@ export function CreateClassModal({
                   returnKeyType="done"
                   onSubmitEditing={() => name.trim() && handleContinue()}
                 />
+                <Text className="text-sm leading-5 text-muted-foreground">
+                  You will be listed as the class rep and get a code to share.
+                </Text>
                 {error ? (
                   <Text className="text-center text-sm text-destructive">
                     {error}

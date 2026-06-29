@@ -68,7 +68,7 @@ export function JoinClassModal({
         <View>
           <View className="gap-6 rounded-t-3xl bg-background p-6 pb-10">
             <View className="flex-row items-center justify-between">
-              <Text className="text-xl font-bold text-foreground">Join a class</Text>
+              <Text className="text-xl font-bold text-foreground">Join with class code</Text>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Close"
@@ -91,6 +91,9 @@ export function JoinClassModal({
                 keyboardType="number-pad"
                 autoFocus
               />
+              <Text className="text-sm leading-5 text-muted-foreground">
+                You will join as a member. Create a class when you need to manage one.
+              </Text>
               {error ? (
                 <Text className="text-center text-sm text-destructive">{error}</Text>
               ) : null}
@@ -105,7 +108,7 @@ export function JoinClassModal({
               />
               <Button
                 className="flex-1"
-                label="Join"
+                label="Join as member"
                 disabled={!code.trim()}
                 loading={loading}
                 onPress={handleJoin}

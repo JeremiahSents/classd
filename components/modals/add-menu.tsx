@@ -31,7 +31,7 @@ export function AddMenu({
   const [open, setOpen] = useState(false);
 
   const items: MenuItem[] = [
-    { label: "New class", Icon: Mortarboard02Icon, onPress: onNewClass },
+    { label: "Create class", Icon: Mortarboard02Icon, onPress: onNewClass },
     { label: "New announcement", Icon: Megaphone01Icon, onPress: onNewAnnouncement },
     { label: "New task", Icon: TaskDone01Icon, onPress: onNewTask },
   ];

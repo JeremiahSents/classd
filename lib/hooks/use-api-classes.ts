@@ -1,6 +1,6 @@
 /**
  * useApiClasses — fetches the current user's classes from the Firebase API.
- * Class reps get classes they own; students get classes they're enrolled in.
+ * Includes classes the user created as rep and classes they joined as a member.
  */
 import { useCallback, useEffect, useState } from "react";
 import { api, type Class } from "@/lib/api";

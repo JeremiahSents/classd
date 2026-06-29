@@ -8,6 +8,7 @@ import {
   ArrowRight01Icon,
   BookOpen01Icon,
   CheckmarkCircle02Icon,
+  CrownIcon,
   Logout01Icon,
   Settings01Icon,
   UserEdit01Icon,
@@ -18,6 +19,7 @@ import { useHomeData } from "@/lib/hooks/use-home-data";
 import { AvatarPickerModal } from "@/components/modals/avatar-picker-modal";
 
 interface SettingsItem {
+  id: string;
   label: string;
   icon: any;
   onPress: () => void;
@@ -26,43 +28,45 @@ interface SettingsItem {
 
 export default function Profile() {
   const router = useRouter();
-  const { role, name, email, avatarUrl, updateAvatar, signOut } = useSession();
+  const { user, name, email, avatarUrl, updateAvatar, signOut } = useSession();
   const { classes, tasks, completedTaskIds } = useHomeData();
 
   const [avatarPickerVisible, setAvatarPickerVisible] = useState(false);
 
   async function handleSignOut() {
-    try {
-      await signOut();
-    } finally {
-      router.replace("/(auth)/register");
-    }
+    await signOut().catch(() => {});
+    router.replace("/(auth)/register");
   }
 
   function handleAvatarSelect(url: string) {
     updateAvatar(url).catch(() => {});
   }
 
-  const isClassRep = role === "classRep";
-  const roleLabel = isClassRep ? "Class Representative" : "Student";
-
   const activeClasses = classes.length;
-  const pendingTasks = isClassRep
-    ? tasks.length
-    : tasks.filter((t) => !completedTaskIds.includes(t.id)).length;
+  const managedClasses = user
+    ? classes.filter((c) => c.ownerId === user.id || c.classRepId === user.id).length
+    : 0;
+  const pendingTasks = tasks.filter((t) => !completedTaskIds.includes(t.id)).length;
+  const profileBadge =
+    managedClasses > 0
+      ? `Rep for ${managedClasses} ${managedClasses === 1 ? "class" : "classes"}`
+      : "Class member";
 
   const items: SettingsItem[] = [
     {
+      id: "edit-profile",
       label: "Edit Profile",
       icon: UserEdit01Icon,
       onPress: () => router.push("/profile/edit"),
     },
     {
+      id: "app-settings",
       label: "App Settings",
       icon: Settings01Icon,
       onPress: () => router.push("/profile/settings"),
     },
     {
+      id: "sign-out",
       label: "Sign Out",
       icon: Logout01Icon,
       onPress: handleSignOut,
@@ -109,7 +113,7 @@ export default function Profile() {
             </Text>
             <View className="mt-1 rounded-full bg-primary/10 px-3 py-1">
               <Text className="text-xs font-bold capitalize tracking-wide text-primary">
-                {roleLabel} account
+                {profileBadge}
               </Text>
             </View>
           </View>
@@ -117,29 +121,39 @@ export default function Profile() {
 
         <View className="mt-8 flex-row gap-4">
           <View className="flex-1 items-center justify-center rounded-2xl border border-border bg-card py-5">
-            <HugeiconsIcon icon={BookOpen01Icon} size={28} color="#4f46e5" />
+            <HugeiconsIcon icon={CrownIcon} size={28} color="#4f46e5" />
+            <Text className="mt-3 text-2xl font-black text-foreground">
+              {managedClasses}
+            </Text>
+            <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Managed Classes
+            </Text>
+          </View>
+          <View className="flex-1 items-center justify-center rounded-2xl border border-border bg-card py-5">
+            <HugeiconsIcon icon={BookOpen01Icon} size={28} color="#0f766e" />
             <Text className="mt-3 text-2xl font-black text-foreground">
               {activeClasses}
             </Text>
             <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {activeClasses === 1 ? "Active Class" : "Active Classes"}
+              Total Classes
             </Text>
           </View>
-          <View className="flex-1 items-center justify-center rounded-2xl border border-border bg-card py-5">
-            <HugeiconsIcon icon={CheckmarkCircle02Icon} size={28} color="#22c55e" />
-            <Text className="mt-3 text-2xl font-black text-foreground">
-              {pendingTasks}
-            </Text>
-            <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Pending Tasks
-            </Text>
-          </View>
+        </View>
+
+        <View className="mt-4 items-center justify-center rounded-2xl border border-border bg-card py-5">
+          <HugeiconsIcon icon={CheckmarkCircle02Icon} size={28} color="#22c55e" />
+          <Text className="mt-3 text-2xl font-black text-foreground">
+            {pendingTasks}
+          </Text>
+          <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Pending Tasks
+          </Text>
         </View>
 
         <View className="mt-8 gap-1.5 rounded-3xl border border-border bg-card p-2">
           {items.map((item, i) => (
             <Pressable
-              key={i}
+              key={item.id}
               accessibilityRole="button"
               onPress={item.onPress}
               className="flex-row items-center justify-between rounded-2xl px-4 py-3.5 active:bg-secondary"

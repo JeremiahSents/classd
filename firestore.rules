@@ -29,6 +29,17 @@ service cloud.firestore {
         get(/databases/$(database)/documents/classes/$(classId)).data.ownerId == request.auth.uid;
     }
 
+    /** True if the caller is the class representative for the given class. */
+    function isClassRep(classId) {
+      return isSignedIn() &&
+        get(/databases/$(database)/documents/classes/$(classId)).data.classRepId == request.auth.uid;
+    }
+
+    /** True if the caller can manage class content. */
+    function canManageClass(classId) {
+      return isOwner(classId) || isClassRep(classId);
+    }
+
     // ----------------------------------------------------------------
     // users/{uid}
     // Readable by any signed-in user (needed for profile lookups).
@@ -36,7 +47,13 @@ service cloud.firestore {
     // ----------------------------------------------------------------
     match /users/{uid} {
       allow read: if isSignedIn();
-      allow create, update: if isSelf(uid);
+      allow create: if isSelf(uid)
+        && request.resource.data.role == "student";
+      allow update: if isSelf(uid)
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.email == resource.data.email
+        && request.resource.data.diff(resource.data).changedKeys()
+          .hasOnly(["name", "avatarUrl", "expoPushTokens"]);
       allow delete: if false;
 
       // users/{uid}/completions/{taskId}
@@ -48,56 +65,74 @@ service cloud.firestore {
 
     // ----------------------------------------------------------------
     // classes/{classId}
-    // Read: owner OR member.
-    // Create: any signed-in user (they become the owner).
+    // Read: owner, class rep, OR member.
+    // Create: any signed-in user (they become owner and class rep).
     // Update/delete: owner only.
     // ----------------------------------------------------------------
     match /classes/{classId} {
-      allow read: if isOwner(classId) || isMember(classId);
+      allow read: if canManageClass(classId) || isMember(classId);
       allow create: if isSignedIn()
-        && request.resource.data.ownerId == request.auth.uid;
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.classRepId == request.auth.uid
+        && request.resource.data.keys().hasOnly([
+          "name",
+          "code",
+          "coverUrl",
+          "ownerId",
+          "classRepId",
+          "schedules",
+          "createdAt"
+        ]);
       allow update: if isOwner(classId);
       allow delete: if isOwner(classId);
 
       // classes/{classId}/members/{uid}
-      // Read: class members and the owner.
-      // Create: the user can add themselves (join) OR the owner can add anyone.
-      // Delete: the user can remove themselves (leave) OR the owner can remove anyone.
+      // Read: class members and managers.
+      // Create: the user can add themselves as a student OR a manager can add anyone.
+      // Delete: the user can remove themselves OR a manager can remove anyone.
       match /members/{memberId} {
-        allow read: if isOwner(classId) || isMember(classId);
+        allow read: if canManageClass(classId) || isMember(classId);
         allow create: if isSignedIn() && (
-          memberId == request.auth.uid ||   // joining
-          isOwner(classId)                  // owner adds a member
+          (
+            memberId == request.auth.uid &&
+            request.resource.data.uid == request.auth.uid &&
+            request.resource.data.role == "student"
+          ) ||
+          (
+            canManageClass(classId) &&
+            request.resource.data.uid == memberId
+          )
         );
-        allow update: if isOwner(classId);
+        allow update: if canManageClass(classId)
+          && request.resource.data.uid == memberId;
         allow delete: if isSignedIn() && (
-          memberId == request.auth.uid ||   // leaving
-          isOwner(classId)                  // owner removes a member
+          memberId == request.auth.uid ||
+          canManageClass(classId)
         );
       }
 
       // classes/{classId}/tasks/{taskId}
-      // Read: members and owner.
-      // Create/update/delete: owner only.
+      // Read: members and managers.
+      // Create/update/delete: managers only.
       match /tasks/{taskId} {
-        allow read: if isOwner(classId) || isMember(classId);
-        allow create, update, delete: if isOwner(classId);
+        allow read: if canManageClass(classId) || isMember(classId);
+        allow create, update, delete: if canManageClass(classId);
       }
 
       // classes/{classId}/announcements/{announcementId}
-      // Read: members and owner.
-      // Create/update/delete: owner only.
+      // Read: members and managers.
+      // Create/update/delete: managers only.
       match /announcements/{announcementId} {
-        allow read: if isOwner(classId) || isMember(classId);
-        allow create, update, delete: if isOwner(classId);
+        allow read: if canManageClass(classId) || isMember(classId);
+        allow create, update, delete: if canManageClass(classId);
       }
 
       // classes/{classId}/materials/{materialId}
-      // Read: members and owner.
-      // Create/update/delete: owner only.
+      // Read: members and managers.
+      // Create/update/delete: managers only.
       match /materials/{materialId} {
-        allow read: if isOwner(classId) || isMember(classId);
-        allow create, update, delete: if isOwner(classId);
+        allow read: if canManageClass(classId) || isMember(classId);
+        allow create, update, delete: if canManageClass(classId);
       }
     }
   }

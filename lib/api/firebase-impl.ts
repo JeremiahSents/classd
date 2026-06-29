@@ -229,20 +229,20 @@ async function uniqueClassCode(): Promise<string> {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-/** Ids of the classes the current user can see (owned for class rep, joined for student). */
+/** Ids of the classes the current user can see: owned or joined. */
 async function visibleClassIds(): Promise<string[]> {
   const uid = requireUid();
-  const profile = await loadProfile(uid);
-  if (profile?.role === "classRep") {
-    const snap = await getDocs(query(collection(db, "classes"), where("ownerId", "==", uid)));
-    return snap.docs.map((d) => d.id);
-  }
-  const memberSnap = await getDocs(
-    query(collectionGroup(db, "members"), where("uid", "==", uid)),
-  );
-  return memberSnap.docs
+  const [ownedSnap, memberSnap] = await Promise.all([
+    getDocs(query(collection(db, "classes"), where("ownerId", "==", uid))),
+    getDocs(
+      query(collectionGroup(db, "members"), where("uid", "==", uid)),
+    ),
+  ]);
+  const ownedIds = ownedSnap.docs.map((d) => d.id);
+  const memberIds = memberSnap.docs
     .map((d) => d.ref.parent.parent?.id)
     .filter((id): id is string => !!id);
+  return Array.from(new Set([...ownedIds, ...memberIds]));
 }
 
 /** Shape a classes/{id}/tasks/{taskId} document into a Task. */
@@ -430,25 +430,12 @@ export const firebaseApi: ClassdApi = {
 
   // ---- Classes ----
   async listClasses(): Promise<Class[]> {
-    const uid = requireUid();
     try {
-      const profile = await loadProfile(uid);
-      if (profile?.role === "classRep") {
-        // classes this user owns
-        const snap = await getDocs(
-          query(collection(db, "classes"), where("ownerId", "==", uid)),
-        );
-        return snap.docs.map((d) => toClass(d.id, d.data()));
-      }
-      // student: classes where a members/{uid} doc exists
-      const memberSnap = await getDocs(
-        query(collectionGroup(db, "members"), where("uid", "==", uid)),
+      const ids = await visibleClassIds();
+      const docs = await Promise.all(
+        ids.map((classId) => getDoc(doc(db, "classes", classId))),
       );
-      const classRefs = memberSnap.docs
-        .map((d) => d.ref.parent.parent)
-        .filter((ref): ref is NonNullable<typeof ref> => ref !== null);
-      const classDocs = await Promise.all(classRefs.map((ref) => getDoc(ref)));
-      return classDocs.filter((d) => d.exists()).map((d) => toClass(d.id, d.data()!));
+      return docs.filter((d) => d.exists()).map((d) => toClass(d.id, d.data()!));
     } catch (e) {
       throw toApiError(e);
     }
@@ -478,6 +465,7 @@ export const firebaseApi: ClassdApi = {
         code: joinCode,
         coverUrl,
         ownerId: uid,
+        classRepId: uid,
         schedules,
         createdAt: serverTimestamp(),
       });
@@ -488,7 +476,7 @@ export const firebaseApi: ClassdApi = {
         name: profile?.name ?? "",
         email: profile?.email ?? "",
         avatarUrl: profile?.avatarUrl ?? "",
-        role: profile?.role ?? "classRep",
+        role: "classRep",
         joinedAt: serverTimestamp(),
       });
 
@@ -498,6 +486,7 @@ export const firebaseApi: ClassdApi = {
         code: joinCode,
         coverUrl,
         ownerId: uid,
+        classRepId: uid,
         schedules,
         createdAt: new Date().toISOString(),
       };
@@ -521,7 +510,7 @@ export const firebaseApi: ClassdApi = {
         name: profile?.name ?? "",
         email: profile?.email ?? "",
         avatarUrl: profile?.avatarUrl ?? "",
-        role: profile?.role ?? "student",
+        role: "student",
         joinedAt: serverTimestamp(),
       });
       return toClass(classDoc.id, classDoc.data());

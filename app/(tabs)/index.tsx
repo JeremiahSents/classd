@@ -3,12 +3,15 @@ import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-nati
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { HugeiconsIcon } from "@hugeicons/react-native";
-import { PlusSignIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
+import {
+  CrownIcon,
+  UserAdd01Icon,
+  UserGroupIcon,
+} from "@hugeicons/core-free-icons";
 import { BooksIcon } from "@/components/ui/books-icon";
 import { Button } from "@/components/ui/button";
 import { CreateClassModal } from "@/components/modals/create-class-modal";
 import { JoinClassModal } from "@/components/modals/join-class-modal";
-import { AddMenu } from "@/components/modals/add-menu";
 import { HomeHeader } from "@/components/home/home-header";
 import { ClassSchedule } from "@/components/home/class-schedule";
 import { TasksSection } from "@/components/home/tasks-section";
@@ -57,6 +60,46 @@ function JoinButton({ onPress }: { onPress: () => void }) {
   );
 }
 
+function QuickAction({
+  title,
+  description,
+  icon,
+  onPress,
+  primary,
+}: {
+  title: string;
+  description: string;
+  icon: any;
+  onPress: () => void;
+  primary?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      className={`flex-1 gap-3 rounded-2xl border p-4 active:opacity-85 ${
+        primary ? "border-primary bg-primary" : "border-border bg-card"
+      }`}
+    >
+      <View
+        className={`h-10 w-10 items-center justify-center rounded-full ${
+          primary ? "bg-white/20" : "bg-primary/10"
+        }`}
+      >
+        <HugeiconsIcon icon={icon} size={20} color={primary ? "#fff" : "#4f46e5"} />
+      </View>
+      <View className="gap-1">
+        <Text className={`text-base font-black ${primary ? "text-white" : "text-foreground"}`}>
+          {title}
+        </Text>
+        <Text className={`text-xs leading-5 ${primary ? "text-white/80" : "text-muted-foreground"}`}>
+          {description}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  Home screen                                                       */
 /* ------------------------------------------------------------------ */
@@ -72,13 +115,15 @@ export default function Home() {
     reload,
     reloadCompletions,
   } = useHomeData();
-  const { role, firstName } = useSession();
+  const { user, firstName } = useSession();
   const [createVisible, setCreateVisible] = useState(false);
   const [joinVisible, setJoinVisible] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const isClassRep = role === "classRep";
   const isEmpty = classes.length === 0;
+  const repClassCount = user
+    ? classes.filter((c) => c.ownerId === user.id || c.classRepId === user.id).length
+    : 0;
 
   // className helper: map classId → class name for display
   const classNameMap = Object.fromEntries(classes.map((c) => [c.id, c.name]));
@@ -124,11 +169,7 @@ export default function Home() {
             <View className="flex-1">
               <UserGreeting size="small" />
             </View>
-            {isClassRep ? (
-              <AddMenu onNewClass={() => setCreateVisible(true)} />
-            ) : (
-              <JoinButton onPress={() => setJoinVisible(true)} />
-            )}
+            <JoinButton onPress={() => setJoinVisible(true)} />
           </View>
           {error || actionError ? (
             <Text className="px-6 pt-4 text-center text-sm font-medium text-red-500">
@@ -136,25 +177,30 @@ export default function Home() {
             </Text>
           ) : null}
 
-          <View className="flex-1 items-center justify-center gap-8 px-6">
+          <View className="flex-1 items-center justify-center gap-6 px-6">
             <BooksIcon size={140} />
+            <View className="items-center gap-2">
+              <Text className="text-center text-2xl font-black text-foreground">
+                Start with a class
+              </Text>
+              <Text className="max-w-sm text-center text-sm leading-6 text-muted-foreground">
+                Create a class to become its rep, or join one with a code as a member.
+              </Text>
+            </View>
             <Button
-              label={
-                isClassRep
-                  ? "Create your first class"
-                  : "Join your first class"
-              }
-              leftIcon={
-                isClassRep ? (
-                  <HugeiconsIcon icon={PlusSignIcon} size={20} color="#fff" />
-                ) : (
-                  <HugeiconsIcon icon={UserAdd01Icon} size={20} color="#fff" />
-                )
-              }
-              onPress={() =>
-                isClassRep ? setCreateVisible(true) : setJoinVisible(true)
-              }
+              label="Create a class"
+              leftIcon={<HugeiconsIcon icon={CrownIcon} size={20} color="#fff" />}
+              onPress={() => setCreateVisible(true)}
             />
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => setJoinVisible(true)}
+              className="active:opacity-70"
+            >
+              <Text className="text-sm font-bold text-primary">
+                I have a class code
+              </Text>
+            </Pressable>
           </View>
         </View>
       ) : (
@@ -169,7 +215,23 @@ export default function Home() {
           ) : null}
 
           {/* 1. Greeting */}
-          <HomeHeader firstName={firstName} />
+          <HomeHeader firstName={firstName} repClassCount={repClassCount} />
+
+          <View className="flex-row gap-3">
+            <QuickAction
+              primary
+              title="Create"
+              description="Become rep for a new class."
+              icon={CrownIcon}
+              onPress={() => setCreateVisible(true)}
+            />
+            <QuickAction
+              title="Join"
+              description="Enter a code as a member."
+              icon={UserGroupIcon}
+              onPress={() => setJoinVisible(true)}
+            />
+          </View>
 
           {/* 2. Today's classes */}
           <ClassSchedule

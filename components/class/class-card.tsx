@@ -7,8 +7,8 @@ interface ClassCardProps extends Omit<PressableProps, "children"> {
 }
 
 export function ClassCard({ classroom, ...props }: ClassCardProps) {
-  // Deterministic student count based on class id (15 to 34)
-  const studentsCount = (classroom.id.charCodeAt(classroom.id.length - 1) % 20) + 15;
+  // Deterministic member count based on class id (15 to 34)
+  const membersCount = (classroom.id.charCodeAt(classroom.id.length - 1) % 20) + 15;
 
   return (
     <Pressable
@@ -33,7 +33,7 @@ export function ClassCard({ classroom, ...props }: ClassCardProps) {
         </Text>
 
         <Text className="text-[14px] font-medium text-white/80" numberOfLines={1}>
-          {studentsCount} Students
+          {membersCount} members
         </Text>
       </View>
     </Pressable>
