@@ -65,13 +65,27 @@ service cloud.firestore {
         get(classPath(classId)).data.ownerId == request.auth.uid;
     }
 
+    function isOwnerAfter(classId) {
+      return isSignedIn() &&
+        getAfter(classPath(classId)).data.ownerId == request.auth.uid;
+    }
+
     function isClassRep(classId) {
       return isSignedIn() &&
         get(classPath(classId)).data.classRepId == request.auth.uid;
     }
 
+    function isClassRepAfter(classId) {
+      return isSignedIn() &&
+        getAfter(classPath(classId)).data.classRepId == request.auth.uid;
+    }
+
     function canManageClass(classId) {
       return isOwner(classId) || isClassRep(classId);
+    }
+
+    function canManageClassAfter(classId) {
+      return isOwnerAfter(classId) || isClassRepAfter(classId);
     }
 
     function isRecentTimestamp(value) {
@@ -333,7 +347,7 @@ service cloud.firestore {
               request.resource.data.role == "student"
             ) ||
             (
-              canManageClass(classId) &&
+              canManageClassAfter(classId) &&
               request.resource.data.role in ["student", "classRep"]
             )
           );
