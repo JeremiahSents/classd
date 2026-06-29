@@ -70,7 +70,7 @@ export function HomeHeader({
             className="text-xl font-black tracking-tight text-foreground"
             numberOfLines={1}
           >
-            Hi {firstName} 👋
+            Hi {firstName}
           </Text>
           <Text className="text-sm text-muted-foreground" numberOfLines={1}>
             Here&apos;s what&apos;s happening today.
