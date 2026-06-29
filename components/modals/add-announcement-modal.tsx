@@ -1,18 +1,18 @@
-import { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
-import { HugeiconsIcon } from "@hugeicons/react-native";
-import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { api, type Announcement } from "@/lib/api";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { useState } from "react";
+import {
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    View,
+} from "react-native";
 
 interface AddAnnouncementModalProps {
   classId: string;
@@ -94,7 +94,8 @@ export function AddAnnouncementModal({
                   value={title}
                   onChangeText={setTitle}
                   placeholder="e.g. Midterm moved to Friday"
-                  className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
+                  textAlignVertical="center"
+                  className="h-14 rounded-xl border border-border bg-secondary/50 px-4 py-0 text-base leading-5 text-foreground"
                   placeholderTextColor="#9ca3af"
                 />
               </View>

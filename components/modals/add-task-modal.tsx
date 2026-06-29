@@ -1,23 +1,23 @@
+import { Button } from "@/components/ui/button";
+import { api, type Task } from "@/lib/api";
+import type { TaskType } from "@/lib/types";
+import { TASK_TYPE_LABEL } from "@/lib/types";
+import { Calendar01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import DateTimePicker, {
+    type DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
+    KeyboardAvoidingView,
+    Modal,
+    Platform,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    View,
 } from "react-native";
-import DateTimePicker, {
-  type DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
-import { HugeiconsIcon } from "@hugeicons/react-native";
-import { Cancel01Icon, Calendar01Icon } from "@hugeicons/core-free-icons";
-import { Button } from "@/components/ui/button";
-import { TASK_TYPE_LABEL } from "@/lib/types";
-import type { TaskType } from "@/lib/types";
-import { api, type Task } from "@/lib/api";
 
 interface AddTaskModalProps {
   classId: string;
@@ -156,7 +156,8 @@ export function AddTaskModal({
                   value={title}
                   onChangeText={setTitle}
                   placeholder="e.g. Essay Draft"
-                  className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
+                  textAlignVertical="center"
+                  className="h-14 rounded-xl border border-border bg-secondary/50 px-4 py-0 text-base leading-5 text-foreground"
                   placeholderTextColor="#9ca3af"
                 />
               </View>
