@@ -18,6 +18,7 @@
     "eas:ios": "eas build --platform ios --profile production",
     "eas:update": "cross-env NODE_OPTIONS=--max-old-space-size=8192 eas update --branch production",
     "deploy:ios": "cross-env NODE_OPTIONS=--max-old-space-size=8192 eas update --branch preview --platform ios --message \"iOS preview update\"",
+    "deploy:android": "cross-env NODE_OPTIONS=--max-old-space-size=8192 eas update --branch preview --platform android --message \"Android preview update\"",
     "eas:submit:android": "eas submit --platform android --profile production",
     "eas:submit:ios": "eas submit --platform ios --profile production",
     "lint": "expo lint",
