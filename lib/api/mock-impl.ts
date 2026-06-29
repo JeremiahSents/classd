@@ -89,7 +89,9 @@ const requireAuth = () => {
 /** Classes visible to the caller given their role. */
 const visibleClasses = () => {
   const u = requireAuth();
-  return classes.filter((c) => c.ownerId === u.id || enrolledClassIds.includes(c.id));
+  return classes
+    .filter((c) => c.ownerId === u.id || enrolledClassIds.includes(c.id))
+    .map((c) => ({ ...c, memberCount: membersByClass[c.id]?.length ?? 0 }));
 };
 
 export const mockApi: ClassdApi = {
@@ -156,6 +158,7 @@ export const mockApi: ClassdApi = {
       coverUrl: coverFor(id("seed")),
       ownerId: u.id,
       classRepId: u.id,
+      memberCount: 1,
       schedules: input.schedules ?? [],
       createdAt: now(),
     };

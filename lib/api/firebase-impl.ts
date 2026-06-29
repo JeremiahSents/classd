@@ -192,7 +192,7 @@ function requireUid(): string {
 }
 
 /** Shape a classes/{id} document into a Class. */
-function toClass(id: string, data: DocumentData): Class {
+function toClass(id: string, data: DocumentData, memberCount?: number): Class {
   return {
     id,
     name: data.name ?? "",
@@ -200,6 +200,7 @@ function toClass(id: string, data: DocumentData): Class {
     coverUrl: data.coverUrl ?? coverFor(id),
     ownerId: data.ownerId ?? "",
     classRepId: data.classRepId ?? undefined,
+    memberCount,
     schedules: data.schedules ?? [],
     createdAt: tsToIso(data.createdAt),
   };
@@ -432,10 +433,16 @@ export const firebaseApi: ClassdApi = {
   async listClasses(): Promise<Class[]> {
     try {
       const ids = await visibleClassIds();
-      const docs = await Promise.all(
-        ids.map((classId) => getDoc(doc(db, "classes", classId))),
+      const classes = await Promise.all(
+        ids.map(async (classId) => {
+          const classSnap = await getDoc(doc(db, "classes", classId));
+          if (!classSnap.exists()) return null;
+
+          const membersSnap = await getDocs(collection(db, "classes", classId, "members"));
+          return toClass(classSnap.id, classSnap.data(), membersSnap.size);
+        }),
       );
-      return docs.filter((d) => d.exists()).map((d) => toClass(d.id, d.data()!));
+      return classes.filter((classroom): classroom is Class => classroom !== null);
     } catch (e) {
       throw toApiError(e);
     }
@@ -487,6 +494,7 @@ export const firebaseApi: ClassdApi = {
         coverUrl,
         ownerId: uid,
         classRepId: uid,
+        memberCount: 1,
         schedules,
         createdAt: new Date().toISOString(),
       };

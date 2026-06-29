@@ -1,16 +1,16 @@
-import { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { HugeiconsIcon } from "@hugeicons/react-native";
-import { CrownIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
-import { BooksIcon } from "@/components/ui/books-icon";
-import { Button } from "@/components/ui/button";
 import { ClassCard } from "@/components/class/class-card";
 import { CreateClassModal } from "@/components/modals/create-class-modal";
 import { JoinClassModal } from "@/components/modals/join-class-modal";
-import { useApiClasses } from "@/lib/hooks/use-api-classes";
+import { BooksIcon } from "@/components/ui/books-icon";
+import { Button } from "@/components/ui/button";
 import type { Class } from "@/lib/api";
+import { useApiClasses } from "@/lib/hooks/use-api-classes";
+import { Add01Icon, CrownIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { useRouter } from "expo-router";
+import { useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Classes() {
   const router = useRouter();
@@ -39,7 +39,7 @@ export default function Classes() {
           onPress={() => setJoinVisible(true)}
           className="h-11 w-11 items-center justify-center rounded-full bg-primary active:opacity-90"
         >
-          <HugeiconsIcon icon={UserAdd01Icon} size={22} color="#fff" />
+          <HugeiconsIcon icon={Add01Icon} size={24} color="#fff" />
         </Pressable>
       </View>
 
@@ -55,30 +55,24 @@ export default function Classes() {
           <Button label="Try again" variant="outline" onPress={reload} />
         </View>
       ) : isEmpty ? (
-        <View className="flex-1 items-center justify-center gap-8 px-6 pb-24">
-          <BooksIcon size={120} />
+        <View className="flex-1 items-center justify-center gap-9 px-6 pb-24">
+          <BooksIcon size={150} />
           <View className="items-center gap-2">
             <Text className="text-center text-2xl font-black text-foreground">
-              Create or join a class
+              Start with a class
             </Text>
-            <Text className="max-w-sm text-center text-sm leading-6 text-muted-foreground">
-              Create a class to manage it as rep, or join with a code as a member.
+            <Text className="max-w-xs text-center text-sm leading-6 text-muted-foreground">
+              Create a class to become its rep, or tap the + above to join one
+              with a code.
             </Text>
           </View>
-          <Button
-            label="Create a class"
-            leftIcon={<HugeiconsIcon icon={CrownIcon} size={20} color="#fff" />}
-            onPress={() => setCreateVisible(true)}
-          />
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => setJoinVisible(true)}
-            className="active:opacity-70"
-          >
-            <Text className="text-sm font-bold text-primary">
-              Have a code? Join a class
-            </Text>
-          </Pressable>
+          <View className="w-full max-w-sm">
+            <Button
+              label="Create a class"
+              leftIcon={<HugeiconsIcon icon={CrownIcon} size={20} color="#fff" />}
+              onPress={() => setCreateVisible(true)}
+            />
+          </View>
         </View>
       ) : (
         <ScrollView

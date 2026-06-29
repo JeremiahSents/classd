@@ -74,6 +74,8 @@ export interface Class {
   ownerId: string;
   /** uid of the appointed class rep for this class. */
   classRepId?: string;
+  /** Optional precomputed count for list/card views. */
+  memberCount?: number;
   schedules: ScheduleBlock[];
   createdAt: string; // ISO
 }

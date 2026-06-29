@@ -1,104 +1,22 @@
+import { ClassSchedule } from "@/components/home/class-schedule";
+import { ClassesSection } from "@/components/home/classes-section";
+import { HomeHeader } from "@/components/home/home-header";
+import { TasksSection } from "@/components/home/tasks-section";
+import { UpdatesSection } from "@/components/home/updates-section";
+import { CreateClassModal } from "@/components/modals/create-class-modal";
+import { JoinClassModal } from "@/components/modals/join-class-modal";
+import { BooksIcon } from "@/components/ui/books-icon";
+import { Button } from "@/components/ui/button";
+import type { Class } from "@/lib/api";
+import { api } from "@/lib/api";
+import { useHomeData } from "@/lib/hooks/use-home-data";
+import { useSession } from "@/lib/session";
+import { DashboardCircleAddIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { HugeiconsIcon } from "@hugeicons/react-native";
-import {
-  CrownIcon,
-  UserAdd01Icon,
-  UserGroupIcon,
-} from "@hugeicons/core-free-icons";
-import { BooksIcon } from "@/components/ui/books-icon";
-import { Button } from "@/components/ui/button";
-import { CreateClassModal } from "@/components/modals/create-class-modal";
-import { JoinClassModal } from "@/components/modals/join-class-modal";
-import { HomeHeader } from "@/components/home/home-header";
-import { ClassSchedule } from "@/components/home/class-schedule";
-import { TasksSection } from "@/components/home/tasks-section";
-import { UpdatesSection } from "@/components/home/updates-section";
-import { useHomeData } from "@/lib/hooks/use-home-data";
-import { useSession } from "@/lib/session";
-import { api } from "@/lib/api";
-import type { Class } from "@/lib/api";
-
-/* ------------------------------------------------------------------ */
-/*  Small helpers                                                     */
-/* ------------------------------------------------------------------ */
-function greeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
-}
-
-function UserGreeting({ size = "large" }: { size?: "small" | "large" }) {
-  const nameClassName =
-    size === "large"
-      ? "text-3xl font-bold tracking-tight text-foreground"
-      : "text-xl font-bold tracking-tight text-foreground";
-
-  return (
-    <View className="flex-1">
-      <Text className="text-sm font-medium text-muted-foreground">
-        {greeting()}
-      </Text>
-      <Text className={nameClassName}>{useSession().firstName}</Text>
-    </View>
-  );
-}
-
-function JoinButton({ onPress }: { onPress: () => void }) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel="Join a class"
-      onPress={onPress}
-      className="h-11 w-11 items-center justify-center rounded-full bg-primary active:opacity-90"
-    >
-      <HugeiconsIcon icon={UserAdd01Icon} size={22} color="#fff" />
-    </Pressable>
-  );
-}
-
-function QuickAction({
-  title,
-  description,
-  icon,
-  onPress,
-  primary,
-}: {
-  title: string;
-  description: string;
-  icon: any;
-  onPress: () => void;
-  primary?: boolean;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      className={`flex-1 gap-3 rounded-2xl border p-4 active:opacity-85 ${
-        primary ? "border-primary bg-primary" : "border-border bg-card"
-      }`}
-    >
-      <View
-        className={`h-10 w-10 items-center justify-center rounded-full ${
-          primary ? "bg-white/20" : "bg-primary/10"
-        }`}
-      >
-        <HugeiconsIcon icon={icon} size={20} color={primary ? "#fff" : "#4f46e5"} />
-      </View>
-      <View className="gap-1">
-        <Text className={`text-base font-black ${primary ? "text-white" : "text-foreground"}`}>
-          {title}
-        </Text>
-        <Text className={`text-xs leading-5 ${primary ? "text-white/80" : "text-muted-foreground"}`}>
-          {description}
-        </Text>
-      </View>
-    </Pressable>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /*  Home screen                                                       */
@@ -115,15 +33,12 @@ export default function Home() {
     reload,
     reloadCompletions,
   } = useHomeData();
-  const { user, firstName } = useSession();
+  const { firstName, avatarUrl } = useSession();
   const [createVisible, setCreateVisible] = useState(false);
   const [joinVisible, setJoinVisible] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const isEmpty = classes.length === 0;
-  const repClassCount = user
-    ? classes.filter((c) => c.ownerId === user.id || c.classRepId === user.id).length
-    : 0;
 
   // className helper: map classId → class name for display
   const classNameMap = Object.fromEntries(classes.map((c) => [c.id, c.name]));
@@ -165,11 +80,14 @@ export default function Home() {
       {isEmpty ? (
         <View className="flex-1">
           {/* Top header */}
-          <View className="flex-row items-center justify-between px-6 pt-4">
-            <View className="flex-1">
-              <UserGreeting size="small" />
-            </View>
-            <JoinButton onPress={() => setJoinVisible(true)} />
+          <View className="px-6 pt-2">
+            <HomeHeader
+              firstName={firstName}
+              avatarUrl={avatarUrl}
+              onAvatarPress={() => router.push("/(tabs)/profile")}
+              onCreateClass={() => setCreateVisible(true)}
+              onJoinClass={() => setJoinVisible(true)}
+            />
           </View>
           {error || actionError ? (
             <Text className="px-6 pt-4 text-center text-sm font-medium text-red-500">
@@ -177,35 +95,39 @@ export default function Home() {
             </Text>
           ) : null}
 
-          <View className="flex-1 items-center justify-center gap-6 px-6">
-            <BooksIcon size={140} />
+          <View className="flex-1 items-center justify-center gap-9 px-6">
+            <BooksIcon size={150} />
             <View className="items-center gap-2">
               <Text className="text-center text-2xl font-black text-foreground">
                 Start with a class
               </Text>
-              <Text className="max-w-sm text-center text-sm leading-6 text-muted-foreground">
-                Create a class to become its rep, or join one with a code as a member.
+              <Text className="max-w-xs text-center text-sm leading-6 text-muted-foreground">
+                Create a class or join an existing one with a code.
               </Text>
             </View>
-            <Button
-              label="Create a class"
-              leftIcon={<HugeiconsIcon icon={CrownIcon} size={20} color="#fff" />}
-              onPress={() => setCreateVisible(true)}
-            />
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => setJoinVisible(true)}
-              className="active:opacity-70"
-            >
-              <Text className="text-sm font-bold text-primary">
-                I have a class code
-              </Text>
-            </Pressable>
+            <View className="w-full max-w-sm items-center gap-4">
+              <Button
+                label="Create a class"
+                className="h-15 w-full"
+                leftIcon={<HugeiconsIcon icon={DashboardCircleAddIcon} size={24} color="#fff" />}
+                onPress={() => setCreateVisible(true)}
+              />
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setJoinVisible(true)}
+                hitSlop={8}
+                className="active:opacity-60"
+              >
+                <Text className="text-sm font-bold text-primary">
+                  Join with a code
+                </Text>
+              </Pressable>
+            </View>
           </View>
         </View>
       ) : (
         <ScrollView
-          contentContainerClassName="gap-8 px-6 pb-32 pt-2"
+          contentContainerClassName="gap-8 px-6 pb-32 pt-6"
           showsVerticalScrollIndicator={false}
         >
           {error || actionError ? (
@@ -215,25 +137,22 @@ export default function Home() {
           ) : null}
 
           {/* 1. Greeting */}
-          <HomeHeader firstName={firstName} repClassCount={repClassCount} />
+          <HomeHeader
+            firstName={firstName}
+            avatarUrl={avatarUrl}
+            onAvatarPress={() => router.push("/(tabs)/profile")}
+            onCreateClass={() => setCreateVisible(true)}
+            onJoinClass={() => setJoinVisible(true)}
+          />
 
-          <View className="flex-row gap-3">
-            <QuickAction
-              primary
-              title="Create"
-              description="Become rep for a new class."
-              icon={CrownIcon}
-              onPress={() => setCreateVisible(true)}
-            />
-            <QuickAction
-              title="Join"
-              description="Enter a code as a member."
-              icon={UserGroupIcon}
-              onPress={() => setJoinVisible(true)}
-            />
-          </View>
+          {/* 2. Your classes */}
+          <ClassesSection
+            classes={classes}
+            onClassPress={navigateToClass}
+            onSeeAll={() => router.push("/(tabs)/classes")}
+          />
 
-          {/* 2. Today's classes */}
+          {/* 3. Today's schedule */}
           <ClassSchedule
             classes={classes}
             onClassPress={navigateToClass}
@@ -241,7 +160,7 @@ export default function Home() {
             onSeeAll={() => router.push("/(tabs)/classes")}
           />
 
-          {/* 3. Tasks checklist */}
+          {/* 4. Tasks checklist */}
           <TasksSection
             tasks={tasks}
             className={className}
@@ -249,7 +168,7 @@ export default function Home() {
             onToggle={handleToggleTask}
           />
 
-          {/* 4. Announcements summary */}
+          {/* 5. Announcements summary */}
           <UpdatesSection
             announcements={announcements}
             className={className}

@@ -1,60 +1,122 @@
-import { Text, View } from "react-native";
+import {
+  Add01Icon,
+  DashboardCircleAddIcon,
+  UserGroupIcon,
+} from "@hugeicons/core-free-icons";
+import type { IconSvgElement } from "@hugeicons/react-native";
 import { HugeiconsIcon } from "@hugeicons/react-native";
-import { CrownIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
+import { Image } from "expo-image";
+import { useState } from "react";
+import { Modal, Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const dateFormatter = new Intl.DateTimeFormat("en", {
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-});
-
-function greeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
+interface MenuItem {
+  label: string;
+  Icon: IconSvgElement;
+  onPress?: () => void;
 }
 
 export function HomeHeader({
   firstName,
-  repClassCount = 0,
+  avatarUrl,
+  onAvatarPress,
+  onCreateClass,
+  onJoinClass,
 }: {
   firstName: string;
-  repClassCount?: number;
+  avatarUrl?: string;
+  onAvatarPress?: () => void;
+  onCreateClass?: () => void;
+  onJoinClass?: () => void;
 }) {
-  const today = dateFormatter.format(new Date());
-  const managesClasses = repClassCount > 0;
-  const statusLabel = managesClasses
-    ? `Rep for ${repClassCount} ${repClassCount === 1 ? "class" : "classes"}`
-    : "Member dashboard";
+  const initial = firstName.charAt(0).toUpperCase() || "?";
+  const insets = useSafeAreaInsets();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const items: MenuItem[] = [
+    { label: "Create class", Icon: DashboardCircleAddIcon, onPress: onCreateClass },
+    { label: "Join class", Icon: UserGroupIcon, onPress: onJoinClass },
+  ];
+
+  function select(item: MenuItem) {
+    setMenuOpen(false);
+    item.onPress?.();
+  }
 
   return (
-    <View className="rounded-3xl bg-primary/8 px-6 pb-6 pt-5">
-      <View className="flex-row items-start justify-between">
-        <View className="flex-1">
-          <Text className="text-sm font-medium text-muted-foreground">
-            {greeting()}
-          </Text>
-          <Text className="mt-0.5 text-3xl font-black tracking-tight text-foreground">
-            Hi {firstName}
-          </Text>
-        </View>
-        <View className="items-end gap-2">
-          <Text className="text-xs font-semibold text-muted-foreground">
-            {today}
-          </Text>
-          <View className="flex-row items-center gap-1.5 rounded-full bg-background/80 px-3 py-1.5">
-            <HugeiconsIcon
-              icon={managesClasses ? CrownIcon : UserGroupIcon}
-              size={14}
-              color={managesClasses ? "#4f46e5" : "#64748b"}
+    <View className="flex-row items-center justify-between">
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open profile"
+        onPress={onAvatarPress}
+        className="flex-1 flex-row items-center gap-3 active:opacity-80"
+      >
+        <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-full border border-border bg-secondary">
+          {avatarUrl ? (
+            <Image
+              source={{ uri: avatarUrl }}
+              style={{ width: "100%", height: "100%" }}
+              contentFit="cover"
+              transition={150}
             />
-            <Text className="text-xs font-bold text-foreground">
-              {statusLabel}
+          ) : (
+            <Text className="text-lg font-black text-muted-foreground">
+              {initial}
             </Text>
-          </View>
+          )}
         </View>
-      </View>
+        <View className="flex-1">
+          <Text
+            className="text-xl font-black tracking-tight text-foreground"
+            numberOfLines={1}
+          >
+            Hi {firstName} 👋
+          </Text>
+          <Text className="text-sm text-muted-foreground" numberOfLines={1}>
+            Here&apos;s what&apos;s happening today.
+          </Text>
+        </View>
+      </Pressable>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Add"
+        onPress={() => setMenuOpen(true)}
+        hitSlop={8}
+        className="h-11 w-11 items-center justify-center rounded-full active:opacity-90"
+      >
+        <HugeiconsIcon icon={Add01Icon} size={24} color="#fff" />
+      </Pressable>
+
+      <Modal
+        visible={menuOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuOpen(false)}
+      >
+        <Pressable className="flex-1" onPress={() => setMenuOpen(false)}>
+          <View
+            style={{ position: "absolute", top: insets.top + 72, right: 24 }}
+            className="w-56 overflow-hidden rounded-2xl border border-border bg-popover shadow-lg"
+          >
+            {items.map((item, index) => (
+              <Pressable
+                key={item.label}
+                accessibilityRole="button"
+                onPress={() => select(item)}
+                className={`flex-row items-center gap-3 px-4 py-3.5 active:bg-secondary ${
+                  index > 0 ? "border-t border-border" : ""
+                }`}
+              >
+                <HugeiconsIcon icon={item.Icon} size={20} color="#4f46e5" />
+                <Text className="text-base font-medium text-popover-foreground">
+                  {item.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }

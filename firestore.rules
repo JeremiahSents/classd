@@ -29,10 +29,20 @@ service cloud.firestore {
         get(/databases/$(database)/documents/classes/$(classId)).data.ownerId == request.auth.uid;
     }
 
+    /** True if the caller owns the class document currently being evaluated. */
+    function isCurrentClassOwner() {
+      return isSignedIn() && resource.data.ownerId == request.auth.uid;
+    }
+
     /** True if the caller is the class representative for the given class. */
     function isClassRep(classId) {
       return isSignedIn() &&
         get(/databases/$(database)/documents/classes/$(classId)).data.classRepId == request.auth.uid;
+    }
+
+    /** True if the caller is the class rep for the class document currently being evaluated. */
+    function isCurrentClassRep() {
+      return isSignedIn() && resource.data.classRepId == request.auth.uid;
     }
 
     /** True if the caller can manage class content. */
@@ -70,7 +80,7 @@ service cloud.firestore {
     // Update/delete: owner only.
     // ----------------------------------------------------------------
     match /classes/{classId} {
-      allow read: if canManageClass(classId) || isMember(classId);
+      allow read: if isCurrentClassOwner() || isCurrentClassRep() || isMember(classId);
       allow create: if isSignedIn()
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.classRepId == request.auth.uid
@@ -91,7 +101,7 @@ service cloud.firestore {
       // Create: the user can add themselves as a student OR a manager can add anyone.
       // Delete: the user can remove themselves OR a manager can remove anyone.
       match /members/{memberId} {
-        allow read: if canManageClass(classId) || isMember(classId);
+        allow read: if isSelf(memberId) || canManageClass(classId) || isMember(classId);
         allow create: if isSignedIn() && (
           (
             memberId == request.auth.uid &&
