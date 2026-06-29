@@ -35,7 +35,8 @@ const TABS = ["Tasks", "Materials", "Updates", "Members"];
 
 export default function ClassDetail() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useLocalSearchParams<{ id?: string | string[] }>();
+  const classId = Array.isArray(id) ? id[0] : id;
   const {
     classroom,
     members,
@@ -49,7 +50,7 @@ export default function ClassDetail() {
     reloadAnnouncements,
     reloadMaterials,
     reloadCompletions,
-  } = useClassDetail(id);
+  } = useClassDetail(classId ?? "");
   const { user } = useSession();
 
   const [tab, setTab] = useState(0);
@@ -81,7 +82,7 @@ export default function ClassDetail() {
     const asset = result.assets[0];
     setActionError(null);
     try {
-      await api.uploadMaterial(id, {
+      await api.uploadMaterial(classId ?? "", {
         uri: asset.uri,
         name: asset.name,
         mimeType: asset.mimeType ?? undefined,
@@ -287,13 +288,13 @@ export default function ClassDetail() {
         onClose={() => setInviteVisible(false)}
       />
       <AddTaskModal
-        classId={id}
+        classId={classId ?? ""}
         visible={addTaskVisible}
         onClose={() => setAddTaskVisible(false)}
         onCreated={() => reloadTasks()}
       />
       <AddAnnouncementModal
-        classId={id}
+        classId={classId ?? ""}
         visible={addAnnouncementVisible}
         onClose={() => setAddAnnouncementVisible(false)}
         onCreated={() => reloadAnnouncements()}

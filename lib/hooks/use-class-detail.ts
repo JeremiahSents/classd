@@ -66,6 +66,20 @@ export function useClassDetail(classId: string): ClassDetailState {
     setLoading(true);
     setError(null);
 
+    if (!classId) {
+      setClassroom(null);
+      setMembers([]);
+      setTasks([]);
+      setAnnouncements([]);
+      setMaterials([]);
+      setCompletedTaskIds([]);
+      setError("Class not found.");
+      setLoading(false);
+      return () => {
+        alive = false;
+      };
+    }
+
     Promise.all([
       api.getClass(classId),
       api.listMembers(classId),

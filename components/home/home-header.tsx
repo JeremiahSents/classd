@@ -5,10 +5,20 @@ import {
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react-native";
 import { HugeiconsIcon } from "@hugeicons/react-native";
+import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { Image } from "expo-image";
 import { useState } from "react";
-import { Modal, Pressable, Text, View } from "react-native";
+import {
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const glassAvailable = isLiquidGlassAvailable();
 
 interface MenuItem {
   label: string;
@@ -31,6 +41,8 @@ export function HomeHeader({
 }) {
   const initial = firstName.charAt(0).toUpperCase() || "?";
   const insets = useSafeAreaInsets();
+  const scheme = useColorScheme();
+  const isDark = scheme === "dark";
   const [menuOpen, setMenuOpen] = useState(false);
 
   const items: MenuItem[] = [
@@ -83,7 +95,7 @@ export function HomeHeader({
         accessibilityLabel="Add"
         onPress={() => setMenuOpen(true)}
         hitSlop={8}
-        className="h-11 w-11 items-center justify-center rounded-full active:opacity-90"
+        className="h-11 w-11 items-center justify-center rounded-full bg-primary active:opacity-90"
       >
         <HugeiconsIcon icon={Add01Icon} size={24} color="#fff" />
       </Pressable>
@@ -96,16 +108,46 @@ export function HomeHeader({
       >
         <Pressable className="flex-1" onPress={() => setMenuOpen(false)}>
           <View
-            style={{ position: "absolute", top: insets.top + 72, right: 24 }}
-            className="w-56 overflow-hidden rounded-2xl border border-border bg-popover shadow-lg"
+            style={{
+              position: "absolute",
+              top: insets.top + 72,
+              right: 24,
+              width: 224,
+              borderRadius: 20,
+              overflow: "hidden",
+            }}
           >
+            {glassAvailable ? (
+              <GlassView
+                style={StyleSheet.absoluteFill}
+                glassEffectStyle="regular"
+                tintColor={
+                  isDark ? "rgba(40,40,40,0.5)" : "rgba(255,255,255,0.6)"
+                }
+              />
+            ) : (
+              <View
+                style={[
+                  StyleSheet.absoluteFill,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(30,30,30,0.92)"
+                      : "rgba(255,255,255,0.96)",
+                    borderWidth: StyleSheet.hairlineWidth,
+                    borderColor: isDark
+                      ? "rgba(255,255,255,0.08)"
+                      : "rgba(0,0,0,0.06)",
+                  },
+                ]}
+              />
+            )}
             {items.map((item, index) => (
               <Pressable
                 key={item.label}
                 accessibilityRole="button"
                 onPress={() => select(item)}
-                className={`flex-row items-center gap-3 px-4 py-3.5 active:bg-secondary ${
-                  index > 0 ? "border-t border-border" : ""
+                className={`flex-row items-center gap-3 px-4 py-3.5 active:bg-secondary/40 ${
+                  index > 0 ? "border-t border-border/40" : ""
                 }`}
               >
                 <HugeiconsIcon icon={item.Icon} size={20} color="#4f46e5" />

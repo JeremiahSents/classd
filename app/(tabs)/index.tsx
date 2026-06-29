@@ -1,4 +1,3 @@
-import { ClassSchedule } from "@/components/home/class-schedule";
 import { ClassesSection } from "@/components/home/classes-section";
 import { HomeHeader } from "@/components/home/home-header";
 import { TasksSection } from "@/components/home/tasks-section";
@@ -152,15 +151,7 @@ export default function Home() {
             onSeeAll={() => router.push("/(tabs)/classes")}
           />
 
-          {/* 3. Today's schedule */}
-          <ClassSchedule
-            classes={classes}
-            onClassPress={navigateToClass}
-            onNewClass={() => setCreateVisible(true)}
-            onSeeAll={() => router.push("/(tabs)/classes")}
-          />
-
-          {/* 4. Tasks checklist */}
+          {/* 3. Tasks checklist */}
           <TasksSection
             tasks={tasks}
             className={className}
@@ -168,7 +159,7 @@ export default function Home() {
             onToggle={handleToggleTask}
           />
 
-          {/* 5. Announcements summary */}
+          {/* 4. Announcements summary */}
           <UpdatesSection
             announcements={announcements}
             className={className}

@@ -3,88 +3,144 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ----------------------------------------------------------------
-    // Helper functions
-    // ----------------------------------------------------------------
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // users/{uid}
+    //   name: string, email: string, role: "student", avatarUrl: string,
+    //   createdAt: timestamp, expoPushTokens?: list<string>
+    //
+    // codes/{code}
+    //   classId: string, createdBy: uid, createdAt: timestamp
+    //
+    // classes/{classId}
+    //   name: string, code: 6 digit string, coverUrl: URL string,
+    //   ownerId: uid, classRepId?: uid, schedules: list, createdAt: timestamp
+    //
+    // classes/{classId}/members/{uid}
+    //   uid: uid, name: string, email: string, avatarUrl?: string,
+    //   role: "student" | "classRep", joinedAt: timestamp
+    //
+    // classes/{classId}/tasks/{taskId}
+    //   title: string, description: string, type: enum, dueAt: timestamp,
+    //   createdBy: uid, createdAt: timestamp
+    //
+    // classes/{classId}/announcements/{announcementId}
+    //   title: string, content: string, createdBy: uid, createdAt: timestamp
+    //
+    // classes/{classId}/materials/{materialId}
+    //   name: string, sizeBytes?: number|null, mimeType?: string|null,
+    //   url: URL string, storagePath: string, uploadedBy: uid, createdAt: timestamp
+    //
+    // users/{uid}/completions/{taskId}
+    //   completedAt: timestamp
 
-    /** True if the caller is signed in. */
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** True if the caller's uid matches the given uid. */
     function isSelf(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
 
-    /** True if the caller is a member of the given class. */
-    function isMember(classId) {
-      return isSignedIn() &&
-        exists(/databases/$(database)/documents/classes/$(classId)/members/$(request.auth.uid));
+    function classPath(classId) {
+      return /databases/$(database)/documents/classes/$(classId);
     }
 
-    /** True if the caller owns the given class (is the ownerId). */
+    function memberPath(classId, uid) {
+      return /databases/$(database)/documents/classes/$(classId)/members/$(uid);
+    }
+
+    function isMember(classId) {
+      return isSignedIn() && exists(memberPath(classId, request.auth.uid));
+    }
+
     function isOwner(classId) {
       return isSignedIn() &&
-        get(/databases/$(database)/documents/classes/$(classId)).data.ownerId == request.auth.uid;
+        get(classPath(classId)).data.ownerId == request.auth.uid;
     }
 
-    /** True if the caller owns the class document currently being evaluated. */
-    function isCurrentClassOwner() {
-      return isSignedIn() && resource.data.ownerId == request.auth.uid;
-    }
-
-    /** True if the caller is the class representative for the given class. */
     function isClassRep(classId) {
       return isSignedIn() &&
-        get(/databases/$(database)/documents/classes/$(classId)).data.classRepId == request.auth.uid;
+        get(classPath(classId)).data.classRepId == request.auth.uid;
     }
 
-    /** True if the caller is the class rep for the class document currently being evaluated. */
-    function isCurrentClassRep() {
-      return isSignedIn() && resource.data.classRepId == request.auth.uid;
-    }
-
-    /** True if the caller can manage class content. */
     function canManageClass(classId) {
       return isOwner(classId) || isClassRep(classId);
     }
 
-    // ----------------------------------------------------------------
-    // users/{uid}
-    // Readable by any signed-in user (needed for profile lookups).
-    // Writable only by the user themselves.
-    // ----------------------------------------------------------------
-    match /users/{uid} {
-      allow read: if isSignedIn();
-      allow create: if isSelf(uid)
-        && request.resource.data.role == "student";
-      allow update: if isSelf(uid)
-        && request.resource.data.role == resource.data.role
-        && request.resource.data.email == resource.data.email
-        && request.resource.data.diff(resource.data).changedKeys()
-          .hasOnly(["name", "avatarUrl", "expoPushTokens"]);
-      allow delete: if false;
-
-      // users/{uid}/completions/{taskId}
-      // Per-user task completion — read/write only by the same user.
-      match /completions/{taskId} {
-        allow read, write: if isSelf(uid);
-      }
+    function isRecentTimestamp(value) {
+      return value is timestamp &&
+        value > request.time - duration.value(5, 'm') &&
+        value <= request.time;
     }
 
-    // ----------------------------------------------------------------
-    // classes/{classId}
-    // Read: owner, class rep, OR member.
-    // Create: any signed-in user (they become owner and class rep).
-    // Update/delete: owner only.
-    // ----------------------------------------------------------------
-    match /classes/{classId} {
-      allow read: if isCurrentClassOwner() || isCurrentClassRep() || isMember(classId);
-      allow create: if isSignedIn()
-        && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.classRepId == request.auth.uid
-        && request.resource.data.keys().hasOnly([
+    function optionalString(data, field, maxSize) {
+      return !(field in data) ||
+        data[field] == null ||
+        (data[field] is string && data[field].size() <= maxSize);
+    }
+
+    function optionalNumber(data, field, minValue, maxValue) {
+      return !(field in data) ||
+        data[field] == null ||
+        (data[field] is number &&
+          data[field] >= minValue &&
+          data[field] <= maxValue);
+    }
+
+    function validUrl(value, maxSize) {
+      return value is string &&
+        value.size() <= maxSize &&
+        (value.matches("^https://.*") || value.matches("^http://.*"));
+    }
+
+    function validUid(value) {
+      return value is string && value.size() > 0 && value.size() <= 128;
+    }
+
+    function validCode(value) {
+      return value is string && value.matches("^[0-9]{6}$");
+    }
+
+    function validSchedules(data) {
+      return data.schedules is list && data.schedules.size() <= 20;
+    }
+
+    function validUser(data) {
+      return data.keys().hasOnly([
+          "name",
+          "email",
+          "role",
+          "avatarUrl",
+          "createdAt",
+          "expoPushTokens"
+        ]) &&
+        data.keys().hasAll(["name", "email", "role", "avatarUrl", "createdAt"]) &&
+        data.name is string &&
+        data.name.size() > 0 &&
+        data.name.size() <= 80 &&
+        data.email is string &&
+        data.email.size() <= 320 &&
+        data.role == "student" &&
+        data.avatarUrl is string &&
+        data.avatarUrl.size() <= 2048 &&
+        data.createdAt is timestamp &&
+        optionalPushTokens(data);
+    }
+
+    function optionalPushTokens(data) {
+      return !("expoPushTokens" in data) ||
+        (data.expoPushTokens is list && data.expoPushTokens.size() <= 20);
+    }
+
+    function validClass(data) {
+      return data.keys().hasOnly([
           "name",
           "code",
           "coverUrl",
@@ -92,57 +148,238 @@ service cloud.firestore {
           "classRepId",
           "schedules",
           "createdAt"
-        ]);
-      allow update: if isOwner(classId);
+        ]) &&
+        data.keys().hasAll(["name", "code", "coverUrl", "ownerId", "schedules", "createdAt"]) &&
+        data.name is string &&
+        data.name.size() > 0 &&
+        data.name.size() <= 100 &&
+        validCode(data.code) &&
+        validUrl(data.coverUrl, 2048) &&
+        validUid(data.ownerId) &&
+        optionalString(data, "classRepId", 128) &&
+        validSchedules(data) &&
+        data.createdAt is timestamp;
+    }
+
+    function validClassCreate(data) {
+      return validClass(data) &&
+        data.ownerId == request.auth.uid &&
+        data.classRepId == request.auth.uid &&
+        isRecentTimestamp(data.createdAt);
+    }
+
+    function validClassUpdate(classId, data) {
+      return validClass(data) &&
+        data.ownerId == resource.data.ownerId &&
+        data.code == resource.data.code &&
+        data.createdAt == resource.data.createdAt &&
+        data.coverUrl == resource.data.coverUrl &&
+        (
+          !("classRepId" in data) ||
+          exists(memberPath(classId, data.classRepId))
+        );
+    }
+
+    function validCodeDoc(code, data) {
+      return validCode(code) &&
+        data.keys().hasOnly(["classId", "createdBy", "createdAt"]) &&
+        data.keys().hasAll(["classId", "createdBy", "createdAt"]) &&
+        data.classId is string &&
+        data.classId.size() > 0 &&
+        data.classId.size() <= 128 &&
+        data.createdBy == request.auth.uid &&
+        isRecentTimestamp(data.createdAt) &&
+        getAfter(classPath(data.classId)).data.ownerId == request.auth.uid &&
+        getAfter(classPath(data.classId)).data.code == code;
+    }
+
+    function validMember(data, memberId) {
+      return data.keys().hasOnly([
+          "uid",
+          "name",
+          "email",
+          "avatarUrl",
+          "role",
+          "joinedAt"
+        ]) &&
+        data.keys().hasAll(["uid", "name", "email", "role", "joinedAt"]) &&
+        data.uid == memberId &&
+        data.name is string &&
+        data.name.size() <= 80 &&
+        data.email is string &&
+        data.email.size() <= 320 &&
+        optionalString(data, "avatarUrl", 2048) &&
+        data.role in ["student", "classRep"] &&
+        data.joinedAt is timestamp;
+    }
+
+    function validTask(data) {
+      return data.keys().hasOnly([
+          "title",
+          "description",
+          "type",
+          "dueAt",
+          "createdBy",
+          "createdAt"
+        ]) &&
+        data.keys().hasAll(["title", "description", "type", "dueAt", "createdBy", "createdAt"]) &&
+        data.title is string &&
+        data.title.size() > 0 &&
+        data.title.size() <= 120 &&
+        data.description is string &&
+        data.description.size() <= 2000 &&
+        data.type in ["assignment", "cat", "deadline"] &&
+        data.dueAt is timestamp &&
+        data.createdBy == request.auth.uid &&
+        data.createdAt is timestamp;
+    }
+
+    function validAnnouncement(data) {
+      return data.keys().hasOnly(["title", "content", "createdBy", "createdAt"]) &&
+        data.keys().hasAll(["title", "content", "createdBy", "createdAt"]) &&
+        data.title is string &&
+        data.title.size() > 0 &&
+        data.title.size() <= 120 &&
+        data.content is string &&
+        data.content.size() <= 4000 &&
+        data.createdBy == request.auth.uid &&
+        data.createdAt is timestamp;
+    }
+
+    function validMaterial(data) {
+      return data.keys().hasOnly([
+          "name",
+          "sizeBytes",
+          "mimeType",
+          "url",
+          "storagePath",
+          "uploadedBy",
+          "createdAt"
+        ]) &&
+        data.keys().hasAll(["name", "url", "storagePath", "uploadedBy", "createdAt"]) &&
+        data.name is string &&
+        data.name.size() > 0 &&
+        data.name.size() <= 255 &&
+        optionalNumber(data, "sizeBytes", 0, 104857600) &&
+        optionalString(data, "mimeType", 120) &&
+        validUrl(data.url, 4096) &&
+        data.storagePath is string &&
+        data.storagePath.size() > 0 &&
+        data.storagePath.size() <= 1024 &&
+        data.uploadedBy == request.auth.uid &&
+        data.createdAt is timestamp;
+    }
+
+    // users/{uid}
+    match /users/{uid} {
+      allow read: if isSelf(uid);
+      allow create: if isSelf(uid) && validUser(request.resource.data);
+      allow update: if isSelf(uid) &&
+        validUser(request.resource.data) &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.email == resource.data.email &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["name", "avatarUrl", "expoPushTokens"]);
+      allow delete: if false;
+
+      match /completions/{taskId} {
+        allow read: if isSelf(uid);
+        allow create, update: if isSelf(uid) &&
+          request.resource.data.keys().hasOnly(["completedAt"]) &&
+          request.resource.data.keys().hasAll(["completedAt"]) &&
+          isRecentTimestamp(request.resource.data.completedAt);
+        allow delete: if isSelf(uid);
+      }
+    }
+
+    // Collection-group read of member docs: a user may read their own
+    // membership records across all classes.
+    match /{path=**}/members/{memberId} {
+      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // codes/{code}
+    // Signed-in users can get one code document by its exact 6-digit id, but
+    // cannot list all join codes.
+    match /codes/{code} {
+      allow get: if isSignedIn() && validCode(code);
+      allow list: if false;
+      allow create: if isSignedIn() && validCodeDoc(code, request.resource.data);
+      allow update, delete: if false;
+    }
+
+    // classes/{classId}
+    match /classes/{classId} {
+      allow get: if canManageClass(classId) || isMember(classId);
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      allow create: if isSignedIn() && validClassCreate(request.resource.data);
+      allow update: if isOwner(classId) && validClassUpdate(classId, request.resource.data);
       allow delete: if isOwner(classId);
 
-      // classes/{classId}/members/{uid}
-      // Read: class members and managers.
-      // Create: the user can add themselves as a student OR a manager can add anyone.
-      // Delete: the user can remove themselves OR a manager can remove anyone.
       match /members/{memberId} {
-        allow read: if isSelf(memberId) || canManageClass(classId) || isMember(classId);
-        allow create: if isSignedIn() && (
-          (
-            memberId == request.auth.uid &&
-            request.resource.data.uid == request.auth.uid &&
-            request.resource.data.role == "student"
-          ) ||
-          (
-            canManageClass(classId) &&
-            request.resource.data.uid == memberId
-          )
+        allow get: if isSelf(memberId) || canManageClass(classId) || isMember(classId);
+        allow list: if isSignedIn() && (
+          canManageClass(classId) ||
+          isMember(classId) ||
+          resource.data.uid == request.auth.uid
         );
-        allow update: if canManageClass(classId)
-          && request.resource.data.uid == memberId;
+        allow create: if isSignedIn() &&
+          validMember(request.resource.data, memberId) &&
+          isRecentTimestamp(request.resource.data.joinedAt) &&
+          (
+            (
+              memberId == request.auth.uid &&
+              request.resource.data.role == "student"
+            ) ||
+            (
+              canManageClass(classId) &&
+              request.resource.data.role in ["student", "classRep"]
+            )
+          );
+        allow update: if canManageClass(classId) &&
+          validMember(request.resource.data, memberId) &&
+          request.resource.data.joinedAt == resource.data.joinedAt;
         allow delete: if isSignedIn() && (
           memberId == request.auth.uid ||
           canManageClass(classId)
         );
       }
 
-      // classes/{classId}/tasks/{taskId}
-      // Read: members and managers.
-      // Create/update/delete: managers only.
       match /tasks/{taskId} {
         allow read: if canManageClass(classId) || isMember(classId);
-        allow create, update, delete: if canManageClass(classId);
+        allow create: if canManageClass(classId) &&
+          validTask(request.resource.data) &&
+          isRecentTimestamp(request.resource.data.createdAt);
+        allow update: if canManageClass(classId) &&
+          validTask(request.resource.data) &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.createdBy == resource.data.createdBy;
+        allow delete: if canManageClass(classId);
       }
 
-      // classes/{classId}/announcements/{announcementId}
-      // Read: members and managers.
-      // Create/update/delete: managers only.
       match /announcements/{announcementId} {
         allow read: if canManageClass(classId) || isMember(classId);
-        allow create, update, delete: if canManageClass(classId);
+        allow create: if canManageClass(classId) &&
+          validAnnouncement(request.resource.data) &&
+          isRecentTimestamp(request.resource.data.createdAt);
+        allow update: if canManageClass(classId) &&
+          validAnnouncement(request.resource.data) &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.createdBy == resource.data.createdBy;
+        allow delete: if canManageClass(classId);
       }
 
-      // classes/{classId}/materials/{materialId}
-      // Read: members and managers.
-      // Create/update/delete: managers only.
       match /materials/{materialId} {
         allow read: if canManageClass(classId) || isMember(classId);
-        allow create, update, delete: if canManageClass(classId);
+        allow create: if canManageClass(classId) &&
+          validMaterial(request.resource.data) &&
+          isRecentTimestamp(request.resource.data.createdAt);
+        allow update: if canManageClass(classId) &&
+          validMaterial(request.resource.data) &&
+          request.resource.data.createdAt == resource.data.createdAt &&
+          request.resource.data.uploadedBy == resource.data.uploadedBy;
+        allow delete: if canManageClass(classId);
       }
     }
   }

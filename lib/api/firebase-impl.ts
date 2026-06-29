@@ -52,6 +52,7 @@ import {
   Timestamp,
   updateDoc,
   where,
+  writeBatch,
   type DocumentData,
 } from "firebase/firestore";
 import {
@@ -222,10 +223,8 @@ function toMember(uid: string, data: DocumentData): Member {
 async function uniqueClassCode(): Promise<string> {
   for (let i = 0; i < 5; i++) {
     const candidate = Math.floor(100000 + Math.random() * 900000).toString();
-    const existing = await getDocs(
-      query(collection(db, "classes"), where("code", "==", candidate), limit(1)),
-    );
-    if (existing.empty) return candidate;
+    const existing = await getDoc(doc(db, "codes", candidate));
+    if (!existing.exists()) return candidate;
   }
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
@@ -466,8 +465,10 @@ export const firebaseApi: ClassdApi = {
       const name = input.name.trim();
       const coverUrl = coverFor(ref.id);
       const schedules = input.schedules ?? [];
+      const profile = await loadProfile(uid);
+      const batch = writeBatch(db);
 
-      await setDoc(ref, {
+      batch.set(ref, {
         name,
         code: joinCode,
         coverUrl,
@@ -477,8 +478,7 @@ export const firebaseApi: ClassdApi = {
         createdAt: serverTimestamp(),
       });
 
-      const profile = await loadProfile(uid);
-      await setDoc(doc(db, "classes", ref.id, "members", uid), {
+      batch.set(doc(db, "classes", ref.id, "members", uid), {
         uid,
         name: profile?.name ?? "",
         email: profile?.email ?? "",
@@ -486,6 +486,14 @@ export const firebaseApi: ClassdApi = {
         role: "classRep",
         joinedAt: serverTimestamp(),
       });
+
+      batch.set(doc(db, "codes", joinCode), {
+        classId: ref.id,
+        createdBy: uid,
+        createdAt: serverTimestamp(),
+      });
+
+      await batch.commit();
 
       return {
         id: ref.id,
@@ -506,14 +514,19 @@ export const firebaseApi: ClassdApi = {
   async joinClassByCode(joinCode: string): Promise<Class> {
     const uid = requireUid();
     try {
-      const found = await getDocs(
-        query(collection(db, "classes"), where("code", "==", joinCode.trim()), limit(1)),
-      );
-      if (found.empty) throw new ApiError("not-found", "No class with that code");
-      const classDoc = found.docs[0];
+      const normalizedCode = joinCode.trim();
+      const codeSnap = await getDoc(doc(db, "codes", normalizedCode));
+      if (!codeSnap.exists()) {
+        throw new ApiError("not-found", "No class with that code");
+      }
+
+      const classId = codeSnap.data().classId;
+      if (typeof classId !== "string" || !classId) {
+        throw new ApiError("not-found", "No class with that code");
+      }
 
       const profile = await loadProfile(uid);
-      await setDoc(doc(db, "classes", classDoc.id, "members", uid), {
+      await setDoc(doc(db, "classes", classId, "members", uid), {
         uid,
         name: profile?.name ?? "",
         email: profile?.email ?? "",
@@ -521,6 +534,9 @@ export const firebaseApi: ClassdApi = {
         role: "student",
         joinedAt: serverTimestamp(),
       });
+
+      const classDoc = await getDoc(doc(db, "classes", classId));
+      if (!classDoc.exists()) throw new ApiError("not-found", "Class not found");
       return toClass(classDoc.id, classDoc.data());
     } catch (e) {
       throw toApiError(e);
