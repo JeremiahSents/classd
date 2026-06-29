@@ -8,7 +8,7 @@
  * Uses the api.listMyTasks / listMyAnnouncements aggregates so the client
  * doesn't need to fan out across class IDs manually.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type Class, type Task, type Announcement } from "@/lib/api";
 
 interface HomeDataState {
@@ -23,6 +23,7 @@ interface HomeDataState {
 }
 
 export function useHomeData(): HomeDataState {
+  const hasLoadedRef = useRef(false);
   const [classes, setClasses] = useState<Class[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -40,7 +41,7 @@ export function useHomeData(): HomeDataState {
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
+    setLoading(!hasLoadedRef.current);
     setError(null);
 
     Promise.all([
@@ -60,7 +61,9 @@ export function useHomeData(): HomeDataState {
         if (alive) setError(e.message);
       })
       .finally(() => {
-        if (alive) setLoading(false);
+        if (!alive) return;
+        hasLoadedRef.current = true;
+        setLoading(false);
       });
 
     return () => {

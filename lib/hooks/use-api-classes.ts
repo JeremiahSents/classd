@@ -2,7 +2,7 @@
  * useApiClasses — fetches the current user's classes from the Firebase API.
  * Includes classes the user created as rep and classes they joined as a member.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, type Class } from "@/lib/api";
 
 interface ApiClassesState {
@@ -13,6 +13,7 @@ interface ApiClassesState {
 }
 
 export function useApiClasses(): ApiClassesState {
+  const hasLoadedRef = useRef(false);
   const [classes, setClasses] = useState<Class[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +23,7 @@ export function useApiClasses(): ApiClassesState {
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
+    setLoading(!hasLoadedRef.current);
     setError(null);
     api
       .listClasses()
@@ -33,7 +34,9 @@ export function useApiClasses(): ApiClassesState {
         if (alive) setError(e.message);
       })
       .finally(() => {
-        if (alive) setLoading(false);
+        if (!alive) return;
+        hasLoadedRef.current = true;
+        setLoading(false);
       });
     return () => {
       alive = false;

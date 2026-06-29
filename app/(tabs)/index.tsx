@@ -12,8 +12,9 @@ import { useHomeData } from "@/lib/hooks/use-home-data";
 import { useSession } from "@/lib/session";
 import { DashboardCircleAddIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
+import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -33,15 +34,28 @@ export default function Home() {
     reloadCompletions,
   } = useHomeData();
   const { firstName, avatarUrl } = useSession();
+  const isFocused = useIsFocused();
   const [createVisible, setCreateVisible] = useState(false);
   const [joinVisible, setJoinVisible] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const isEmpty = classes.length === 0;
 
-  // className helper: map classId → class name for display
+  useEffect(() => {
+    if (isFocused) {
+      reload();
+    }
+  }, [isFocused, reload]);
+
+  // className helper: map classId -> class name for display
   const classNameMap = Object.fromEntries(classes.map((c) => [c.id, c.name]));
   const className = (classId: string) => classNameMap[classId] ?? "";
+  const currentTasks = [...tasks].sort((a, b) => {
+    const dueDelta =
+      new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime();
+    if (dueDelta !== 0) return dueDelta;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
 
   async function handleToggleTask(taskId: string) {
     const isDone = completedTaskIds.includes(taskId);
@@ -153,7 +167,7 @@ export default function Home() {
 
           {/* 3. Tasks checklist */}
           <TasksSection
-            tasks={tasks}
+            tasks={currentTasks}
             className={className}
             completedTaskIds={completedTaskIds}
             onToggle={handleToggleTask}

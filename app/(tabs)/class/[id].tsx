@@ -10,10 +10,13 @@ import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
+import * as Clipboard from "expo-clipboard";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import {
   ArrowLeft01Icon,
+  Copy01Icon,
   PlusSignIcon,
+  Tick02Icon,
   UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
 import { InviteModal } from "@/components/modals/invite-modal";
@@ -58,6 +61,7 @@ export default function ClassDetail() {
   const [addTaskVisible, setAddTaskVisible] = useState(false);
   const [addAnnouncementVisible, setAddAnnouncementVisible] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [copiedCode, setCopiedCode] = useState(false);
 
   const canManageClass =
     !!user && !!classroom && (classroom.ownerId === user.id || classroom.classRepId === user.id);
@@ -92,6 +96,14 @@ export default function ClassDetail() {
     } catch (e) {
       setActionError(e instanceof Error ? e.message : "Failed to upload material.");
     }
+  }
+
+  async function handleCopyClassCode() {
+    const code = classroom?.code;
+    if (!code) return;
+    await Clipboard.setStringAsync(code);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 1500);
   }
 
   function handleAdd() {
@@ -148,9 +160,32 @@ export default function ClassDetail() {
           <Text className="text-2xl font-bold text-foreground" numberOfLines={1}>
             {classroom.name}
           </Text>
-          <Text className="text-sm text-muted-foreground">
-            {members.length} member{members.length === 1 ? "" : "s"}
-          </Text>
+          <View className="mt-1 flex-row flex-wrap items-center gap-2">
+            <Text className="text-sm text-muted-foreground">
+              {members.length} member{members.length === 1 ? "" : "s"}
+            </Text>
+            {classroom.code ? (
+              <>
+                <View className="h-1 w-1 rounded-full bg-muted-foreground/50" />
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Copy class code ${classroom.code}`}
+                  onPress={handleCopyClassCode}
+                  hitSlop={8}
+                  className="flex-row items-center gap-1 rounded-full bg-secondary px-2.5 py-1 active:opacity-70"
+                >
+                  <Text className="text-xs font-semibold text-foreground">
+                    {classroom.code}
+                  </Text>
+                  <HugeiconsIcon
+                    icon={copiedCode ? Tick02Icon : Copy01Icon}
+                    size={14}
+                    color={copiedCode ? "#22c55e" : "#71717a"}
+                  />
+                </Pressable>
+              </>
+            ) : null}
+          </View>
         </View>
         {canManageClass ? (
           <Pressable

@@ -7,18 +7,26 @@ import type { Class } from "@/lib/api";
 import { useApiClasses } from "@/lib/hooks/use-api-classes";
 import { Add01Icon, CrownIcon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react-native";
+import { useIsFocused } from "@react-navigation/native";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Classes() {
   const router = useRouter();
   const { classes, loading, error, reload } = useApiClasses();
+  const isFocused = useIsFocused();
   const [createVisible, setCreateVisible] = useState(false);
   const [joinVisible, setJoinVisible] = useState(false);
 
   const isEmpty = classes.length === 0;
+
+  useEffect(() => {
+    if (isFocused) {
+      reload();
+    }
+  }, [isFocused, reload]);
 
   function handleClassCreated(_cls: Class) {
     reload();
