@@ -88,26 +88,6 @@ export default function Home() {
   );
   const isEmpty = classes.length === 0;
 
-  function navigateToClass(classId: string) {
-    router.push(`/(tabs)/class/${classId}`);
-  }
-
-  function handleClassCreated(_cls: Class) {
-    reload();
-  }
-
-  function handleClassJoined(_cls: Class) {
-    reload();
-  }
-
-  if (loading) {
-    return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-background" edges={["top"]}>
-        <ActivityIndicator size="large" />
-      </SafeAreaView>
-    );
-  }
-
   function navigateToTask(taskId: string) {
     router.push({ pathname: "/(tabs)/task/[id]", params: { id: taskId } });
   }
@@ -189,13 +169,6 @@ export default function Home() {
               onPress={() => setQuickAddVisible(true)}
             />
           ) : null}
-
-          <ClassSchedule
-            classes={classes}
-            onClassPress={navigateToClass}
-            onNewClass={() => {}}
-            onSeeAll={() => router.push("/(tabs)/classes")}
-          />
 
           <TasksSection
             tasks={tasks}
