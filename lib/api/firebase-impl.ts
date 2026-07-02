@@ -438,6 +438,19 @@ export const firebaseApi: ClassdApi = {
     }
   },
 
+  async updateGroup(groupId: string, patch: { name: string }): Promise<Group> {
+    requireUid();
+    try {
+      const ref = doc(db, "groups", groupId);
+      await updateDoc(ref, { name: patch.name.trim() });
+      const snap = await getDoc(ref);
+      if (!snap.exists()) throw new ApiError("not-found", "Group not found");
+      return toGroup(snap.id, snap.data());
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
   async joinGroup(groupId: string): Promise<void> {
     const uid = requireUid();
     try {
@@ -748,6 +761,38 @@ export const firebaseApi: ClassdApi = {
         createdBy: uid,
         createdAt: new Date().toISOString(),
       };
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async updateTask(
+    classId: string,
+    taskId: string,
+    patch: Partial<CreateTaskInput>,
+  ): Promise<Task> {
+    requireUid();
+    try {
+      const ref = doc(db, "classes", classId, "tasks", taskId);
+      const fields: Record<string, unknown> = {};
+      if (patch.title !== undefined) fields.title = patch.title.trim();
+      if (patch.description !== undefined) fields.description = patch.description;
+      if (patch.type !== undefined) fields.type = patch.type;
+      if (patch.dueAt !== undefined) fields.dueAt = Timestamp.fromDate(new Date(patch.dueAt));
+      await updateDoc(ref, fields);
+
+      const snap = await getDoc(ref);
+      if (!snap.exists()) throw new ApiError("not-found", "Task not found");
+      return toTask(snap.id, classId, snap.data());
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async deleteTask(classId: string, taskId: string): Promise<void> {
+    requireUid();
+    try {
+      await deleteDoc(doc(db, "classes", classId, "tasks", taskId));
     } catch (e) {
       throw toApiError(e);
     }

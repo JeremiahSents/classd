@@ -17,6 +17,8 @@ export interface Task {
   type: TaskType;
   /** Human-readable due label for now (e.g. "Due tomorrow"). */
   dueLabel: string;
+  /** Raw ISO due date — used when editing a task. */
+  dueAt: string;
 }
 
 export interface Announcement {

@@ -1,15 +1,27 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import {
   ArrowLeft01Icon,
+  Cancel01Icon,
   CheckmarkCircle02Icon,
   CircleIcon,
+  PencilEdit02Icon,
   PlusSignIcon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { EmptySectionHint } from "@/components/ui/section-header";
 import { AddGroupTaskModal } from "@/components/modals/add-group-task-modal";
@@ -39,6 +51,9 @@ export default function GroupDetail() {
   const [tab, setTab] = useState(0);
   const [addVisible, setAddVisible] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [renameVisible, setRenameVisible] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [renaming, setRenaming] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -64,6 +79,19 @@ export default function GroupDetail() {
   );
 
   const isMember = members.some((m) => m.id === user?.id);
+  const isCreator = group?.createdBy === user?.id;
+
+  async function handleRename() {
+    if (!newName.trim()) return;
+    setRenaming(true);
+    try {
+      await api.updateGroup(id, { name: newName.trim() });
+      setRenameVisible(false);
+      await load();
+    } finally {
+      setRenaming(false);
+    }
+  }
 
   async function toggleMembership() {
     setBusy(true);
@@ -116,6 +144,19 @@ export default function GroupDetail() {
         <Text className="flex-1 text-xl font-bold text-foreground" numberOfLines={1}>
           {group.name}
         </Text>
+        {isCreator ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Rename group"
+            onPress={() => {
+              setNewName(group.name);
+              setRenameVisible(true);
+            }}
+            className="h-10 w-10 items-center justify-center rounded-full active:bg-secondary"
+          >
+            <HugeiconsIcon icon={PencilEdit02Icon} size={22} color="#111" />
+          </Pressable>
+        ) : null}
       </View>
 
       <View className="flex-row items-center justify-between px-6 pb-3">
@@ -214,6 +255,46 @@ export default function GroupDetail() {
         onClose={() => setAddVisible(false)}
         onCreated={load}
       />
+
+      {/* Rename group (creator only) */}
+      <Modal
+        visible={renameVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRenameVisible(false)}
+      >
+        <KeyboardAvoidingView
+          className="flex-1 justify-end bg-black/50"
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <Pressable className="absolute inset-0" onPress={() => setRenameVisible(false)} />
+          <View className="gap-6 rounded-t-3xl bg-background p-6 pb-10">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-xl font-bold text-foreground">Rename group</Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setRenameVisible(false)}
+                className="h-9 w-9 items-center justify-center rounded-full active:bg-secondary"
+              >
+                <HugeiconsIcon icon={Cancel01Icon} size={22} color="#71717a" />
+              </Pressable>
+            </View>
+            <Input
+              label="Group name"
+              value={newName}
+              onChangeText={setNewName}
+              autoFocus
+              autoCapitalize="words"
+            />
+            <Button
+              label="Save"
+              loading={renaming}
+              disabled={!newName.trim()}
+              onPress={handleRename}
+            />
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
