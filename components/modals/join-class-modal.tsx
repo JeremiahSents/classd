@@ -29,7 +29,7 @@ export function JoinClassModal({
   const router = useRouter();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [joining, setJoining] = useState(false);
 
   function handleClose() {
     setCode("");
@@ -38,18 +38,20 @@ export function JoinClassModal({
   }
 
   async function handleJoin() {
-    if (!code.trim()) return;
-    setLoading(true);
+    setJoining(true);
     setError(null);
     try {
-      const cls = await api.joinClassByCode(code.trim());
-      onJoined?.(cls);
+      const match = await joinClass(code);
+      if (!match) {
+        setError("No class found with that code.");
+        return;
+      }
       handleClose();
-      router.push({ pathname: "/(tabs)/class/[id]", params: { id: cls.id } });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "No class found with that code.");
+      router.push({ pathname: "/(tabs)/class/[id]", params: { id: match.id } });
+    } catch {
+      setError("Could not join. Please try again.");
     } finally {
-      setLoading(false);
+      setJoining(false);
     }
   }
 
@@ -108,7 +110,8 @@ export function JoinClassModal({
               />
               <Button
                 className="flex-1"
-                label="Join as member"
+                label="Join"
+                loading={joining}
                 disabled={!code.trim()}
                 loading={loading}
                 onPress={handleJoin}

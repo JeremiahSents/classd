@@ -20,7 +20,7 @@
  *    never passes a userId for the caller.
  */
 
-export type Role = "classRep" | "student";
+export type Role = "admin" | "classRep" | "student";
 export type TaskType = "assignment" | "cat" | "deadline";
 
 /** Standard error the UI knows how to display. */
@@ -124,6 +124,31 @@ export interface Material {
   createdAt: string; // ISO
 }
 
+export interface Group {
+  id: string;
+  classId: string;
+  name: string;
+  createdBy: string; // uid
+  createdAt: string; // ISO
+  /** Populated by listGroups/listMyGroups; omitted elsewhere. */
+  memberCount?: number;
+}
+
+export type GroupTaskStatus = "pending" | "completed";
+
+export interface GroupTask {
+  id: string;
+  groupId: string;
+  title: string;
+  description: string;
+  dueAt: string; // ISO
+  assignedTo: string; // uid
+  assignedToName: string;
+  status: GroupTaskStatus;
+  createdBy: string; // uid
+  createdAt: string; // ISO
+}
+
 /* ------------------------------------------------------------------ *
  * Request payloads
  * ------------------------------------------------------------------ */
@@ -163,6 +188,14 @@ export interface CreateAnnouncementInput {
   content: string;
 }
 
+export interface CreateGroupTaskInput {
+  title: string;
+  description: string;
+  dueAt: string; // ISO
+  assignedTo: string; // uid of a group member
+  assignedToName: string;
+}
+
 /** A file selected from the device, ready to upload. */
 export interface UploadFileInput {
   /** Local uri from expo-document-picker. */
@@ -189,6 +222,21 @@ export interface ClassdApi {
   /** Subscribe to auth changes; returns an unsubscribe fn. */
   onAuthStateChanged(cb: (user: UserProfile | null) => void): () => void;
   updateProfile(patch: Partial<Pick<UserProfile, "name" | "avatarUrl">>): Promise<UserProfile>;
+
+  // ---- Project groups ----
+  /** Groups within a class (the "unit group section"). */
+  listGroups(classId: string): Promise<Group[]>;
+  /** Groups the current user belongs to, across all classes. */
+  listMyGroups(): Promise<Group[]>;
+  getGroup(groupId: string): Promise<Group>;
+  /** Any enrolled member can create a group in a class; creator auto-joins. */
+  createGroup(classId: string, name: string): Promise<Group>;
+  joinGroup(groupId: string): Promise<void>;
+  leaveGroup(groupId: string): Promise<void>;
+  listGroupMembers(groupId: string): Promise<Member[]>;
+  listGroupTasks(groupId: string): Promise<GroupTask[]>;
+  createGroupTask(groupId: string, input: CreateGroupTaskInput): Promise<GroupTask>;
+  setGroupTaskStatus(groupId: string, taskId: string, status: GroupTaskStatus): Promise<void>;
 
   // ---- Push notifications ----
   /** Save an Expo push token for the current user's device. */

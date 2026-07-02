@@ -134,6 +134,51 @@ export const mockApi: ClassdApi = {
     return currentUser;
   },
 
+  // ---- Project groups (mock) ----
+  async listGroups() {
+    return [];
+  },
+  async listMyGroups() {
+    return [];
+  },
+  async getGroup() {
+    throw new ApiError("not-found", "Group not found");
+  },
+  async createGroup(classId, name) {
+    const u = requireAuth();
+    return { id: id("g"), classId, name: name.trim(), createdBy: u.id, createdAt: now(), memberCount: 1 };
+  },
+  async joinGroup() {
+    /* no-op in mock */
+  },
+  async leaveGroup() {
+    /* no-op in mock */
+  },
+  async listGroupMembers() {
+    return [];
+  },
+  async listGroupTasks() {
+    return [];
+  },
+  async createGroupTask(groupId, input) {
+    const u = requireAuth();
+    return {
+      id: id("gt"),
+      groupId,
+      title: input.title,
+      description: input.description,
+      dueAt: input.dueAt,
+      assignedTo: input.assignedTo,
+      assignedToName: input.assignedToName,
+      status: "pending",
+      createdBy: u.id,
+      createdAt: now(),
+    };
+  },
+  async setGroupTaskStatus() {
+    /* no-op in mock */
+  },
+
   async registerPushToken() {
     /* no-op in mock */
   },

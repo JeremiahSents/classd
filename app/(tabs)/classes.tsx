@@ -1,3 +1,11 @@
+import { useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { PlusSignIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
+import { BooksIcon } from "@/components/ui/books-icon";
+import { Button } from "@/components/ui/button";
 import { ClassCard } from "@/components/class/class-card";
 import { CreateClassModal } from "@/components/modals/create-class-modal";
 import { JoinClassModal } from "@/components/modals/join-class-modal";
@@ -15,8 +23,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Classes() {
   const router = useRouter();
-  const { classes, loading, error, reload } = useApiClasses();
-  const isFocused = useIsFocused();
+  const { loading, classes, enrolledClassIds } = useClasses();
+  const { role } = useSession();
   const [createVisible, setCreateVisible] = useState(false);
   const [joinVisible, setJoinVisible] = useState(false);
 
@@ -41,46 +49,36 @@ export default function Classes() {
       {/* Header */}
       <View className="flex-row items-center justify-between px-6 pb-4 pt-8">
         <Text className="text-2xl font-bold text-foreground">Classes</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Join class"
-          onPress={() => setJoinVisible(true)}
-          className="h-11 w-11 items-center justify-center rounded-full bg-primary active:opacity-90"
-        >
-          <HugeiconsIcon icon={Add01Icon} size={24} color="#fff" />
-        </Pressable>
+        {isClassRep ? null : (
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => setJoinVisible(true)}
+            className="h-11 w-11 items-center justify-center rounded-full bg-primary active:opacity-90"
+          >
+            <HugeiconsIcon icon={UserAdd01Icon} size={22} color="#fff" />
+          </Pressable>
+        )}
       </View>
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" />
-        </View>
-      ) : error ? (
-        <View className="flex-1 items-center justify-center gap-3 px-6 pb-24">
-          <Text className="text-center text-sm font-medium text-red-500">
-            {error}
-          </Text>
-          <Button label="Try again" variant="outline" onPress={reload} />
+          <ActivityIndicator color="#4f46e5" />
         </View>
       ) : isEmpty ? (
-        <View className="flex-1 items-center justify-center gap-9 px-6 pb-24">
-          <BooksIcon size={150} />
-          <View className="items-center gap-2">
-            <Text className="text-center text-2xl font-black text-foreground">
-              Start with a class
+        <View className="flex-1 items-center justify-center gap-8 px-6 pb-24">
+          <BooksIcon size={120} />
+          {isClassRep ? (
+            <Text className="max-w-xs text-center text-base text-muted-foreground">
+              You&#39;re not in any classes yet. An admin will add you to your
+              classes.
             </Text>
-            <Text className="max-w-xs text-center text-sm leading-6 text-muted-foreground">
-              Create a class to become its rep, or tap the + above to join one
-              with a code.
-            </Text>
-          </View>
-          <View className="w-full max-w-sm">
+          ) : (
             <Button
-              label="Create a class"
-              leftIcon={<HugeiconsIcon icon={CrownIcon} size={20} color="#fff" />}
-              onPress={() => setCreateVisible(true)}
+              label="Join your first class"
+              leftIcon={<HugeiconsIcon icon={UserAdd01Icon} size={20} color="#fff" />}
+              onPress={() => setJoinVisible(true)}
             />
-          </View>
+          )}
         </View>
       ) : (
         <ScrollView

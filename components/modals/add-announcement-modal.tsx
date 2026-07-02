@@ -30,24 +30,18 @@ export function AddAnnouncementModal({
 }: AddAnnouncementModalProps) {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   async function handleSave() {
     if (!title.trim() || !content.trim()) return;
-    setLoading(true);
-    setError(null);
+    setSubmitting(true);
     try {
-      const announcement = await api.createAnnouncement(classId, {
-        title: title.trim(),
-        content,
-      });
-      onCreated?.(announcement);
-      handleClose();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to post announcement.");
+      await addAnnouncement(classId, { title, content });
+      setTitle("");
+      setContent("");
+      onClose();
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   }
 
@@ -124,7 +118,7 @@ export function AddAnnouncementModal({
               <Button
                 label="Post Announcement"
                 onPress={handleSave}
-                loading={loading}
+                loading={submitting}
                 disabled={!title.trim() || !content.trim()}
               />
             </View>

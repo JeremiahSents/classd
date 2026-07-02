@@ -1,10 +1,12 @@
 /**
  * Backend smoke test — exercises the Firestore backend with NO frontend.
  *
- * It signs up a class rep + a student as real Firebase Auth users and runs the
- * same Firestore operations that lib/api/firebase-impl.ts performs, so it
- * verifies both the data model AND the security rules. It also runs a negative
- * test (a student must NOT be able to create a task).
+ * It signs up an admin (class owner) + a student as real Firebase Auth users
+ * and runs the same Firestore operations that lib/api/firebase-impl.ts
+ * performs — classes, join-by-code, tasks, completions, announcements, and
+ * project groups — so it verifies both the data model AND the security rules.
+ * Includes negative tests (student can't create class tasks; a non-member
+ * can't create group tasks).
  *
  * Run against the LOCAL EMULATOR (recommended — safe, no real data, needs Java):
  *   1) firebase emulators:start --only auth,firestore
@@ -196,6 +198,54 @@ async function completedIds() {
   return s.docs.map((d) => d.id);
 }
 
+/* ---------- project-group operations (mirror firebase-impl.ts) ---------- */
+
+async function createGroup(classId, name) {
+  const uid = auth.currentUser.uid;
+  const ref = doc(collection(db, "groups"));
+  await setDoc(ref, { classId, name, createdBy: uid, createdAt: serverTimestamp() });
+  // creator auto-joins
+  await setDoc(doc(db, "groups", ref.id, "groupMembers", uid), {
+    uid,
+    name: "Test Student",
+    email: auth.currentUser.email,
+    joinedAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+async function myGroupIds() {
+  const uid = auth.currentUser.uid;
+  const snap = await getDocs(
+    query(collectionGroup(db, "groupMembers"), where("uid", "==", uid)),
+  );
+  return snap.docs.map((d) => d.ref.parent.parent.id);
+}
+
+async function createGroupTask(groupId, title, assignedTo, assignedToName) {
+  const uid = auth.currentUser.uid;
+  const ref = doc(collection(db, "groups", groupId, "tasks"));
+  await setDoc(ref, {
+    title,
+    description: "desc",
+    dueAt: Timestamp.fromDate(new Date(Date.now() + 86_400_000)),
+    assignedTo,
+    assignedToName,
+    status: "pending",
+    createdBy: uid,
+    createdAt: serverTimestamp(),
+  });
+  return ref.id;
+}
+
+async function setGroupTaskStatus(groupId, taskId, status) {
+  await setDoc(
+    doc(db, "groups", groupId, "tasks", taskId),
+    { status },
+    { merge: true },
+  );
+}
+
 /* ---------- the flow ---------- */
 
 const stamp = Date.now();
@@ -203,16 +253,16 @@ const repEmail = `rep_${stamp}@test.classd`;
 const stuEmail = `stu_${stamp}@test.classd`;
 const pass = "Test123!pass";
 
-let repUid, stuUid, classId, taskId, annId;
+let repUid, stuUid, classId, taskId, annId, groupId, groupTaskId;
 
 async function main() {
-  console.log("CLASS REP");
-  repUid = await step("sign up class rep", () => signUp(repEmail, pass, "Test Rep", "classRep"));
+  console.log("ADMIN (class owner)");
+  repUid = await step("sign up admin", () => signUp(repEmail, pass, "Test Admin", "admin"));
   const cls = await step("create class", () => createClass("Smoke Test Class"));
   classId = cls.id;
   taskId = await step("create task", () => createTask(classId, "Smoke Task 1"));
   annId = await step("create announcement", () => createAnnouncement(classId, "Smoke Note 1"));
-  await step("class rep sees own class in listClasses", async () => {
+  await step("admin sees own class in listClasses", async () => {
     const snap = await getDocs(query(collection(db, "classes"), where("ownerId", "==", repUid)));
     assert(snap.docs.some((d) => d.id === classId), "owned class present");
   });
@@ -238,11 +288,40 @@ async function main() {
     assert(done.includes(taskId), "completion recorded");
   });
 
+  console.log("\nPROJECT GROUPS (as student)");
+  groupId = await step("create group (creator auto-joins)", () =>
+    createGroup(classId, "Smoke Group A"),
+  );
+  await step("student sees group in listMyGroups (collection-group query)", async () => {
+    const ids = await myGroupIds();
+    assert(ids.includes(groupId), "created group visible");
+  });
+  groupTaskId = await step("assign a group task to self", () =>
+    createGroupTask(groupId, "Smoke Group Task", stuUid, "Test Student"),
+  );
+  await step("toggle group task to completed + read it back", async () => {
+    await setGroupTaskStatus(groupId, groupTaskId, "completed");
+    const snap = await getDocs(collection(db, "groups", groupId, "tasks"));
+    const t = snap.docs.find((d) => d.id === groupTaskId);
+    assert(t && t.get("status") === "completed", "status updated");
+  });
+
   console.log("\nSECURITY RULES (negative tests)");
   await step("student is BLOCKED from creating a task", async () => {
     try {
       await createTask(classId, "should be denied");
       throw new Error("NOT blocked — rules are too permissive!");
+    } catch (e) {
+      assert(e.code === "permission-denied", "expected permission-denied, got " + (e.code || e.message));
+    }
+  });
+  await step("NON-member is BLOCKED from creating a group task", async () => {
+    // the admin never joined the group, so this write must be denied
+    await signOut(auth);
+    await signInWithEmailAndPassword(auth, repEmail, pass);
+    try {
+      await createGroupTask(groupId, "should be denied", repUid, "Test Admin");
+      throw new Error("NOT blocked — group rules are too permissive!");
     } catch (e) {
       assert(e.code === "permission-denied", "expected permission-denied, got " + (e.code || e.message));
     }
@@ -253,8 +332,15 @@ async function cleanup() {
   console.log("\nCLEANUP");
   try {
     await signOut(auth).catch(() => {});
-    // student removes own completion + profile, deletes own auth user
+    // student removes group data, own completion + profile, deletes own auth user
     await signInWithEmailAndPassword(auth, stuEmail, pass);
+    if (groupId) {
+      if (groupTaskId) {
+        await deleteDoc(doc(db, "groups", groupId, "tasks", groupTaskId)).catch(() => {});
+      }
+      await deleteDoc(doc(db, "groups", groupId, "groupMembers", stuUid)).catch(() => {});
+      await deleteDoc(doc(db, "groups", groupId)).catch(() => {});
+    }
     await deleteDoc(doc(db, "users", stuUid, "completions", taskId)).catch(() => {});
     await deleteDoc(doc(db, "classes", classId, "members", stuUid)).catch(() => {});
     await deleteDoc(doc(db, "users", stuUid)).catch(() => {});

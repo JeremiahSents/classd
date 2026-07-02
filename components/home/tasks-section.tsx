@@ -24,19 +24,21 @@ function TaskRow({
   classLabel,
   completed,
   onToggle,
+  onPress,
 }: {
   task: Task;
   classLabel: string;
   completed: boolean;
   onToggle: () => void;
+  onPress?: () => void;
 }) {
   const dueLabel = formatDueDate(task.dueAt);
   const dotColor = urgencyColor(dueLabel);
 
   return (
     <View className="flex-row items-center gap-3 px-4 py-3.5">
-      {/* Left — task info */}
-      <View className="flex-1 gap-1">
+      {/* Left — task info (tap to open details) */}
+      <Pressable className="flex-1 gap-1 active:opacity-60" onPress={onPress} disabled={!onPress}>
         <Text
           className={`text-[15px] font-semibold ${
             completed
@@ -59,7 +61,7 @@ function TaskRow({
             {classLabel ? ` · ${classLabel}` : ""}
           </Text>
         </View>
-      </View>
+      </Pressable>
 
       {/* Right — checkbox */}
       <Pressable
@@ -98,13 +100,17 @@ function Divider() {
 export function TasksSection({
   tasks,
   className,
-  completedTaskIds,
-  onToggle,
+  isTaskComplete,
+  toggleTaskComplete,
+  onTaskPress,
+  onSeeAll,
 }: {
   tasks: Task[];
   className: (classId: string) => string;
-  completedTaskIds: string[];
-  onToggle: (taskId: string) => void;
+  isTaskComplete: (taskId: string) => boolean;
+  toggleTaskComplete: (taskId: string) => void;
+  onTaskPress?: (taskId: string) => void;
+  onSeeAll?: () => void;
 }) {
   if (tasks.length === 0) {
     return (
@@ -122,7 +128,7 @@ export function TasksSection({
 
   return (
     <View className="gap-4">
-      <SectionTitle title="Your tasks" count={tasks.length} />
+      <SectionTitle title="Your tasks" count={tasks.length} onSeeAll={onSeeAll} />
       <View className="overflow-hidden rounded-2xl">
         {tasks.map((task, index) => (
           <View key={task.id}>
@@ -130,8 +136,9 @@ export function TasksSection({
             <TaskRow
               task={task}
               classLabel={className(task.classId)}
-              completed={completedTaskIds.includes(task.id)}
-              onToggle={() => onToggle(task.id)}
+              completed={isTaskComplete(task.id)}
+              onToggle={() => toggleTaskComplete(task.id)}
+              onPress={onTaskPress ? () => onTaskPress(task.id) : undefined}
             />
           </View>
         ))}

@@ -19,6 +19,7 @@ import type { IconSvgElement } from "@hugeicons/react-native";
 import {
   Home01Icon,
   Mortarboard02Icon,
+  UserGroupIcon,
   UserIcon,
 } from "@hugeicons/core-free-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
@@ -29,6 +30,7 @@ import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 const ICONS: Record<string, IconSvgElement> = {
   index: Home01Icon,
   classes: Mortarboard02Icon,
+  groups: UserGroupIcon,
   profile: UserIcon,
 };
 

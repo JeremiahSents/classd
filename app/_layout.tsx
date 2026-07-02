@@ -18,14 +18,16 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <SessionProvider>
-        <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="profile/edit" />
-          <Stack.Screen name="profile/settings" />
-        </Stack>
+        <ClassesProvider>
+          <StatusBar style="dark" />
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="(admin)" />
+            <Stack.Screen name="class/[id]" />
+          </Stack>
+        </ClassesProvider>
       </SessionProvider>
     </SafeAreaProvider>
   );

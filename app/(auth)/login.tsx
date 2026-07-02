@@ -1,86 +1,104 @@
-import { Button } from "@/components/ui/button";
-import { GoogleIcon } from "@/components/ui/google-icon";
-import { Input } from "@/components/ui/input";
-import { Logo } from "@/components/ui/logo";
-import {
-    googleAuthConfig,
-    googleIdTokenFromResult,
-    isGoogleAuthConfigured,
-} from "@/lib/google-auth";
-import { useSession } from "@/lib/session";
-import * as Google from "expo-auth-session/providers/google";
-import { useRouter } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    Text,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Text,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { Logo } from "@/components/ui/logo";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { GoogleIcon } from "@/components/ui/google-icon";
+import { AppleIcon } from "@/components/ui/apple-icon";
+import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { GoogleAuthButton } from "@/components/auth/google-auth-button";
+import { useSession } from "@/lib/session";
 
-WebBrowser.maybeCompleteAuthSession();
+// Google sign-in only works once client IDs are set (see .env). When they're
+// missing we render a disabled fallback instead of the real button, because
+// Google.useAuthRequest throws at render time with no client id.
+const GOOGLE_CONFIGURED = !!(
+  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
+  process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ||
+  process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
+);
 
-export default function Login() {
+export default function AuthScreen() {
   const router = useRouter();
-  const { signInWithEmail, signInWithGoogle } = useSession();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple } = useSession();
+
+  const [mode, setMode] = useState(0); // 0 = Login, 1 = Register
+  const isRegister = mode === 1;
+
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [googleSubmitting, setGoogleSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const googleConfigured = isGoogleAuthConfigured();
-  const [googleRequest, , promptGoogleAsync] = Google.useIdTokenAuthRequest(
-    googleAuthConfig(),
-    { scheme: "classd" },
-  );
 
-  async function handleLogin() {
+  async function completeSocial(run: () => Promise<void>) {
     setError(null);
-    if (!email.trim()) {
-      setError("Please enter your email.");
-      return;
-    }
-    if (!password) {
-      setError("Please enter your password.");
-      return;
-    }
-
     setSubmitting(true);
     try {
-      await signInWithEmail({ email: email.trim(), password });
+      await run();
       router.replace("/(tabs)");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Invalid email or password.");
+      setError(e instanceof Error ? e.message : "Sign-in failed.");
     } finally {
       setSubmitting(false);
     }
   }
 
-  async function handleGoogleContinue() {
+  async function handleSubmit() {
+    if (!email.trim() || !password) {
+      setError("Enter your email and password.");
+      return;
+    }
     setError(null);
-    if (!googleConfigured) {
-      setError("Google sign-in needs Google OAuth client IDs in .env first.");
-      return;
-    }
-    if (!googleRequest) {
-      setError("Google sign-in is still loading. Please try again.");
-      return;
-    }
-
-    setGoogleSubmitting(true);
+    setSubmitting(true);
     try {
-      const result = await promptGoogleAsync();
-      const idToken = googleIdTokenFromResult(result);
-      await signInWithGoogle(idToken, "student");
+      if (isRegister) {
+        // Everyone registers as a student; a class rep is assigned later.
+        await signUpWithEmail({
+          name: name.trim() || undefined,
+          email: email.trim(),
+          password,
+          role: "student",
+        });
+      } else {
+        await signInWithEmail({ email: email.trim(), password });
+      }
       router.replace("/(tabs)");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Google sign-in failed.");
+      setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
-      setGoogleSubmitting(false);
+      setSubmitting(false);
+    }
+  }
+
+  async function handleApple() {
+    if (Platform.OS !== "ios") {
+      setError("Apple sign-in is only available on iOS.");
+      return;
+    }
+    try {
+      const AppleAuthentication = await import("expo-apple-authentication");
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      if (credential.identityToken) {
+        const token = credential.identityToken;
+        await completeSocial(() => signInWithApple(token));
+      }
+    } catch (e) {
+      if ((e as { code?: string }).code === "ERR_REQUEST_CANCELED") return;
+      setError("Apple sign-in failed.");
     }
   }
 
@@ -96,22 +114,42 @@ export default function Login() {
           showsVerticalScrollIndicator={false}
         >
           <View className="w-full max-w-md self-center">
+            {/* Header */}
             <View className="gap-6 pb-8">
               <Logo size={96} style={{ alignSelf: "center" }} />
-              <View className="gap-1.5">
-                <Text className="text-2xl font-bold text-foreground text-center">
-                  Welcome back
-                </Text>
-                <Text className="text-center text-sm text-muted-foreground">
-                  Log in to your account
-                </Text>
-              </View>
+              <Text className="text-2xl font-bold text-foreground text-center">
+                {isRegister ? "Create your account" : "Welcome back"}
+              </Text>
             </View>
 
+            {/* Login / Register switch */}
+            <View className="pb-6">
+              <SegmentedTabs
+                tabs={["Login", "Register"]}
+                active={mode}
+                onChange={(i) => {
+                  setMode(i);
+                  setError(null);
+                }}
+              />
+            </View>
+
+            {/* Form */}
             <View className="gap-4">
+              {isRegister ? (
+                <Input
+                  label="Full name"
+                  placeholder="Your name"
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                  autoComplete="name"
+                />
+              ) : null}
+
               <Input
                 label="University email"
-                placeholder="you@university.edu"
+                placeholder="you@strathmore.edu"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -123,49 +161,58 @@ export default function Login() {
 
               <Input
                 label="Password"
-                placeholder="Enter your password"
+                placeholder={isRegister ? "Create a password" : "Your password"}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry
                 autoCapitalize="none"
-                autoComplete="password"
-                onSubmitEditing={handleLogin}
-                returnKeyType="go"
+                autoComplete={isRegister ? "password-new" : "password"}
               />
 
-              <Button label="Log in" onPress={handleLogin} loading={submitting} />
+              {error ? (
+                <Text className="text-center text-sm font-medium text-red-500">
+                  {error}
+                </Text>
+              ) : null}
+
+              <Button
+                label={isRegister ? "Create account" : "Log in"}
+                onPress={handleSubmit}
+                loading={submitting}
+              />
             </View>
 
-            {error ? (
-              <Text className="pt-3 text-center text-sm font-medium text-red-500">
-                {error}
-              </Text>
-            ) : null}
-
-            <View className="gap-4 pt-4">
+            {/* Social auth */}
+            <View className="gap-4 pt-6">
               <View className="flex-row items-center gap-4 py-2">
                 <View className="h-px flex-1 bg-border" />
                 <Text className="text-sm text-muted-foreground">Or continue with</Text>
                 <View className="h-px flex-1 bg-border" />
               </View>
 
-              <Button
-                label="Continue with Google"
-                variant="outline"
-                leftIcon={<GoogleIcon size={20} />}
-                loading={googleSubmitting}
-                disabled={!googleRequest || googleSubmitting}
-                onPress={handleGoogleContinue}
-              />
-            </View>
-
-            <View className="flex-row items-center justify-center gap-1 pt-6">
-              <Text className="text-sm text-muted-foreground">
-                Don&apos;t have an account?
-              </Text>
-              <Pressable onPress={() => router.replace("/register")}>
-                <Text className="text-sm font-semibold text-primary">Sign up</Text>
-              </Pressable>
+              {GOOGLE_CONFIGURED ? (
+                <GoogleAuthButton
+                  disabled={submitting}
+                  onToken={(idToken) => completeSocial(() => signInWithGoogle(idToken))}
+                />
+              ) : (
+                <Button
+                  label="Continue with Google"
+                  variant="outline"
+                  leftIcon={<GoogleIcon size={20} />}
+                  disabled={submitting}
+                  onPress={() => setError("Google sign-in isn't configured yet.")}
+                />
+              )}
+              {Platform.OS === "ios" ? (
+                <Button
+                  label="Continue with Apple"
+                  variant="outline"
+                  leftIcon={<AppleIcon size={20} />}
+                  disabled={submitting}
+                  onPress={handleApple}
+                />
+              ) : null}
             </View>
           </View>
         </ScrollView>

@@ -35,14 +35,13 @@ export function CreateClassModal({
   const [name, setName] = useState("");
   const [created, setCreated] = useState<Class | null>(null);
   const [copied, setCopied] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   function reset() {
     setName("");
     setCreated(null);
     setCopied(false);
-    setError(null);
+    setBusy(false);
   }
 
   function handleClose() {
@@ -51,17 +50,12 @@ export function CreateClassModal({
   }
 
   async function handleContinue() {
-    if (!name.trim()) return;
-    setLoading(true);
-    setError(null);
+    setBusy(true);
     try {
-      const cls = await api.createClass({ name: name.trim() });
-      setCreated(cls);
-      onCreated?.(cls);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to create class.");
+      const classroom = await addClass(name);
+      setCreated(classroom);
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   }
 
@@ -176,6 +170,7 @@ export function CreateClassModal({
                   <Button
                     className="flex-1"
                     label="Continue"
+                    loading={busy}
                     disabled={!name.trim()}
                     loading={loading}
                     onPress={handleContinue}

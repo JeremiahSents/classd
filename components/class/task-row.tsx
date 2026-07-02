@@ -17,6 +17,8 @@ interface TaskRowProps {
   /** When provided, shows a completion toggle (student view). */
   completed?: boolean;
   onToggle?: () => void;
+  /** Tap the row body to open task details. */
+  onPress?: () => void;
 }
 
 const TYPE_STYLES: Record<TaskType, string> = {
@@ -32,6 +34,7 @@ export function TaskRow({
   dueAt,
   completed,
   onToggle,
+  onPress,
 }: TaskRowProps) {
   const checkable = !!onToggle;
   const dueLabel = formatDueDate(dueAt);
@@ -58,7 +61,7 @@ export function TaskRow({
         </Pressable>
       ) : null}
 
-      <View className="flex-1 gap-2">
+      <Pressable className="flex-1 gap-2 active:opacity-60" onPress={onPress} disabled={!onPress}>
         <View className="flex-row items-start justify-between gap-3">
           <Text
             className={`flex-1 text-base font-semibold text-foreground ${
@@ -82,7 +85,7 @@ export function TaskRow({
           <HugeiconsIcon icon={Appointment01Icon} size={14} color="#71717a" />
           <Text className="text-xs font-medium text-muted-foreground">{dueLabel}</Text>
         </View>
-      </View>
+      </Pressable>
     </View>
   );
 }

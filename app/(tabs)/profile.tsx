@@ -34,8 +34,11 @@ export default function Profile() {
   const [avatarPickerVisible, setAvatarPickerVisible] = useState(false);
 
   async function handleSignOut() {
-    await signOut().catch(() => {});
-    router.replace("/(auth)/register");
+    try {
+      await signOut();
+    } finally {
+      router.replace("/(auth)/login");
+    }
   }
 
   function handleAvatarSelect(url: string) {

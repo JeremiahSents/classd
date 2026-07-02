@@ -1,35 +1,30 @@
-import { Button } from "@/components/ui/button";
-import { api, type Task } from "@/lib/api";
-import type { TaskType } from "@/lib/types";
-import { TASK_TYPE_LABEL } from "@/lib/types";
-import { Calendar01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react-native";
-import DateTimePicker, {
-    type DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    View,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
+import { TASK_TYPE_LABEL, type TaskType } from "@/lib/types";
+import type { Classroom } from "@/lib/classes";
+import { useClasses } from "@/lib/classes-store";
 
-interface AddTaskModalProps {
-  classId: string;
+interface QuickAddTaskModalProps {
+  /** Classes the current user can post to (the ones they rep). */
+  classes: Classroom[];
   visible: boolean;
   onClose: () => void;
-  /** Called after the task is successfully created. */
-  onCreated?: (task: Task) => void;
 }
 
 const TYPES: TaskType[] = ["assignment", "cat", "deadline"];
 
-/** Combine a YYYY-MM-DD date and HH:MM time into an ISO string, or null. */
 function toIso(date: string, time: string): string | null {
   const clean = date.trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(clean)) return null;
@@ -39,15 +34,21 @@ function toIso(date: string, time: string): string | null {
   return isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
+export function QuickAddTaskModal({ classes, visible, onClose }: QuickAddTaskModalProps) {
   const { addTask } = useClasses();
+  const [classId, setClassId] = useState(classes[0]?.id ?? "");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<TaskType>("assignment");
-  const [dueDate, setDueDate] = useState(""); // YYYY-MM-DD
-  const [dueTime, setDueTime] = useState(""); // HH:MM (optional)
+  const [dueDate, setDueDate] = useState("");
+  const [dueTime, setDueTime] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // default to the first class whenever the list changes / modal opens
+  useEffect(() => {
+    if (visible && !classId && classes[0]) setClassId(classes[0].id);
+  }, [visible, classId, classes]);
 
   function reset() {
     setTitle("");
@@ -65,6 +66,10 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
 
   async function handleSave() {
     const dueAt = toIso(dueDate, dueTime);
+    if (!classId) {
+      setError("Pick a class.");
+      return;
+    }
     if (!title.trim()) {
       setError("Enter a title.");
       return;
@@ -73,7 +78,6 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
       setError("Enter a valid due date (YYYY-MM-DD).");
       return;
     }
-
     setError(null);
     setSubmitting(true);
     try {
@@ -93,10 +97,10 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1 justify-end bg-black/40"
       >
-        <View className="rounded-t-3xl bg-card">
+        <View className="max-h-[88%] rounded-t-3xl bg-card">
           <View className="flex-row items-center justify-between border-b border-border p-4">
             <View className="w-8" />
-            <Text className="text-base font-bold text-foreground">Add Task</Text>
+            <Text className="text-base font-bold text-foreground">Quick add task</Text>
             <Pressable
               accessibilityRole="button"
               onPress={handleClose}
@@ -108,7 +112,37 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
 
           <ScrollView className="px-6 py-4" showsVerticalScrollIndicator={false}>
             <View className="gap-5 pb-8">
-              {/* Type selector */}
+              {/* Class picker */}
+              <View className="gap-2">
+                <Text className="text-sm font-semibold text-foreground">Class</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerClassName="gap-2"
+                >
+                  {classes.map((c) => (
+                    <Pressable
+                      key={c.id}
+                      onPress={() => setClassId(c.id)}
+                      className={`rounded-xl border px-4 py-2.5 ${
+                        classId === c.id
+                          ? "border-primary bg-primary/10"
+                          : "border-border bg-transparent"
+                      }`}
+                    >
+                      <Text
+                        className={`text-sm font-medium ${
+                          classId === c.id ? "text-primary" : "text-muted-foreground"
+                        }`}
+                      >
+                        {c.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+
+              {/* Type */}
               <View className="gap-2">
                 <Text className="text-sm font-semibold text-foreground">Type</Text>
                 <View className="flex-row gap-2">
@@ -134,20 +168,17 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
                 </View>
               </View>
 
-              {/* Title */}
               <View className="gap-2">
                 <Text className="text-sm font-semibold text-foreground">Title *</Text>
                 <TextInput
                   value={title}
                   onChangeText={setTitle}
                   placeholder="e.g. Essay Draft"
-                  textAlignVertical="center"
-                  className="h-14 rounded-xl border border-border bg-secondary/50 px-4 py-0 text-base leading-5 text-foreground"
+                  className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
                   placeholderTextColor="#9ca3af"
                 />
               </View>
 
-              {/* Description */}
               <View className="gap-2">
                 <Text className="text-sm font-semibold text-foreground">Description</Text>
                 <TextInput
@@ -156,7 +187,7 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
                   placeholder="Additional details..."
                   multiline
                   textAlignVertical="top"
-                  className="min-h-[80px] rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
+                  className="min-h-[70px] rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
                   placeholderTextColor="#9ca3af"
                 />
               </View>
@@ -186,12 +217,10 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
                 </View>
               </View>
 
-              {error ? (
-                <Text className="text-sm font-medium text-red-500">{error}</Text>
-              ) : null}
+              {error ? <Text className="text-sm font-medium text-red-500">{error}</Text> : null}
 
               <Button
-                label="Save Task"
+                label="Add task"
                 onPress={handleSave}
                 loading={submitting}
                 disabled={!title.trim() || !dueDate.trim()}

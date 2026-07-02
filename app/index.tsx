@@ -7,7 +7,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function Welcome() {
   const router = useRouter();
-  const { loading, isAuthenticated } = useSession();
+  const { loading, isAuthenticated, role } = useSession();
+  // hold the splash for a brief minimum so it doesn't flash on fast auth resolves
+  const [minTimePassed, setMinTimePassed] = useState(false);
 
   // Signed-in users skip the welcome screen and go straight to the app.
   useEffect(() => {
@@ -16,15 +18,17 @@ export default function Welcome() {
     }
   }, [loading, isAuthenticated, router]);
 
-  // While restoring the session (or about to redirect), show a branded loader.
-  if (loading || isAuthenticated) {
-    return (
-      <View className="flex-1 items-center justify-center bg-[#5645E6]">
-        <StatusBar style="light" />
-        <ActivityIndicator color="#ffffff" />
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (loading || !minTimePassed) return;
+    if (!isAuthenticated) {
+      router.replace("/login");
+    } else if (role === "admin") {
+      // cast: expo-router's typed routes regenerate for (admin) on next `expo start`
+      router.replace("/(admin)" as never);
+    } else {
+      router.replace("/(tabs)");
+    }
+  }, [loading, minTimePassed, isAuthenticated, role, router]);
 
   return (
     <View className="flex-1 bg-[#5645E6]">
