@@ -35,18 +35,22 @@ export default function AuthScreen() {
     setError(null);
     setSubmitting(true);
     try {
-      if (isRegister) {
-        // Everyone registers as a student; a class rep is assigned later.
-        await signUpWithEmail({
-          name: name.trim() || undefined,
-          email: email.trim(),
-          password,
-          role: "student",
-        });
+      const profile = isRegister
+        ? // Everyone registers as a student; a class rep is assigned later.
+          await signUpWithEmail({
+            name: name.trim() || undefined,
+            email: email.trim(),
+            password,
+            role: "student",
+          })
+        : await signInWithEmail({ email: email.trim(), password });
+
+      // route by system role: admins get the admin panel
+      if (profile.role === "admin") {
+        router.replace("/(admin)" as never);
       } else {
-        await signInWithEmail({ email: email.trim(), password });
+        router.replace("/(tabs)");
       }
-      router.replace("/(tabs)");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
