@@ -36,6 +36,18 @@ export interface Announcement {
   dueAt?: string;
 }
 
+/** A task inside a project group, shaped for the dashboard. */
+export interface GroupTaskItem {
+  id: string;
+  groupId: string;
+  groupName: string;
+  title: string;
+  description: string;
+  dueLabel: string;
+  assignedToName: string;
+  completed: boolean;
+}
+
 /** A file/resource attached to a class. */
 export interface Material {
   id: string;
