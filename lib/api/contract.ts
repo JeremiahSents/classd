@@ -20,7 +20,14 @@
  *    never passes a userId for the caller.
  */
 
-export type Role = "admin" | "classRep" | "student";
+/** System-wide role, stored on users/{uid}. Everyone who isn't an admin is a student. */
+export type Role = "admin" | "student";
+/**
+ * Per-class role, stored on classes/{classId}/members/{uid}. A student can be
+ * the class rep of one class and a regular student in another. This — not the
+ * system role — is what grants task/announcement permissions in a class.
+ */
+export type MemberRole = "classRep" | "student";
 export type TaskType = "assignment" | "cat" | "deadline";
 
 /** Standard error the UI knows how to display. */
@@ -85,7 +92,8 @@ export interface Member {
   name: string;
   email: string;
   avatarUrl?: string;
-  role: Role;
+  /** Role within THIS class — the one permissions key off. */
+  role: MemberRole;
   joinedAt: string; // ISO
 }
 
