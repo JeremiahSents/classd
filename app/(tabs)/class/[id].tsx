@@ -81,10 +81,14 @@ export default function ClassDetail() {
     );
   }
 
-  // Whoever is the assigned rep of THIS class (or an admin) can manage it.
-  const canManage = role === "admin" || classroom.classRepId === user?.id;
-
   const members = membersForClass(id);
+
+  // Whoever is the assigned rep of THIS class (or an admin) can manage it.
+  // Rep status is recognised from either the class's classRepId or the
+  // caller's own member-doc role, so partially-synced data still works.
+  const myMemberRole = members.find((m) => m.id === user?.id)?.role;
+  const canManage =
+    role === "admin" || classroom.classRepId === user?.id || myMemberRole === "classRep";
   const tasks = tasksForClass(id);
   const announcements = announcementsForClass(id);
   const materials = materialsForClass(id);

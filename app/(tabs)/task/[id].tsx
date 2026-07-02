@@ -21,7 +21,8 @@ const TYPE_STYLES: Record<TaskType, string> = {
 export default function TaskDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { getTask, getClass, className, isTaskComplete, toggleTaskComplete } = useClasses();
+  const { getTask, getClass, className, membersForClass, isTaskComplete, toggleTaskComplete } =
+    useClasses();
   const { role, user } = useSession();
 
   const task = getTask(id);
@@ -35,7 +36,9 @@ export default function TaskDetail() {
   }
 
   const classroom = getClass(task.classId);
-  const canManage = role === "admin" || classroom?.classRepId === user?.id;
+  const myMemberRole = membersForClass(task.classId).find((m) => m.id === user?.id)?.role;
+  const canManage =
+    role === "admin" || classroom?.classRepId === user?.id || myMemberRole === "classRep";
   const completed = isTaskComplete(task.id);
 
   return (

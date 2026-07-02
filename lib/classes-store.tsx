@@ -87,6 +87,7 @@ const toMember = (m: ApiMember): Member => ({
   id: m.id,
   name: m.name,
   email: m.email,
+  role: m.role,
 });
 
 /* ------------------------------------------------------------------ *
