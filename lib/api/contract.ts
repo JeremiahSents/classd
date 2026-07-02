@@ -236,6 +236,8 @@ export interface ClassdApi {
   getGroup(groupId: string): Promise<Group>;
   /** Any enrolled member can create a group in a class; creator auto-joins. */
   createGroup(classId: string, name: string): Promise<Group>;
+  /** Rename a group (creator only, per security rules). */
+  updateGroup(groupId: string, patch: { name: string }): Promise<Group>;
   joinGroup(groupId: string): Promise<void>;
   leaveGroup(groupId: string): Promise<void>;
   listGroupMembers(groupId: string): Promise<Member[]>;
@@ -267,6 +269,9 @@ export interface ClassdApi {
   /** All tasks across the caller's classes (home dashboard). */
   listMyTasks(): Promise<Task[]>;
   createTask(classId: string, input: CreateTaskInput): Promise<Task>; // class rep
+  /** Edit an existing task (class rep). Only provided fields change. */
+  updateTask(classId: string, taskId: string, patch: Partial<CreateTaskInput>): Promise<Task>;
+  deleteTask(classId: string, taskId: string): Promise<void>; // class rep
   /** Per-user completion state. */
   listCompletedTaskIds(): Promise<string[]>;
   setTaskComplete(taskId: string, complete: boolean): Promise<void>;

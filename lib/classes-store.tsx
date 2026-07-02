@@ -73,6 +73,7 @@ const toTask = (t: ApiTask): Task => ({
   description: t.description,
   type: t.type,
   dueLabel: dueLabel(t.dueAt),
+  dueAt: t.dueAt,
 });
 
 const toAnnouncement = (a: ApiAnnouncement): Announcement => ({
@@ -121,6 +122,12 @@ interface ClassesStore {
     classId: string,
     input: { title: string; description: string; type: TaskType; dueAt: string },
   ) => Promise<Task>;
+  updateTask: (
+    classId: string,
+    taskId: string,
+    patch: Partial<{ title: string; description: string; type: TaskType; dueAt: string }>,
+  ) => Promise<Task>;
+  deleteTask: (classId: string, taskId: string) => Promise<void>;
   addAnnouncement: (
     classId: string,
     input: { title: string; content: string },
@@ -248,6 +255,17 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
         const t = await api.createTask(classId, input);
         await refresh();
         return toTask(t);
+      },
+
+      updateTask: async (classId, taskId, patch) => {
+        const t = await api.updateTask(classId, taskId, patch);
+        await refresh();
+        return toTask(t);
+      },
+
+      deleteTask: async (classId, taskId) => {
+        await api.deleteTask(classId, taskId);
+        await refresh();
       },
 
       addAnnouncement: async (classId, input) => {

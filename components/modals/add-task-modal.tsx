@@ -1,13 +1,4 @@
-import { Button } from "@/components/ui/button";
-import { api, type Task } from "@/lib/api";
-import type { TaskType } from "@/lib/types";
-import { TASK_TYPE_LABEL } from "@/lib/types";
-import { Calendar01Icon, Cancel01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react-native";
-import DateTimePicker, {
-    type DateTimePickerEvent,
-} from "@react-native-community/datetimepicker";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     KeyboardAvoidingView,
     Modal,
@@ -18,9 +9,17 @@ import {
     TextInput,
     View,
 } from "react-native";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { Cancel01Icon } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
+import { TASK_TYPE_LABEL } from "@/lib/types";
+import type { Task, TaskType } from "@/lib/types";
+import { useClasses } from "@/lib/classes-store";
 
 interface AddTaskModalProps {
   classId: string;
+  /** When set, the modal edits this task instead of creating a new one. */
+  task?: Task;
   visible: boolean;
   onClose: () => void;
   /** Called after the task is successfully created. */
@@ -39,8 +38,9 @@ function toIso(date: string, time: string): string | null {
   return isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
-  const { addTask } = useClasses();
+export function AddTaskModal({ classId, task, visible, onClose }: AddTaskModalProps) {
+  const { addTask, updateTask } = useClasses();
+  const isEdit = !!task;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<TaskType>("assignment");
@@ -48,6 +48,22 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
   const [dueTime, setDueTime] = useState(""); // HH:MM (optional)
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // prefill from the task being edited each time the modal opens
+  useEffect(() => {
+    if (visible && task) {
+      setTitle(task.title);
+      setDescription(task.description);
+      setType(task.type);
+      const due = new Date(task.dueAt);
+      if (!isNaN(due.getTime())) {
+        setDueDate(due.toISOString().slice(0, 10));
+        setDueTime(
+          `${String(due.getHours()).padStart(2, "0")}:${String(due.getMinutes()).padStart(2, "0")}`,
+        );
+      }
+    }
+  }, [visible, task]);
 
   function reset() {
     setTitle("");
@@ -77,11 +93,20 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
     setError(null);
     setSubmitting(true);
     try {
-      await addTask(classId, { title: title.trim(), description, type, dueAt });
+      if (isEdit && task) {
+        await updateTask(task.classId, task.id, {
+          title: title.trim(),
+          description,
+          type,
+          dueAt,
+        });
+      } else {
+        await addTask(classId, { title: title.trim(), description, type, dueAt });
+      }
       reset();
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not add task.");
+      setError(e instanceof Error ? e.message : "Could not save task.");
     } finally {
       setSubmitting(false);
     }
@@ -96,7 +121,9 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
         <View className="rounded-t-3xl bg-card">
           <View className="flex-row items-center justify-between border-b border-border p-4">
             <View className="w-8" />
-            <Text className="text-base font-bold text-foreground">Add Task</Text>
+            <Text className="text-base font-bold text-foreground">
+              {isEdit ? "Edit Task" : "Add Task"}
+            </Text>
             <Pressable
               accessibilityRole="button"
               onPress={handleClose}
@@ -191,7 +218,7 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
               ) : null}
 
               <Button
-                label="Save Task"
+                label={isEdit ? "Save Changes" : "Save Task"}
                 onPress={handleSave}
                 loading={submitting}
                 disabled={!title.trim() || !dueDate.trim()}

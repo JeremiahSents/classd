@@ -137,6 +137,10 @@ export const mockApi: ClassdApi = {
     const u = requireAuth();
     return { id: id("g"), classId, name: name.trim(), createdBy: u.id, createdAt: now(), memberCount: 1 };
   },
+  async updateGroup(groupId, patch) {
+    const u = requireAuth();
+    return { id: groupId, classId: "", name: patch.name.trim(), createdBy: u.id, createdAt: now() };
+  },
   async joinGroup() {
     /* no-op in mock */
   },
@@ -256,6 +260,17 @@ export const mockApi: ClassdApi = {
     const t: Task = { id: id("t"), classId, createdBy: u.id, createdAt: now(), ...input };
     tasks = [t, ...tasks];
     return t;
+  },
+  async updateTask(classId, taskId, patch) {
+    requireAuth();
+    tasks = tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t));
+    const updated = tasks.find((t) => t.id === taskId);
+    if (!updated) throw new ApiError("not-found", "Task not found");
+    return updated;
+  },
+  async deleteTask(_classId, taskId) {
+    requireAuth();
+    tasks = tasks.filter((t) => t.id !== taskId);
   },
   async listCompletedTaskIds() {
     return completedTaskIds;
