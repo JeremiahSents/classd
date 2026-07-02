@@ -1,15 +1,24 @@
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 import { HugeiconsIcon } from "@hugeicons/react-native";
-import { ArrowLeft01Icon, Megaphone01Icon, Search01Icon } from "@hugeicons/core-free-icons";
+import { Megaphone01Icon, PlusSignIcon, Search01Icon } from "@hugeicons/core-free-icons";
+import { QuickAddAnnouncementModal } from "@/components/modals/quick-add-announcement-modal";
 import { useClasses } from "@/lib/classes-store";
+import { useSession } from "@/lib/session";
 
 export default function Announcements() {
-  const router = useRouter();
-  const { announcements, className } = useClasses();
+  const { announcements, classes, className, membersForClass } = useClasses();
+  const { user } = useSession();
   const [search, setSearch] = useState("");
+  const [addVisible, setAddVisible] = useState(false);
+
+  // Classes this user reps — they can quick-add announcements to them.
+  const repClasses = classes.filter(
+    (c) =>
+      c.classRepId === user?.id ||
+      membersForClass(c.id).find((m) => m.id === user?.id)?.role === "classRep",
+  );
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -35,16 +44,19 @@ export default function Announcements() {
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
-      <View className="flex-row items-center gap-2 px-4 pb-2 pt-2">
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-          onPress={() => router.back()}
-          className="h-10 w-10 items-center justify-center rounded-full active:bg-secondary"
-        >
-          <HugeiconsIcon icon={ArrowLeft01Icon} size={26} color="#111" />
-        </Pressable>
-        <Text className="text-xl font-bold text-foreground">Announcements</Text>
+      {/* Header */}
+      <View className="flex-row items-center justify-between px-6 pb-4 pt-8">
+        <Text className="text-2xl font-bold text-foreground">Announcements</Text>
+        {repClasses.length > 0 ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="New announcement"
+            onPress={() => setAddVisible(true)}
+            className="h-11 w-11 items-center justify-center rounded-full bg-primary active:opacity-90"
+          >
+            <HugeiconsIcon icon={PlusSignIcon} size={22} color="#fff" />
+          </Pressable>
+        ) : null}
       </View>
 
       {/* Search */}
@@ -101,6 +113,12 @@ export default function Announcements() {
           ))}
         </ScrollView>
       )}
+
+      <QuickAddAnnouncementModal
+        classes={repClasses}
+        visible={addVisible}
+        onClose={() => setAddVisible(false)}
+      />
     </SafeAreaView>
   );
 }
