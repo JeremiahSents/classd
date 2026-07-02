@@ -25,7 +25,7 @@ import {
 } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import type { Classroom } from "@/lib/classes";
-import type { Announcement, AnnouncementCategory, Material, Member, Task } from "@/lib/types";
+import type { Announcement, AnnouncementCategory, GroupTaskItem, Material, Member, Task } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
  * API -> UI mappers
@@ -101,6 +101,7 @@ interface ClassesStore {
   classes: Classroom[];
   tasks: Task[];
   announcements: Announcement[];
+  groupTasks: GroupTaskItem[];
   enrolledClassIds: string[];
 
   getClass: (classId: string) => Classroom | undefined;
@@ -113,6 +114,7 @@ interface ClassesStore {
 
   isTaskComplete: (taskId: string) => boolean;
   toggleTaskComplete: (taskId: string) => void;
+  toggleGroupTask: (groupId: string, taskId: string) => void;
 
   refresh: (silent?: boolean) => Promise<void>;
   joinClass: (code: string) => Promise<Classroom | null>;
@@ -149,6 +151,7 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [membersByClass, setMembersByClass] = useState<Record<string, Member[]>>({});
+  const [groupTasks, setGroupTasks] = useState<GroupTaskItem[]>([]);
   const [completedTaskIds, setCompletedTaskIds] = useState<string[]>([]);
   // Materials are local-only until the backend supports them.
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -159,6 +162,7 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
       setTasks([]);
       setAnnouncements([]);
       setMembersByClass({});
+      setGroupTasks([]);
       setCompletedTaskIds([]);
       setLoading(false);
       return;
@@ -180,6 +184,26 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
         cls.map(async (c) => [c.id, (await api.listMembers(c.id)).map(toMember)] as const),
       );
       setMembersByClass(Object.fromEntries(memberEntries));
+
+      // group tasks across all of the user's project groups, for the dashboard
+      const myGroups = await api.listMyGroups();
+      const perGroup = await Promise.all(
+        myGroups.map(async (g) =>
+          (await api.listGroupTasks(g.id)).map(
+            (t): GroupTaskItem => ({
+              id: t.id,
+              groupId: g.id,
+              groupName: g.name,
+              title: t.title,
+              description: t.description,
+              dueLabel: dueLabel(t.dueAt),
+              assignedToName: t.assignedToName,
+              completed: t.status === "completed",
+            }),
+          ),
+        ),
+      );
+      setGroupTasks(perGroup.flat());
     } catch (e) {
       console.warn("[classes-store] load failed", e);
     } finally {
@@ -199,6 +223,7 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
       classes,
       tasks,
       announcements,
+      groupTasks,
       enrolledClassIds,
 
       getClass: (classId) => classes.find((c) => c.id === classId),
@@ -221,6 +246,22 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
           // revert on failure
           setCompletedTaskIds((prev) =>
             done ? [...prev, taskId] : prev.filter((t) => t !== taskId),
+          );
+        });
+      },
+
+      toggleGroupTask: (groupId, taskId) => {
+        const current = groupTasks.find((t) => t.id === taskId);
+        if (!current) return;
+        const nextStatus = current.completed ? "pending" : "completed";
+        // optimistic update, then persist
+        setGroupTasks((prev) =>
+          prev.map((t) => (t.id === taskId ? { ...t, completed: !t.completed } : t)),
+        );
+        void api.setGroupTaskStatus(groupId, taskId, nextStatus).catch((e) => {
+          console.warn("[classes-store] setGroupTaskStatus failed", e);
+          setGroupTasks((prev) =>
+            prev.map((t) => (t.id === taskId ? { ...t, completed: current.completed } : t)),
           );
         });
       },
@@ -281,7 +322,7 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
         return material;
       },
     };
-  }, [loading, classes, tasks, announcements, membersByClass, materials, completedTaskIds, refresh]);
+  }, [loading, classes, tasks, announcements, groupTasks, membersByClass, materials, completedTaskIds, refresh]);
 
   return <ClassesContext.Provider value={value}>{children}</ClassesContext.Provider>;
 }

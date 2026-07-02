@@ -10,6 +10,7 @@ import { JoinClassModal } from "@/components/modals/join-class-modal";
 import { QuickAddTaskModal } from "@/components/modals/quick-add-task-modal";
 import { HomeHeader } from "@/components/home/home-header";
 import { TasksSection } from "@/components/home/tasks-section";
+import { GroupTasksSection } from "@/components/home/group-tasks-section";
 import { UpdatesSection } from "@/components/home/updates-section";
 import { CreateClassModal } from "@/components/modals/create-class-modal";
 import { JoinClassModal } from "@/components/modals/join-class-modal";
@@ -62,10 +63,12 @@ export default function Home() {
     classes,
     tasks,
     announcements,
+    groupTasks,
     className,
     membersForClass,
     isTaskComplete,
     toggleTaskComplete,
+    toggleGroupTask,
     refresh,
   } = useClasses();
   const { firstName, user } = useSession();
@@ -179,6 +182,15 @@ export default function Home() {
             onSeeAll={() =>
               // cast: typed routes regenerate for tasks on next `expo start`
               router.push("/(tabs)/tasks" as never)
+            }
+          />
+
+          <GroupTasksSection
+            tasks={groupTasks}
+            onToggle={toggleGroupTask}
+            onTaskPress={(groupId) =>
+              // cast: typed routes regenerate for group/[id] on next `expo start`
+              router.push({ pathname: "/(tabs)/group/[id]", params: { id: groupId } } as never)
             }
           />
 
