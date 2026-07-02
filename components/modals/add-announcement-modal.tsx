@@ -28,13 +28,19 @@ export function AddAnnouncementModal({
   const { addAnnouncement } = useClasses();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  function handleSave() {
+  async function handleSave() {
     if (!title.trim() || !content.trim()) return;
-    addAnnouncement(classId, { title, content });
-    setTitle("");
-    setContent("");
-    onClose();
+    setSubmitting(true);
+    try {
+      await addAnnouncement(classId, { title, content });
+      setTitle("");
+      setContent("");
+      onClose();
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function handleClose() {
@@ -102,6 +108,7 @@ export function AddAnnouncementModal({
               <Button
                 label="Post Announcement"
                 onPress={handleSave}
+                loading={submitting}
                 disabled={!title.trim() || !content.trim()}
               />
             </View>

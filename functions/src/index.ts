@@ -12,6 +12,7 @@
 import { setGlobalOptions } from "firebase-functions";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { onRequest } from "firebase-functions/v2/https";
+import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import {
@@ -165,3 +166,58 @@ export const runRemindersNow = onRequest(async (req, res) => {
   const result = await processReminders();
   res.json({ ok: true, ...result });
 });
+
+/* ------------------------------------------------------------------ *
+ * New-post notifications: push every enrolled student when a class rep
+ * posts a new task or announcement (functional requirement ix).
+ * ------------------------------------------------------------------ */
+
+async function notifyClassMembers(
+  classId: string,
+  title: string,
+  body: string,
+  data: Record<string, string>,
+): Promise<void> {
+  const members = await db.collection("classes").doc(classId).collection("members").get();
+  const messages: ExpoMessage[] = [];
+  for (const member of members.docs) {
+    const userSnap = await db.doc(`users/${member.id}`).get();
+    const tokens: string[] = userSnap.get("expoPushTokens") ?? [];
+    for (const token of tokens) {
+      messages.push({ to: token, title, body, data });
+    }
+  }
+  if (messages.length > 0) await sendExpoPush(messages);
+}
+
+export const onTaskPosted = onDocumentCreated(
+  "classes/{classId}/tasks/{taskId}",
+  async (event) => {
+    const task = event.data?.data();
+    if (!task) return;
+    await notifyClassMembers(
+      event.params.classId,
+      "New task posted",
+      String(task.title ?? "A new task"),
+      { classId: event.params.classId, taskId: event.params.taskId, type: "new_task" },
+    );
+  },
+);
+
+export const onAnnouncementPosted = onDocumentCreated(
+  "classes/{classId}/announcements/{announcementId}",
+  async (event) => {
+    const announcement = event.data?.data();
+    if (!announcement) return;
+    await notifyClassMembers(
+      event.params.classId,
+      "New announcement",
+      String(announcement.title ?? "A new announcement"),
+      {
+        classId: event.params.classId,
+        announcementId: event.params.announcementId,
+        type: "new_announcement",
+      },
+    );
+  },
+);

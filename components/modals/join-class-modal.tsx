@@ -24,6 +24,7 @@ export function JoinClassModal({ visible, onClose }: JoinClassModalProps) {
   const { joinClass } = useClasses();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [joining, setJoining] = useState(false);
 
   function handleClose() {
     setCode("");
@@ -31,14 +32,22 @@ export function JoinClassModal({ visible, onClose }: JoinClassModalProps) {
     onClose();
   }
 
-  function handleJoin() {
-    const match = joinClass(code);
-    if (!match) {
-      setError("No class found with that code.");
-      return;
+  async function handleJoin() {
+    setJoining(true);
+    setError(null);
+    try {
+      const match = await joinClass(code);
+      if (!match) {
+        setError("No class found with that code.");
+        return;
+      }
+      handleClose();
+      router.push({ pathname: "/(tabs)/class/[id]", params: { id: match.id } });
+    } catch {
+      setError("Could not join. Please try again.");
+    } finally {
+      setJoining(false);
     }
-    handleClose();
-    router.push({ pathname: "/(tabs)/class/[id]", params: { id: match.id } });
   }
 
   return (
@@ -94,6 +103,7 @@ export function JoinClassModal({ visible, onClose }: JoinClassModalProps) {
               <Button
                 className="flex-1"
                 label="Join"
+                loading={joining}
                 disabled={!code.trim()}
                 onPress={handleJoin}
               />

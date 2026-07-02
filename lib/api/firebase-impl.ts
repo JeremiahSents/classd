@@ -60,10 +60,14 @@ import {
   type CreateClassInput,
   type CreateTaskInput,
   type CreateAnnouncementInput,
+  type CreateGroupTaskInput,
   type Member,
   type Task,
   type Announcement,
   type Material,
+  type Group,
+  type GroupTask,
+  type GroupTaskStatus,
   type Role,
   type SignInInput,
   type SignUpInput,
@@ -233,8 +237,8 @@ async function uniqueClassCode(): Promise<string> {
 async function visibleClassIds(): Promise<string[]> {
   const uid = requireUid();
   const profile = await loadProfile(uid);
-  if (profile?.role === "classRep") {
-    const snap = await getDocs(query(collection(db, "classes"), where("ownerId", "==", uid)));
+  if (profile?.role === "admin") {
+    const snap = await getDocs(collection(db, "classes"));
     return snap.docs.map((d) => d.id);
   }
   const memberSnap = await getDocs(
@@ -266,6 +270,34 @@ function toAnnouncement(id: string, classId: string, data: DocumentData): Announ
     classId,
     title: data.title ?? "",
     content: data.content ?? "",
+    createdBy: data.createdBy ?? "",
+    createdAt: tsToIso(data.createdAt),
+  };
+}
+
+/** Shape a groups/{id} document into a Group. */
+function toGroup(id: string, data: DocumentData, memberCount?: number): Group {
+  return {
+    id,
+    classId: data.classId ?? "",
+    name: data.name ?? "",
+    createdBy: data.createdBy ?? "",
+    createdAt: tsToIso(data.createdAt),
+    ...(memberCount !== undefined ? { memberCount } : {}),
+  };
+}
+
+/** Shape a groups/{id}/tasks/{taskId} document into a GroupTask. */
+function toGroupTask(id: string, groupId: string, data: DocumentData): GroupTask {
+  return {
+    id,
+    groupId,
+    title: data.title ?? "",
+    description: data.description ?? "",
+    dueAt: tsToIso(data.dueAt),
+    assignedTo: data.assignedTo ?? "",
+    assignedToName: data.assignedToName ?? "",
+    status: (data.status as GroupTaskStatus) ?? "pending",
     createdBy: data.createdBy ?? "",
     createdAt: tsToIso(data.createdAt),
   };
@@ -394,6 +426,174 @@ export const firebaseApi: ClassdApi = {
     }
   },
 
+  // ---- Project groups ----
+  async listGroups(classId: string): Promise<Group[]> {
+    try {
+      const snap = await getDocs(query(collection(db, "groups"), where("classId", "==", classId)));
+      return await Promise.all(
+        snap.docs.map(async (d) => {
+          const members = await getDocs(collection(db, "groups", d.id, "groupMembers"));
+          return toGroup(d.id, d.data(), members.size);
+        }),
+      );
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async listMyGroups(): Promise<Group[]> {
+    const uid = requireUid();
+    try {
+      const memberSnap = await getDocs(
+        query(collectionGroup(db, "groupMembers"), where("uid", "==", uid)),
+      );
+      const groupRefs = memberSnap.docs
+        .map((d) => d.ref.parent.parent)
+        .filter((ref): ref is NonNullable<typeof ref> => ref !== null);
+      const groups = await Promise.all(groupRefs.map((ref) => getDoc(ref)));
+      return groups.filter((g) => g.exists()).map((g) => toGroup(g.id, g.data()!));
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async getGroup(groupId: string): Promise<Group> {
+    try {
+      const snap = await getDoc(doc(db, "groups", groupId));
+      if (!snap.exists()) throw new ApiError("not-found", "Group not found");
+      return toGroup(snap.id, snap.data());
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async createGroup(classId: string, name: string): Promise<Group> {
+    const uid = requireUid();
+    try {
+      const profile = await loadProfile(uid);
+      const ref = doc(collection(db, "groups"));
+      const trimmed = name.trim();
+      await setDoc(ref, {
+        classId,
+        name: trimmed,
+        createdBy: uid,
+        createdAt: serverTimestamp(),
+      });
+      // creator auto-joins
+      await setDoc(doc(db, "groups", ref.id, "groupMembers", uid), {
+        uid,
+        name: profile?.name ?? "",
+        email: profile?.email ?? "",
+        joinedAt: serverTimestamp(),
+      });
+      return {
+        id: ref.id,
+        classId,
+        name: trimmed,
+        createdBy: uid,
+        createdAt: new Date().toISOString(),
+      };
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async joinGroup(groupId: string): Promise<void> {
+    const uid = requireUid();
+    try {
+      const profile = await loadProfile(uid);
+      await setDoc(doc(db, "groups", groupId, "groupMembers", uid), {
+        uid,
+        name: profile?.name ?? "",
+        email: profile?.email ?? "",
+        joinedAt: serverTimestamp(),
+      });
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async leaveGroup(groupId: string): Promise<void> {
+    const uid = requireUid();
+    try {
+      await deleteDoc(doc(db, "groups", groupId, "groupMembers", uid));
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async listGroupMembers(groupId: string): Promise<Member[]> {
+    try {
+      const snap = await getDocs(collection(db, "groups", groupId, "groupMembers"));
+      return snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          name: data.name ?? "",
+          email: data.email ?? "",
+          role: "student" as Role,
+          joinedAt: tsToIso(data.joinedAt),
+        };
+      });
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async listGroupTasks(groupId: string): Promise<GroupTask[]> {
+    try {
+      const snap = await getDocs(collection(db, "groups", groupId, "tasks"));
+      return snap.docs.map((d) => toGroupTask(d.id, groupId, d.data()));
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async createGroupTask(groupId: string, input: CreateGroupTaskInput): Promise<GroupTask> {
+    const uid = requireUid();
+    try {
+      const ref = doc(collection(db, "groups", groupId, "tasks"));
+      const dueIso = new Date(input.dueAt).toISOString();
+      await setDoc(ref, {
+        title: input.title.trim(),
+        description: input.description,
+        dueAt: Timestamp.fromDate(new Date(input.dueAt)),
+        assignedTo: input.assignedTo,
+        assignedToName: input.assignedToName,
+        status: "pending",
+        createdBy: uid,
+        createdAt: serverTimestamp(),
+      });
+      return {
+        id: ref.id,
+        groupId,
+        title: input.title.trim(),
+        description: input.description,
+        dueAt: dueIso,
+        assignedTo: input.assignedTo,
+        assignedToName: input.assignedToName,
+        status: "pending",
+        createdBy: uid,
+        createdAt: new Date().toISOString(),
+      };
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async setGroupTaskStatus(
+    groupId: string,
+    taskId: string,
+    status: GroupTaskStatus,
+  ): Promise<void> {
+    requireUid();
+    try {
+      await updateDoc(doc(db, "groups", groupId, "tasks", taskId), { status });
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
   // ---- Push notifications ----
   async registerPushToken(token: string): Promise<void> {
     const uid = requireUid();
@@ -418,14 +618,12 @@ export const firebaseApi: ClassdApi = {
     const uid = requireUid();
     try {
       const profile = await loadProfile(uid);
-      if (profile?.role === "classRep") {
-        // classes this user owns
-        const snap = await getDocs(
-          query(collection(db, "classes"), where("ownerId", "==", uid)),
-        );
+      if (profile?.role === "admin") {
+        // admin: every class in the system
+        const snap = await getDocs(collection(db, "classes"));
         return snap.docs.map((d) => toClass(d.id, d.data()));
       }
-      // student: classes where a members/{uid} doc exists
+      // members (students + assigned reps): classes where a members/{uid} doc exists
       const memberSnap = await getDocs(
         query(collectionGroup(db, "members"), where("uid", "==", uid)),
       );

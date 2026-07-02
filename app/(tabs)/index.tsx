@@ -1,14 +1,13 @@
-import { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { useCallback, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { PlusSignIcon, UserAdd01Icon } from "@hugeicons/core-free-icons";
 import { BooksIcon } from "@/components/ui/books-icon";
 import { Button } from "@/components/ui/button";
-import { CreateClassModal } from "@/components/modals/create-class-modal";
 import { JoinClassModal } from "@/components/modals/join-class-modal";
-import { AddMenu } from "@/components/modals/add-menu";
+import { QuickAddTaskModal } from "@/components/modals/quick-add-task-modal";
 import { HomeHeader } from "@/components/home/home-header";
 import { ClassSchedule } from "@/components/home/class-schedule";
 import { TasksSection } from "@/components/home/tasks-section";
@@ -26,18 +25,11 @@ function greeting(): string {
   return "Good evening";
 }
 
-function UserGreeting({ size = "large" }: { size?: "small" | "large" }) {
-  const nameClassName =
-    size === "large"
-      ? "text-3xl font-bold tracking-tight text-foreground"
-      : "text-xl font-bold tracking-tight text-foreground";
-
+function UserGreeting({ firstName }: { firstName: string }) {
   return (
     <View className="flex-1">
-      <Text className="text-sm font-medium text-muted-foreground">
-        {greeting()}
-      </Text>
-      <Text className={nameClassName}>{useSession().firstName}</Text>
+      <Text className="text-sm font-medium text-muted-foreground">{greeting()}</Text>
+      <Text className="text-xl font-bold tracking-tight text-foreground">{firstName}</Text>
     </View>
   );
 }
@@ -61,75 +53,61 @@ function JoinButton({ onPress }: { onPress: () => void }) {
 export default function Home() {
   const router = useRouter();
   const {
+    loading,
     classes,
     tasks,
     announcements,
     className,
-    getClass,
-    enrolledClassIds,
     isTaskComplete,
     toggleTaskComplete,
+    refresh,
   } = useClasses();
-  const { role, firstName } = useSession();
-  const [createVisible, setCreateVisible] = useState(false);
+  const { firstName, user } = useSession();
   const [joinVisible, setJoinVisible] = useState(false);
+  const [quickAddVisible, setQuickAddVisible] = useState(false);
 
-  const isClassRep = role === "classRep";
+  // Keep data fresh — e.g. after an admin assigns this user as a class rep.
+  useFocusEffect(
+    useCallback(() => {
+      void refresh(true);
+    }, [refresh]),
+  );
 
-  // Class reps see everything; students see only what they're enrolled in.
-  const visibleClasses = isClassRep
-    ? classes
-    : classes.filter((c) => enrolledClassIds.includes(c.id));
-  const visibleTasks = isClassRep
-    ? tasks
-    : tasks.filter((t) => enrolledClassIds.includes(t.classId));
-  const visibleAnnouncements = isClassRep
-    ? announcements
-    : announcements.filter((a) => enrolledClassIds.includes(a.classId));
-
-  const isEmpty = visibleClasses.length === 0;
-
-  function openPrimary() {
-    if (isClassRep) setCreateVisible(true);
-    else setJoinVisible(true);
-  }
+  // Classes where this user is the assigned rep — they can quick-add tasks here.
+  const repClasses = classes.filter((c) => c.classRepId === user?.id);
+  const isEmpty = classes.length === 0;
 
   function navigateToClass(classId: string) {
     router.push({ pathname: "/(tabs)/class/[id]", params: { id: classId } });
+  }
+
+  function navigateToTask(taskId: string) {
+    router.push({ pathname: "/(tabs)/task/[id]", params: { id: taskId } });
+  }
+
+  if (loading) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-background">
+        <ActivityIndicator color="#4f46e5" />
+      </SafeAreaView>
+    );
   }
 
   return (
     <SafeAreaView className="flex-1 bg-background" edges={["top"]}>
       {isEmpty ? (
         <View className="flex-1">
-          {/* Top header */}
           <View className="flex-row items-center justify-between px-6 pt-4">
-            <View className="flex-1">
-              <UserGreeting size="small" />
-            </View>
-            {isClassRep ? (
-              <AddMenu onNewClass={() => setCreateVisible(true)} />
-            ) : (
-              <JoinButton onPress={() => setJoinVisible(true)} />
-            )}
+            <UserGreeting firstName={firstName} />
+            <JoinButton onPress={() => setJoinVisible(true)} />
           </View>
 
           <View className="flex-1 items-center justify-center gap-8 px-6">
             <BooksIcon size={140} />
             <Button
-              label={
-                isClassRep
-                  ? "Create your first class"
-                  : "Join your first class"
-              }
-              leftIcon={
-                isClassRep ? (
-                  <HugeiconsIcon icon={PlusSignIcon} size={20} color="#fff" />
-                ) : (
-                  <HugeiconsIcon icon={UserAdd01Icon} size={20} color="#fff" />
-                )
-              }
-              onPress={openPrimary}
+              label="Join your first class"
+              leftIcon={<HugeiconsIcon icon={UserAdd01Icon} size={20} color="#fff" />}
+              onPress={() => setJoinVisible(true)}
             />
           </View>
         </View>
@@ -138,40 +116,50 @@ export default function Home() {
           contentContainerClassName="gap-8 px-6 pb-32 pt-2"
           showsVerticalScrollIndicator={false}
         >
-          {/* 1. Greeting */}
           <HomeHeader firstName={firstName} />
 
-          {/* 2. Today's classes */}
+          {/* Quick add task — only for users who rep at least one class */}
+          {repClasses.length > 0 ? (
+            <Button
+              label="Quick add task"
+              variant="outline"
+              leftIcon={<HugeiconsIcon icon={PlusSignIcon} size={20} color="#111" />}
+              onPress={() => setQuickAddVisible(true)}
+            />
+          ) : null}
+
           <ClassSchedule
-            classes={visibleClasses}
+            classes={classes}
             onClassPress={navigateToClass}
-            onNewClass={() => setCreateVisible(true)}
+            onNewClass={() => {}}
             onSeeAll={() => router.push("/(tabs)/classes")}
           />
 
-          {/* 3. Tasks checklist */}
           <TasksSection
-            tasks={visibleTasks}
+            tasks={tasks}
             className={className}
             isTaskComplete={isTaskComplete}
             toggleTaskComplete={toggleTaskComplete}
+            onTaskPress={navigateToTask}
+            onSeeAll={() =>
+              // cast: typed routes regenerate for tasks on next `expo start`
+              router.push("/(tabs)/tasks" as never)
+            }
           />
 
-          {/* 4. Announcements summary */}
           <UpdatesSection
-            announcements={visibleAnnouncements}
+            announcements={announcements}
             className={className}
+            onSeeAll={() => router.push("/(tabs)/announcements")}
           />
         </ScrollView>
       )}
 
-      <CreateClassModal
-        visible={createVisible}
-        onClose={() => setCreateVisible(false)}
-      />
-      <JoinClassModal
-        visible={joinVisible}
-        onClose={() => setJoinVisible(false)}
+      <JoinClassModal visible={joinVisible} onClose={() => setJoinVisible(false)} />
+      <QuickAddTaskModal
+        classes={repClasses}
+        visible={quickAddVisible}
+        onClose={() => setQuickAddVisible(false)}
       />
     </SafeAreaView>
   );

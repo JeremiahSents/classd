@@ -7,7 +7,7 @@ import { useSession } from "@/lib/session";
 
 export default function Splash() {
   const router = useRouter();
-  const { loading, isAuthenticated } = useSession();
+  const { loading, isAuthenticated, role } = useSession();
   // hold the splash for a brief minimum so it doesn't flash on fast auth resolves
   const [minTimePassed, setMinTimePassed] = useState(false);
 
@@ -18,9 +18,15 @@ export default function Splash() {
 
   useEffect(() => {
     if (loading || !minTimePassed) return;
-    // signed in -> app; signed out -> auth flow
-    router.replace(isAuthenticated ? "/(tabs)" : "/register");
-  }, [loading, minTimePassed, isAuthenticated, router]);
+    if (!isAuthenticated) {
+      router.replace("/login");
+    } else if (role === "admin") {
+      // cast: expo-router's typed routes regenerate for (admin) on next `expo start`
+      router.replace("/(admin)" as never);
+    } else {
+      router.replace("/(tabs)");
+    }
+  }, [loading, minTimePassed, isAuthenticated, role, router]);
 
   return (
     <View className="flex-1 items-center justify-center gap-5 bg-primary">

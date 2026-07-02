@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -12,19 +12,16 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { TASK_TYPE_LABEL } from "@/lib/types";
-import type { TaskType } from "@/lib/types";
-import { useClasses } from "@/lib/classes-store";
+import { api, type Member } from "@/lib/api";
 
-interface AddTaskModalProps {
-  classId: string;
+interface Props {
+  groupId: string;
+  members: Member[];
   visible: boolean;
   onClose: () => void;
+  onCreated?: () => void;
 }
 
-const TYPES: TaskType[] = ["assignment", "cat", "deadline"];
-
-/** Combine a YYYY-MM-DD date and HH:MM time into an ISO string, or null. */
 function toIso(date: string, time: string): string | null {
   const clean = date.trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(clean)) return null;
@@ -34,20 +31,22 @@ function toIso(date: string, time: string): string | null {
   return isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
-  const { addTask } = useClasses();
+export function AddGroupTaskModal({ groupId, members, visible, onClose, onCreated }: Props) {
+  const [assignedTo, setAssignedTo] = useState(members[0]?.id ?? "");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<TaskType>("assignment");
-  const [dueDate, setDueDate] = useState(""); // YYYY-MM-DD
-  const [dueTime, setDueTime] = useState(""); // HH:MM (optional)
+  const [dueDate, setDueDate] = useState("");
+  const [dueTime, setDueTime] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (visible && !assignedTo && members[0]) setAssignedTo(members[0].id);
+  }, [visible, assignedTo, members]);
 
   function reset() {
     setTitle("");
     setDescription("");
-    setType("assignment");
     setDueDate("");
     setDueTime("");
     setError(null);
@@ -60,6 +59,11 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
 
   async function handleSave() {
     const dueAt = toIso(dueDate, dueTime);
+    const assignee = members.find((m) => m.id === assignedTo);
+    if (!assignee) {
+      setError("Pick who to assign.");
+      return;
+    }
     if (!title.trim()) {
       setError("Enter a title.");
       return;
@@ -68,12 +72,18 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
       setError("Enter a valid due date (YYYY-MM-DD).");
       return;
     }
-
     setError(null);
     setSubmitting(true);
     try {
-      await addTask(classId, { title: title.trim(), description, type, dueAt });
+      await api.createGroupTask(groupId, {
+        title: title.trim(),
+        description,
+        dueAt,
+        assignedTo: assignee.id,
+        assignedToName: assignee.name || assignee.email,
+      });
       reset();
+      onCreated?.();
       onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not add task.");
@@ -88,10 +98,10 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1 justify-end bg-black/40"
       >
-        <View className="rounded-t-3xl bg-card">
+        <View className="max-h-[88%] rounded-t-3xl bg-card">
           <View className="flex-row items-center justify-between border-b border-border p-4">
             <View className="w-8" />
-            <Text className="text-base font-bold text-foreground">Add Task</Text>
+            <Text className="text-base font-bold text-foreground">Assign group task</Text>
             <Pressable
               accessibilityRole="button"
               onPress={handleClose}
@@ -104,28 +114,28 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
           <ScrollView className="px-6 py-4" showsVerticalScrollIndicator={false}>
             <View className="gap-5 pb-8">
               <View className="gap-2">
-                <Text className="text-sm font-semibold text-foreground">Type</Text>
-                <View className="flex-row gap-2">
-                  {TYPES.map((t) => (
+                <Text className="text-sm font-semibold text-foreground">Assign to</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-2">
+                  {members.map((m) => (
                     <Pressable
-                      key={t}
-                      onPress={() => setType(t)}
-                      className={`flex-1 items-center rounded-xl border py-2.5 ${
-                        type === t
+                      key={m.id}
+                      onPress={() => setAssignedTo(m.id)}
+                      className={`rounded-xl border px-4 py-2.5 ${
+                        assignedTo === m.id
                           ? "border-primary bg-primary/10"
                           : "border-border bg-transparent"
                       }`}
                     >
                       <Text
                         className={`text-sm font-medium ${
-                          type === t ? "text-primary" : "text-muted-foreground"
+                          assignedTo === m.id ? "text-primary" : "text-muted-foreground"
                         }`}
                       >
-                        {TASK_TYPE_LABEL[t]}
+                        {m.name || m.email}
                       </Text>
                     </Pressable>
                   ))}
-                </View>
+                </ScrollView>
               </View>
 
               <View className="gap-2">
@@ -133,7 +143,7 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
                 <TextInput
                   value={title}
                   onChangeText={setTitle}
-                  placeholder="e.g. Essay Draft"
+                  placeholder="e.g. Write introduction"
                   className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
                   placeholderTextColor="#9ca3af"
                 />
@@ -147,7 +157,7 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
                   placeholder="Additional details..."
                   multiline
                   textAlignVertical="top"
-                  className="min-h-[80px] rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
+                  className="min-h-[70px] rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
                   placeholderTextColor="#9ca3af"
                 />
               </View>
@@ -177,15 +187,13 @@ export function AddTaskModal({ classId, visible, onClose }: AddTaskModalProps) {
                 </View>
               </View>
 
-              {error ? (
-                <Text className="text-sm font-medium text-red-500">{error}</Text>
-              ) : null}
+              {error ? <Text className="text-sm font-medium text-red-500">{error}</Text> : null}
 
               <Button
-                label="Save Task"
+                label="Assign task"
                 onPress={handleSave}
                 loading={submitting}
-                disabled={!title.trim() || !dueDate.trim()}
+                disabled={!title.trim() || !dueDate.trim() || members.length === 0}
               />
             </View>
           </ScrollView>

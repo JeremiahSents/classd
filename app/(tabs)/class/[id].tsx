@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import {
@@ -20,8 +20,10 @@ import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { EmptySectionHint } from "@/components/ui/section-header";
 import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
+import { api, type Group } from "@/lib/api";
+import { CreateGroupModal } from "@/components/modals/create-group-modal";
 
-const TABS = ["Tasks", "Materials", "Updates", "Members"];
+const TABS = ["Tasks", "Materials", "Updates", "Members", "Groups"];
 
 function formatSize(bytes?: number): string | undefined {
   if (!bytes && bytes !== 0) return undefined;
@@ -42,15 +44,33 @@ export default function ClassDetail() {
     addMaterial,
     isTaskComplete,
     toggleTaskComplete,
+    refresh,
   } = useClasses();
-  const { role } = useSession();
-  
+  const { role, user } = useSession();
+
   const [tab, setTab] = useState(0);
   const [inviteVisible, setInviteVisible] = useState(false);
   const [addTaskVisible, setAddTaskVisible] = useState(false);
   const [addAnnouncementVisible, setAddAnnouncementVisible] = useState(false);
+  const [createGroupVisible, setCreateGroupVisible] = useState(false);
+  const [groups, setGroups] = useState<Group[]>([]);
 
-  const isClassRep = role === "classRep";
+  const loadGroups = useCallback(async () => {
+    try {
+      setGroups(await api.listGroups(id));
+    } catch {
+      setGroups([]);
+    }
+  }, [id]);
+
+  // refresh on focus so a just-assigned rep sees their manage controls
+  useFocusEffect(
+    useCallback(() => {
+      void refresh(true);
+      void loadGroups();
+    }, [refresh, loadGroups]),
+  );
+
   const classroom = getClass(id);
 
   if (!classroom) {
@@ -60,6 +80,9 @@ export default function ClassDetail() {
       </SafeAreaView>
     );
   }
+
+  // Whoever is the assigned rep of THIS class (or an admin) can manage it.
+  const canManage = role === "admin" || classroom.classRepId === user?.id;
 
   const members = membersForClass(id);
   const tasks = tasksForClass(id);
@@ -85,7 +108,8 @@ export default function ClassDetail() {
     if (tab === 0) setAddTaskVisible(true);
     else if (tab === 1) pickFile();
     else if (tab === 2) setAddAnnouncementVisible(true);
-    else setInviteVisible(true);
+    else if (tab === 3) setInviteVisible(true);
+    else setCreateGroupVisible(true); // Groups tab — any member can create
   }
 
   return (
@@ -120,8 +144,11 @@ export default function ClassDetail() {
           <Text className="text-sm text-muted-foreground">
             {members.length} member{members.length === 1 ? "" : "s"}
           </Text>
+          <Text className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+            ID {classroom.id.slice(0, 8).toUpperCase()}
+          </Text>
         </View>
-        {isClassRep ? (
+        {canManage || tab === 4 ? (
           <Pressable
             accessibilityRole="button"
             onPress={handleAdd}
@@ -155,13 +182,16 @@ export default function ClassDetail() {
                 description={t.description}
                 type={t.type}
                 dueLabel={t.dueLabel}
-                completed={isClassRep ? undefined : isTaskComplete(t.id)}
-                onToggle={isClassRep ? undefined : () => toggleTaskComplete(t.id)}
+                completed={canManage ? undefined : isTaskComplete(t.id)}
+                onToggle={canManage ? undefined : () => toggleTaskComplete(t.id)}
+                onPress={() =>
+                  router.push({ pathname: "/(tabs)/task/[id]", params: { id: t.id } })
+                }
               />
             ))
           ) : (
             <EmptySectionHint
-              text={isClassRep ? "No tasks yet — tap Add to post one" : "No tasks yet"}
+              text={canManage ? "No tasks yet — tap Add to post one" : "No tasks yet"}
             />
           )
         ) : null}
@@ -181,7 +211,7 @@ export default function ClassDetail() {
           ) : (
             <EmptySectionHint
               text={
-                isClassRep
+                canManage
                   ? "No materials yet — tap Add to upload a file"
                   : "No materials yet"
               }
@@ -213,7 +243,7 @@ export default function ClassDetail() {
           ) : (
             <EmptySectionHint
               text={
-                isClassRep
+                canManage
                   ? "No announcements yet — tap Add to post one"
                   : "No announcements yet"
               }
@@ -238,6 +268,32 @@ export default function ClassDetail() {
             <EmptySectionHint text="No one has joined with the code yet" />
           )
         ) : null}
+
+        {/* Groups */}
+        {tab === 4 ? (
+          groups.length > 0 ? (
+            groups.map((g) => (
+              <Pressable
+                key={g.id}
+                accessibilityRole="button"
+                onPress={() =>
+                  // cast: typed routes regenerate for group/[id] on next `expo start`
+                  router.push({ pathname: "/(tabs)/group/[id]", params: { id: g.id } } as never)
+                }
+                className="gap-1 rounded-2xl border border-border bg-card p-4 active:bg-secondary"
+              >
+                <Text className="text-base font-semibold text-foreground">{g.name}</Text>
+                {g.memberCount !== undefined ? (
+                  <Text className="text-xs text-muted-foreground">
+                    {g.memberCount} member{g.memberCount === 1 ? "" : "s"}
+                  </Text>
+                ) : null}
+              </Pressable>
+            ))
+          ) : (
+            <EmptySectionHint text="No groups yet — tap Add to create one" />
+          )
+        ) : null}
       </ScrollView>
 
       <InviteModal
@@ -255,6 +311,12 @@ export default function ClassDetail() {
         classId={id}
         visible={addAnnouncementVisible}
         onClose={() => setAddAnnouncementVisible(false)}
+      />
+      <CreateGroupModal
+        classId={id}
+        visible={createGroupVisible}
+        onClose={() => setCreateGroupVisible(false)}
+        onCreated={loadGroups}
       />
     </View>
   );

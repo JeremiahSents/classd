@@ -35,7 +35,7 @@ export default function Profile() {
     try {
       await signOut();
     } finally {
-      router.replace("/(auth)/register");
+      router.replace("/(auth)/login");
     }
   }
 

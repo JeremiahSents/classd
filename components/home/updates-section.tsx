@@ -1,4 +1,4 @@
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Calendar03Icon, Clock01Icon } from "@hugeicons/core-free-icons";
 import type { Announcement } from "@/lib/types";
@@ -30,19 +30,28 @@ function AnnouncementPill({
 export function UpdatesSection({
   announcements,
   className,
+  onSeeAll,
 }: {
   announcements: Announcement[];
   className: (classId: string) => string;
+  onSeeAll?: () => void;
 }) {
   if (announcements.length === 0) return null;
 
   return (
     <View className="gap-3">
-      <View className="flex-row items-center gap-2">
-        <HugeiconsIcon icon={Clock01Icon} size={16} color="#64748b" />
-        <Text className="text-xs font-black uppercase tracking-wider text-slate-900">
-          Latest updates
-        </Text>
+      <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center gap-2">
+          <HugeiconsIcon icon={Clock01Icon} size={16} color="#64748b" />
+          <Text className="text-xs font-black uppercase tracking-wider text-slate-900">
+            Latest updates
+          </Text>
+        </View>
+        {onSeeAll ? (
+          <Pressable accessibilityRole="button" onPress={onSeeAll} hitSlop={8}>
+            <Text className="text-xs font-bold text-indigo-900">See all</Text>
+          </Pressable>
+        ) : null}
       </View>
       {announcements.slice(0, 2).map((announcement) => (
         <AnnouncementPill

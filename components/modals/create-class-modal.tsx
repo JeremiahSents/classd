@@ -31,11 +31,13 @@ export function CreateClassModal({ visible, onClose }: CreateClassModalProps) {
   const [name, setName] = useState("");
   const [created, setCreated] = useState<Classroom | null>(null);
   const [copied, setCopied] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   function reset() {
     setName("");
     setCreated(null);
     setCopied(false);
+    setBusy(false);
   }
 
   function handleClose() {
@@ -43,9 +45,14 @@ export function CreateClassModal({ visible, onClose }: CreateClassModalProps) {
     onClose();
   }
 
-  function handleContinue() {
-    const classroom = addClass(name);
-    setCreated(classroom);
+  async function handleContinue() {
+    setBusy(true);
+    try {
+      const classroom = await addClass(name);
+      setCreated(classroom);
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleCopy() {
@@ -151,6 +158,7 @@ export function CreateClassModal({ visible, onClose }: CreateClassModalProps) {
                   <Button
                     className="flex-1"
                     label="Continue"
+                    loading={busy}
                     disabled={!name.trim()}
                     onPress={handleContinue}
                   />
