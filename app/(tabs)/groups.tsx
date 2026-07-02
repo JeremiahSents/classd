@@ -11,7 +11,7 @@ import { useClasses } from "@/lib/classes-store";
 
 export default function Groups() {
   const router = useRouter();
-  const { classes } = useClasses();
+  const { classes, className } = useClasses();
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [createVisible, setCreateVisible] = useState(false);
@@ -86,6 +86,9 @@ export default function Groups() {
               className="gap-1 rounded-2xl border border-border bg-card p-4 active:bg-secondary"
             >
               <Text className="text-base font-semibold text-foreground">{g.name}</Text>
+              <Text className="text-xs font-medium text-primary">
+                {className(g.classId) || "Class"}
+              </Text>
               {g.memberCount !== undefined ? (
                 <Text className="text-xs text-muted-foreground">
                   {g.memberCount} member{g.memberCount === 1 ? "" : "s"}

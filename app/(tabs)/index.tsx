@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { JoinClassModal } from "@/components/modals/join-class-modal";
 import { QuickAddTaskModal } from "@/components/modals/quick-add-task-modal";
 import { HomeHeader } from "@/components/home/home-header";
-import { ClassSchedule } from "@/components/home/class-schedule";
 import { TasksSection } from "@/components/home/tasks-section";
 import { UpdatesSection } from "@/components/home/updates-section";
 import { useClasses } from "@/lib/classes-store";
@@ -83,10 +82,6 @@ export default function Home() {
   );
   const isEmpty = classes.length === 0;
 
-  function navigateToClass(classId: string) {
-    router.push({ pathname: "/(tabs)/class/[id]", params: { id: classId } });
-  }
-
   function navigateToTask(taskId: string) {
     router.push({ pathname: "/(tabs)/task/[id]", params: { id: taskId } });
   }
@@ -133,13 +128,6 @@ export default function Home() {
               onPress={() => setQuickAddVisible(true)}
             />
           ) : null}
-
-          <ClassSchedule
-            classes={classes}
-            onClassPress={navigateToClass}
-            onNewClass={() => {}}
-            onSeeAll={() => router.push("/(tabs)/classes")}
-          />
 
           <TasksSection
             tasks={tasks}
