@@ -28,7 +28,11 @@ export type Role = "admin" | "student";
  * system role — is what grants task/announcement permissions in a class.
  */
 export type MemberRole = "classRep" | "student";
-export type TaskType = "assignment" | "cat" | "deadline";
+/**
+ * Tasks are assignments — actionable work students complete. CATs, deadlines
+ * and general notices are announcements, tagged with a category.
+ */
+export type AnnouncementCategory = "general" | "cat" | "deadline";
 
 /** Standard error the UI knows how to display. */
 export class ApiError extends Error {
@@ -97,12 +101,12 @@ export interface Member {
   joinedAt: string; // ISO
 }
 
+/** A task is an assignment — actionable work a student marks complete. */
 export interface Task {
   id: string;
   classId: string;
   title: string;
   description: string;
-  type: TaskType;
   /** When the task is due. ISO; UI formats the label. */
   dueAt: string;
   createdBy: string; // uid
@@ -114,6 +118,9 @@ export interface Announcement {
   classId: string;
   title: string;
   content: string;
+  category: AnnouncementCategory;
+  /** Optional — e.g. when a CAT sits or a deadline falls. ISO. */
+  dueAt?: string;
   createdBy: string; // uid
   createdAt: string; // ISO
 }
@@ -187,13 +194,14 @@ export interface CreateClassInput {
 export interface CreateTaskInput {
   title: string;
   description: string;
-  type: TaskType;
   dueAt: string; // ISO
 }
 
 export interface CreateAnnouncementInput {
   title: string;
   content: string;
+  category: AnnouncementCategory;
+  dueAt?: string; // ISO, optional
 }
 
 export interface CreateGroupTaskInput {

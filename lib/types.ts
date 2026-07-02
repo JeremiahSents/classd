@@ -1,4 +1,5 @@
-export type TaskType = "assignment" | "cat" | "deadline";
+/** Announcements are tagged: general notice, a CAT sitting, or a deadline. */
+export type AnnouncementCategory = "general" | "cat" | "deadline";
 
 /** A user enrolled in a class. */
 export interface Member {
@@ -9,12 +10,12 @@ export interface Member {
   role?: "classRep" | "student";
 }
 
+/** A task is an assignment — actionable work a student marks complete. */
 export interface Task {
   id: string;
   classId: string;
   title: string;
   description: string;
-  type: TaskType;
   /** Human-readable due label for now (e.g. "Due tomorrow"). */
   dueLabel: string;
   /** Raw ISO due date — used when editing a task. */
@@ -26,8 +27,13 @@ export interface Announcement {
   classId: string;
   title: string;
   content: string;
+  category: AnnouncementCategory;
   /** Human-readable relative time for now (e.g. "2h ago"). */
   timeLabel: string;
+  /** Human-readable due label, when the announcement has a due date. */
+  dueLabel?: string;
+  /** Raw ISO due date — used when editing. */
+  dueAt?: string;
 }
 
 /** A file/resource attached to a class. */
@@ -44,8 +50,8 @@ export interface Material {
   addedLabel: string;
 }
 
-export const TASK_TYPE_LABEL: Record<TaskType, string> = {
-  assignment: "Assignment",
+export const ANNOUNCEMENT_CATEGORY_LABEL: Record<AnnouncementCategory, string> = {
+  general: "General",
   cat: "CAT",
   deadline: "Deadline",
 };

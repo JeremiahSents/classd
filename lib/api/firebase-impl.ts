@@ -218,7 +218,6 @@ function toTask(id: string, classId: string, data: DocumentData): Task {
     classId,
     title: data.title ?? "",
     description: data.description ?? "",
-    type: data.type ?? "assignment",
     dueAt: tsToIso(data.dueAt),
     createdBy: data.createdBy ?? "",
     createdAt: tsToIso(data.createdAt),
@@ -232,6 +231,10 @@ function toAnnouncement(id: string, classId: string, data: DocumentData): Announ
     classId,
     title: data.title ?? "",
     content: data.content ?? "",
+    // legacy docs have no category; treat them as general
+    category:
+      data.category === "cat" || data.category === "deadline" ? data.category : "general",
+    ...(data.dueAt ? { dueAt: tsToIso(data.dueAt) } : {}),
     createdBy: data.createdBy ?? "",
     createdAt: tsToIso(data.createdAt),
   };
@@ -780,7 +783,6 @@ export const firebaseApi: ClassdApi = {
       await setDoc(ref, {
         title: input.title.trim(),
         description: input.description,
-        type: input.type,
         dueAt: Timestamp.fromDate(new Date(input.dueAt)),
         createdBy: uid,
         createdAt: serverTimestamp(),
@@ -790,7 +792,6 @@ export const firebaseApi: ClassdApi = {
         classId,
         title: input.title.trim(),
         description: input.description,
-        type: input.type,
         dueAt: dueAtIso,
         createdBy: uid,
         createdAt: new Date().toISOString(),
@@ -811,7 +812,6 @@ export const firebaseApi: ClassdApi = {
       const fields: Record<string, unknown> = {};
       if (patch.title !== undefined) fields.title = patch.title.trim();
       if (patch.description !== undefined) fields.description = patch.description;
-      if (patch.type !== undefined) fields.type = patch.type;
       if (patch.dueAt !== undefined) fields.dueAt = Timestamp.fromDate(new Date(patch.dueAt));
       await updateDoc(ref, fields);
 
@@ -892,6 +892,8 @@ export const firebaseApi: ClassdApi = {
       await setDoc(ref, {
         title: input.title.trim(),
         content: input.content,
+        category: input.category,
+        ...(input.dueAt ? { dueAt: Timestamp.fromDate(new Date(input.dueAt)) } : {}),
         createdBy: uid,
         createdAt: serverTimestamp(),
       });
@@ -900,6 +902,8 @@ export const firebaseApi: ClassdApi = {
         classId,
         title: input.title.trim(),
         content: input.content,
+        category: input.category,
+        ...(input.dueAt ? { dueAt: new Date(input.dueAt).toISOString() } : {}),
         createdBy: uid,
         createdAt: new Date().toISOString(),
       };

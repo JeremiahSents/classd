@@ -5,15 +5,11 @@ import {
   CheckmarkCircle02Icon,
   CircleIcon,
 } from "@hugeicons/core-free-icons";
-import { TASK_TYPE_LABEL, type TaskType } from "@/lib/types";
-import { formatDueDate } from "@/lib/utils";
 
 interface TaskRowProps {
   title: string;
   description: string;
-  type: TaskType;
-  /** ISO timestamp — formatted to a due label internally. */
-  dueAt: string;
+  dueLabel: string;
   /** When provided, shows a completion toggle (student view). */
   completed?: boolean;
   onToggle?: () => void;
@@ -21,17 +17,10 @@ interface TaskRowProps {
   onPress?: () => void;
 }
 
-const TYPE_STYLES: Record<TaskType, string> = {
-  assignment: "bg-primary/10 text-primary",
-  cat: "bg-destructive/10 text-destructive",
-  deadline: "bg-amber-500/10 text-amber-600",
-};
-
 export function TaskRow({
   title,
   description,
-  type,
-  dueAt,
+  dueLabel,
   completed,
   onToggle,
   onPress,
@@ -70,10 +59,8 @@ export function TaskRow({
           >
             {title}
           </Text>
-          <View className={`rounded-full px-2.5 py-1 ${TYPE_STYLES[type].split(" ")[0]}`}>
-            <Text className={`text-xs font-semibold ${TYPE_STYLES[type].split(" ")[1]}`}>
-              {TASK_TYPE_LABEL[type]}
-            </Text>
+          <View className="rounded-full bg-primary/10 px-2.5 py-1">
+            <Text className="text-xs font-semibold text-primary">Assignment</Text>
           </View>
         </View>
         {description ? (

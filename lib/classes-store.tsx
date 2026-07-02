@@ -25,7 +25,7 @@ import {
 } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import type { Classroom } from "@/lib/classes";
-import type { Announcement, Material, Member, Task, TaskType } from "@/lib/types";
+import type { Announcement, AnnouncementCategory, Material, Member, Task } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
  * API -> UI mappers
@@ -71,7 +71,6 @@ const toTask = (t: ApiTask): Task => ({
   classId: t.classId,
   title: t.title,
   description: t.description,
-  type: t.type,
   dueLabel: dueLabel(t.dueAt),
   dueAt: t.dueAt,
 });
@@ -81,7 +80,9 @@ const toAnnouncement = (a: ApiAnnouncement): Announcement => ({
   classId: a.classId,
   title: a.title,
   content: a.content,
+  category: a.category,
   timeLabel: relativeTime(a.createdAt),
+  ...(a.dueAt ? { dueLabel: dueLabel(a.dueAt), dueAt: a.dueAt } : {}),
 });
 
 const toMember = (m: ApiMember): Member => ({
@@ -120,17 +121,17 @@ interface ClassesStore {
   removeMember: (classId: string, memberId: string) => void;
   addTask: (
     classId: string,
-    input: { title: string; description: string; type: TaskType; dueAt: string },
+    input: { title: string; description: string; dueAt: string },
   ) => Promise<Task>;
   updateTask: (
     classId: string,
     taskId: string,
-    patch: Partial<{ title: string; description: string; type: TaskType; dueAt: string }>,
+    patch: Partial<{ title: string; description: string; dueAt: string }>,
   ) => Promise<Task>;
   deleteTask: (classId: string, taskId: string) => Promise<void>;
   addAnnouncement: (
     classId: string,
-    input: { title: string; content: string },
+    input: { title: string; content: string; category: AnnouncementCategory; dueAt?: string },
   ) => Promise<Announcement>;
   addMaterial: (
     classId: string,
