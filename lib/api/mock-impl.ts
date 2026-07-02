@@ -37,7 +37,8 @@ const CLASS_REP: UserProfile = {
   id: "u-classrep",
   name: "Jeremiah Sentomero",
   email: "sentomerojeremy@gmail.com",
-  role: "classRep",
+  // system role is student; rep status is per-class (classRepId on the class)
+  role: "student",
   avatarUrl: "https://www.notion.so/icons/user-circle-filled_gray.svg",
   createdAt: now(),
 };
@@ -86,12 +87,10 @@ const requireAuth = () => {
   return currentUser;
 };
 
-/** Classes visible to the caller given their role. */
+/** Classes visible to the caller: ones they created or are enrolled in. */
 const visibleClasses = () => {
   const u = requireAuth();
-  return u.role === "classRep"
-    ? classes.filter((c) => c.ownerId === u.id)
-    : classes.filter((c) => enrolledClassIds.includes(c.id));
+  return classes.filter((c) => c.ownerId === u.id || enrolledClassIds.includes(c.id));
 };
 
 export const mockApi: ClassdApi = {

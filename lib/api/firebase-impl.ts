@@ -96,7 +96,8 @@ function toUserProfile(uid: string, data: DocumentData): UserProfile {
     id: uid,
     name: (data.name as string) ?? "",
     email: (data.email as string) ?? "",
-    role: (data.role as Role) ?? "student",
+    // system role is only admin|student — coerce any legacy value to student
+    role: data.role === "admin" ? "admin" : "student",
     avatarUrl: (data.avatarUrl as string) ?? "",
     createdAt: tsToIso(data.createdAt),
   };
@@ -172,7 +173,8 @@ function toMember(uid: string, data: DocumentData): Member {
     name: data.name ?? "",
     email: data.email ?? "",
     avatarUrl: data.avatarUrl ?? undefined,
-    role: (data.role as Role) ?? "student",
+    // per-class role: classRep or student (legacy values coerce to student)
+    role: data.role === "classRep" ? "classRep" : "student",
     joinedAt: tsToIso(data.joinedAt),
   };
 }
@@ -469,7 +471,7 @@ export const firebaseApi: ClassdApi = {
           id: d.id,
           name: data.name ?? "",
           email: data.email ?? "",
-          role: "student" as Role,
+          role: "student" as const,
           joinedAt: tsToIso(data.joinedAt),
         };
       });
@@ -632,7 +634,8 @@ export const firebaseApi: ClassdApi = {
         name: profile?.name ?? "",
         email: profile?.email ?? "",
         avatarUrl: profile?.avatarUrl ?? "",
-        role: profile?.role ?? "student",
+        // everyone joins as a regular student; an admin promotes to classRep later
+        role: "student",
         joinedAt: serverTimestamp(),
       });
       return toClass(classDoc.id, classDoc.data());
@@ -653,7 +656,20 @@ export const firebaseApi: ClassdApi = {
   async assignClassRep(classId: string, memberId: string): Promise<void> {
     requireUid();
     try {
+      // demote the previous rep's member doc, if any
+      const classSnap = await getDoc(doc(db, "classes", classId));
+      const previousRepId = classSnap.exists() ? classSnap.data().classRepId : undefined;
+      if (previousRepId && previousRepId !== memberId) {
+        await updateDoc(doc(db, "classes", classId, "members", previousRepId), {
+          role: "student",
+        }).catch(() => {}); // previous rep may have left the class
+      }
+
+      // promote the new rep on both the class doc and their member doc
       await updateDoc(doc(db, "classes", classId), { classRepId: memberId });
+      await updateDoc(doc(db, "classes", classId, "members", memberId), {
+        role: "classRep",
+      });
     } catch (e) {
       throw toApiError(e);
     }

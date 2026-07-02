@@ -26,8 +26,8 @@ interface SettingsItem {
 
 export default function Profile() {
   const router = useRouter();
-  const { role, name, email, avatarUrl, updateAvatar, signOut } = useSession();
-  const { classes, tasks, enrolledClassIds, isTaskComplete } = useClasses();
+  const { role, name, email, avatarUrl, user, updateAvatar, signOut } = useSession();
+  const { classes, tasks, isTaskComplete } = useClasses();
 
   const [avatarPickerVisible, setAvatarPickerVisible] = useState(false);
 
@@ -43,16 +43,14 @@ export default function Profile() {
     updateAvatar(url).catch(() => {});
   }
 
-  const isClassRep = role === "classRep";
-  const roleLabel = isClassRep ? "Class Representative" : "Student";
+  // The badge reflects per-class status: rep of at least one class shows as
+  // Class Representative; the system role only distinguishes admins.
+  const repsAnyClass = classes.some((c) => c.classRepId === user?.id);
+  const roleLabel =
+    role === "admin" ? "Administrator" : repsAnyClass ? "Class Representative" : "Student";
 
-  // Dummy stats
-  const activeClasses = isClassRep ? classes.length : enrolledClassIds.length;
-  const pendingTasks = isClassRep
-    ? tasks.length // for class rep, total tasks set
-    : tasks.filter(
-        (t) => enrolledClassIds.includes(t.classId) && !isTaskComplete(t.id),
-      ).length;
+  const activeClasses = classes.length;
+  const pendingTasks = tasks.filter((t) => !isTaskComplete(t.id)).length;
 
   const items: SettingsItem[] = [
     {

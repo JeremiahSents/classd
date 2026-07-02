@@ -57,9 +57,17 @@ service cloud.firestore {
 
       match /members/{memberId} {
         allow read: if request.auth != null;
-        // a user can add themselves (join); the owner/admin can add anyone
+        // a user can add themselves (join); the owner/admin can add anyone.
+        // joining must be as a regular student — never self-assigned classRep.
         allow create: if request.auth != null
-                      && (memberId == request.auth.uid || canManageClass(classId));
+                      && ((memberId == request.auth.uid
+                           && request.resource.data.role == "student")
+                          || canManageClass(classId));
+        // only the class owner or an admin changes a member's per-class role
+        // (rep assignment) — a rep cannot reassign repship themselves
+        allow update: if request.auth != null
+                      && (get(/databases/$(database)/documents/classes/$(classId)).data.ownerId == request.auth.uid
+                          || isAdmin());
         // a user can remove themselves (leave); the owner/admin can remove anyone
         allow delete: if request.auth != null
                       && (memberId == request.auth.uid || canManageClass(classId));
