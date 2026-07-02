@@ -18,6 +18,7 @@ import { HugeiconsIcon } from "@hugeicons/react-native";
 import type { IconSvgElement } from "@hugeicons/react-native";
 import {
   Home01Icon,
+  Megaphone01Icon,
   Mortarboard02Icon,
   UserGroupIcon,
   UserIcon,
@@ -31,6 +32,7 @@ const ICONS: Record<string, IconSvgElement> = {
   index: Home01Icon,
   classes: Mortarboard02Icon,
   groups: UserGroupIcon,
+  announcements: Megaphone01Icon,
   profile: UserIcon,
 };
 
@@ -44,7 +46,6 @@ const PARENT_TAB: Record<string, string> = {
   "group/[id]": "groups",
   "task/[id]": "index",
   tasks: "index",
-  announcements: "index",
 };
 
 /* ------------------------------------------------------------------ */
