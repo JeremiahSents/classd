@@ -213,9 +213,6 @@ export interface ClassdApi {
   // ---- Auth ----
   signUpWithEmail(input: SignUpInput): Promise<AuthResult>;
   signInWithEmail(input: SignInInput): Promise<AuthResult>;
-  /** `idToken` from expo-auth-session / Google sign-in. `role` only used if new. */
-  signInWithGoogle(idToken: string, role?: Role): Promise<AuthResult>;
-  signInWithApple(identityToken: string, role?: Role): Promise<AuthResult>;
   signOut(): Promise<void>;
   /** Current signed-in profile, or null. */
   getCurrentUser(): Promise<UserProfile | null>;

@@ -105,16 +105,6 @@ export const mockApi: ClassdApi = {
     emitAuth();
     return { user: currentUser, isNewUser: false };
   },
-  async signInWithGoogle(_idToken, role: Role = "student"): Promise<AuthResult> {
-    currentUser = { ...CLASS_REP, role };
-    emitAuth();
-    return { user: currentUser, isNewUser: false };
-  },
-  async signInWithApple(_token, role: Role = "student"): Promise<AuthResult> {
-    currentUser = { ...CLASS_REP, role };
-    emitAuth();
-    return { user: currentUser, isNewUser: false };
-  },
   async signOut() {
     currentUser = null;
     emitAuth();
