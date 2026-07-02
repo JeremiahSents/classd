@@ -122,7 +122,6 @@ Full signatures + payload types are in `contract.ts`. Summary:
 **Auth**
 - `signUpWithEmail({name?, email, password, role})` → create auth user + `users/{uid}` doc.
 - `signInWithEmail({email, password})`
-- `signInWithGoogle(idToken, role?)` / `signInWithApple(identityToken, role?)` — create profile on first sign-in.
 - `signOut()`, `getCurrentUser()`, `onAuthStateChanged(cb)`, `updateProfile(patch)`
 
 **Classes**

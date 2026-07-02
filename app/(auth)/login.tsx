@@ -11,24 +11,12 @@ import { useRouter } from "expo-router";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { GoogleIcon } from "@/components/ui/google-icon";
-import { AppleIcon } from "@/components/ui/apple-icon";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
-import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import { useSession } from "@/lib/session";
-
-// Google sign-in only works once client IDs are set (see .env). When they're
-// missing we render a disabled fallback instead of the real button, because
-// Google.useAuthRequest throws at render time with no client id.
-const GOOGLE_CONFIGURED = !!(
-  process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ||
-  process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ||
-  process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID
-);
 
 export default function AuthScreen() {
   const router = useRouter();
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle, signInWithApple } = useSession();
+  const { signInWithEmail, signUpWithEmail } = useSession();
 
   const [mode, setMode] = useState(0); // 0 = Login, 1 = Register
   const isRegister = mode === 1;
@@ -38,19 +26,6 @@ export default function AuthScreen() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  async function completeSocial(run: () => Promise<void>) {
-    setError(null);
-    setSubmitting(true);
-    try {
-      await run();
-      router.replace("/(tabs)");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Sign-in failed.");
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   async function handleSubmit() {
     if (!email.trim() || !password) {
@@ -76,29 +51,6 @@ export default function AuthScreen() {
       setError(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function handleApple() {
-    if (Platform.OS !== "ios") {
-      setError("Apple sign-in is only available on iOS.");
-      return;
-    }
-    try {
-      const AppleAuthentication = await import("expo-apple-authentication");
-      const credential = await AppleAuthentication.signInAsync({
-        requestedScopes: [
-          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
-          AppleAuthentication.AppleAuthenticationScope.EMAIL,
-        ],
-      });
-      if (credential.identityToken) {
-        const token = credential.identityToken;
-        await completeSocial(() => signInWithApple(token));
-      }
-    } catch (e) {
-      if ((e as { code?: string }).code === "ERR_REQUEST_CANCELED") return;
-      setError("Apple sign-in failed.");
     }
   }
 
@@ -180,39 +132,6 @@ export default function AuthScreen() {
                 onPress={handleSubmit}
                 loading={submitting}
               />
-            </View>
-
-            {/* Social auth */}
-            <View className="gap-4 pt-6">
-              <View className="flex-row items-center gap-4 py-2">
-                <View className="h-px flex-1 bg-border" />
-                <Text className="text-sm text-muted-foreground">Or continue with</Text>
-                <View className="h-px flex-1 bg-border" />
-              </View>
-
-              {GOOGLE_CONFIGURED ? (
-                <GoogleAuthButton
-                  disabled={submitting}
-                  onToken={(idToken) => completeSocial(() => signInWithGoogle(idToken))}
-                />
-              ) : (
-                <Button
-                  label="Continue with Google"
-                  variant="outline"
-                  leftIcon={<GoogleIcon size={20} />}
-                  disabled={submitting}
-                  onPress={() => setError("Google sign-in isn't configured yet.")}
-                />
-              )}
-              {Platform.OS === "ios" ? (
-                <Button
-                  label="Continue with Apple"
-                  variant="outline"
-                  leftIcon={<AppleIcon size={20} />}
-                  disabled={submitting}
-                  onPress={handleApple}
-                />
-              ) : null}
             </View>
           </View>
         </ScrollView>

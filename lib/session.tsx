@@ -38,8 +38,6 @@ interface Session {
   // Actions — all async, all throw ApiError on failure for the UI to display.
   signUpWithEmail: (input: SignUpInput) => Promise<void>;
   signInWithEmail: (input: SignInInput) => Promise<void>;
-  signInWithGoogle: (idToken: string, role?: Role) => Promise<void>;
-  signInWithApple: (identityToken: string, role?: Role) => Promise<void>;
   signOut: () => Promise<void>;
   updateAvatar: (url: string) => Promise<void>;
 }
@@ -74,12 +72,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       },
       signInWithEmail: async (input) => {
         await api.signInWithEmail(input);
-      },
-      signInWithGoogle: async (idToken, role) => {
-        await api.signInWithGoogle(idToken, role);
-      },
-      signInWithApple: async (identityToken, role) => {
-        await api.signInWithApple(identityToken, role);
       },
       signOut: async () => {
         await api.signOut();

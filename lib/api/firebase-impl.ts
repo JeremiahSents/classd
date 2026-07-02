@@ -25,13 +25,9 @@ import { FirebaseError } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithCredential,
-  GoogleAuthProvider,
-  OAuthProvider,
   signOut as fbSignOut,
   onAuthStateChanged as fbOnAuthStateChanged,
   updateProfile as fbUpdateProfile,
-  type AuthCredential,
 } from "firebase/auth";
 import {
   collection,
@@ -110,46 +106,6 @@ function toUserProfile(uid: string, data: DocumentData): UserProfile {
 async function loadProfile(uid: string): Promise<UserProfile | null> {
   const snap = await getDoc(doc(db, "users", uid));
   return snap.exists() ? toUserProfile(uid, snap.data()) : null;
-}
-
-/**
- * Sign in with a federated credential (Google/Apple) and, on first sign-in,
- * create the users/{uid} profile document. `role` is only used for new users.
- */
-async function signInWithOAuth(
-  credential: AuthCredential,
-  role: Role | undefined,
-): Promise<AuthResult> {
-  const cred = await signInWithCredential(auth, credential);
-  const uid = cred.user.uid;
-
-  const existing = await loadProfile(uid);
-  if (existing) return { user: existing, isNewUser: false };
-
-  // First sign-in for this account — create the profile.
-  const name =
-    cred.user.displayName?.trim() || cred.user.email?.split("@")[0] || "Student";
-  const email = cred.user.email ?? "";
-  const avatarUrl = cred.user.photoURL ?? getFaceFor(uid);
-  const newRole: Role = role ?? "student";
-
-  await setDoc(doc(db, "users", uid), {
-    name,
-    email,
-    role: newRole,
-    avatarUrl,
-    createdAt: serverTimestamp(),
-  });
-
-  const user: UserProfile = {
-    id: uid,
-    name,
-    email,
-    role: newRole,
-    avatarUrl,
-    createdAt: new Date().toISOString(),
-  };
-  return { user, isNewUser: true };
 }
 
 /** Map a raw Firebase error to an ApiError the UI knows how to show. */
@@ -346,24 +302,6 @@ export const firebaseApi: ClassdApi = {
         throw new ApiError("not-found", "Your profile could not be found. Please sign up again.");
       }
       return { user, isNewUser: false };
-    } catch (e) {
-      throw toApiError(e);
-    }
-  },
-
-  async signInWithGoogle(idToken: string, role?: Role): Promise<AuthResult> {
-    try {
-      const credential = GoogleAuthProvider.credential(idToken);
-      return await signInWithOAuth(credential, role);
-    } catch (e) {
-      throw toApiError(e);
-    }
-  },
-
-  async signInWithApple(identityToken: string, role?: Role): Promise<AuthResult> {
-    try {
-      const credential = new OAuthProvider("apple.com").credential({ idToken: identityToken });
-      return await signInWithOAuth(credential, role);
     } catch (e) {
       throw toApiError(e);
     }
