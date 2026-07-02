@@ -36,8 +36,9 @@ interface Session {
   avatarUrl: string;
 
   // Actions — all async, all throw ApiError on failure for the UI to display.
-  signUpWithEmail: (input: SignUpInput) => Promise<void>;
-  signInWithEmail: (input: SignInInput) => Promise<void>;
+  // Sign-in/up return the signed-in profile so callers can route by role.
+  signUpWithEmail: (input: SignUpInput) => Promise<UserProfile>;
+  signInWithEmail: (input: SignInInput) => Promise<UserProfile>;
   signOut: () => Promise<void>;
   updateAvatar: (url: string) => Promise<void>;
 }
@@ -68,10 +69,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       avatarUrl: user?.avatarUrl ?? "",
 
       signUpWithEmail: async (input) => {
-        await api.signUpWithEmail(input);
+        const result = await api.signUpWithEmail(input);
+        return result.user;
       },
       signInWithEmail: async (input) => {
-        await api.signInWithEmail(input);
+        const result = await api.signInWithEmail(input);
+        return result.user;
       },
       signOut: async () => {
         await api.signOut();
