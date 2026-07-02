@@ -5,6 +5,8 @@ export interface Member {
   id: string;
   name: string;
   email: string;
+  /** Role within the class this membership belongs to. */
+  role?: "classRep" | "student";
 }
 
 export interface Task {

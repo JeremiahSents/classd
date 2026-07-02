@@ -63,6 +63,7 @@ export default function Home() {
     tasks,
     announcements,
     className,
+    membersForClass,
     isTaskComplete,
     toggleTaskComplete,
     refresh,
@@ -79,7 +80,12 @@ export default function Home() {
   );
 
   // Classes where this user is the assigned rep — they can quick-add tasks here.
-  const repClasses = classes.filter((c) => c.classRepId === user?.id);
+  // Recognised via the class's classRepId or their member-doc role.
+  const repClasses = classes.filter(
+    (c) =>
+      c.classRepId === user?.id ||
+      membersForClass(c.id).find((m) => m.id === user?.id)?.role === "classRep",
+  );
   const isEmpty = classes.length === 0;
 
   function navigateToClass(classId: string) {
