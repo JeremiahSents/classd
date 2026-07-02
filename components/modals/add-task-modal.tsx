@@ -12,8 +12,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { TASK_TYPE_LABEL } from "@/lib/types";
-import type { Task, TaskType } from "@/lib/types";
+import type { Task } from "@/lib/types";
 import { useClasses } from "@/lib/classes-store";
 
 interface AddTaskModalProps {
@@ -23,8 +22,6 @@ interface AddTaskModalProps {
   visible: boolean;
   onClose: () => void;
 }
-
-const TYPES: TaskType[] = ["assignment", "cat", "deadline"];
 
 /** Combine a YYYY-MM-DD date and HH:MM time into an ISO string, or null. */
 function toIso(date: string, time: string): string | null {
@@ -41,7 +38,6 @@ export function AddTaskModal({ classId, task, visible, onClose }: AddTaskModalPr
   const isEdit = !!task;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<TaskType>("assignment");
   const [dueDate, setDueDate] = useState(""); // YYYY-MM-DD
   const [dueTime, setDueTime] = useState(""); // HH:MM (optional)
   const [submitting, setSubmitting] = useState(false);
@@ -52,7 +48,6 @@ export function AddTaskModal({ classId, task, visible, onClose }: AddTaskModalPr
     if (visible && task) {
       setTitle(task.title);
       setDescription(task.description);
-      setType(task.type);
       const due = new Date(task.dueAt);
       if (!isNaN(due.getTime())) {
         setDueDate(due.toISOString().slice(0, 10));
@@ -66,7 +61,6 @@ export function AddTaskModal({ classId, task, visible, onClose }: AddTaskModalPr
   function reset() {
     setTitle("");
     setDescription("");
-    setType("assignment");
     setDueDate("");
     setDueTime("");
     setError(null);
@@ -95,11 +89,10 @@ export function AddTaskModal({ classId, task, visible, onClose }: AddTaskModalPr
         await updateTask(task.classId, task.id, {
           title: title.trim(),
           description,
-          type,
           dueAt,
         });
       } else {
-        await addTask(classId, { title: title.trim(), description, type, dueAt });
+        await addTask(classId, { title: title.trim(), description, dueAt });
       }
       reset();
       onClose();
@@ -133,31 +126,6 @@ export function AddTaskModal({ classId, task, visible, onClose }: AddTaskModalPr
 
           <ScrollView className="px-6 py-4" showsVerticalScrollIndicator={false}>
             <View className="gap-5 pb-8">
-              <View className="gap-2">
-                <Text className="text-sm font-semibold text-foreground">Type</Text>
-                <View className="flex-row gap-2">
-                  {TYPES.map((t) => (
-                    <Pressable
-                      key={t}
-                      onPress={() => setType(t)}
-                      className={`flex-1 items-center rounded-xl border py-2.5 ${
-                        type === t
-                          ? "border-primary bg-primary/10"
-                          : "border-border bg-transparent"
-                      }`}
-                    >
-                      <Text
-                        className={`text-sm font-medium ${
-                          type === t ? "text-primary" : "text-muted-foreground"
-                        }`}
-                      >
-                        {TASK_TYPE_LABEL[t]}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-
               <View className="gap-2">
                 <Text className="text-sm font-semibold text-foreground">Title *</Text>
                 <TextInput

@@ -66,13 +66,13 @@ const membersByClass: Record<string, Member[]> = {
 };
 
 let tasks: Task[] = [
-  { id: "t1", classId: "bio101", title: "Cell Structure Lab Report", description: "Submit your write-up on the microscope lab.", type: "assignment", dueAt: now(), createdBy: "u-classrep", createdAt: now() },
-  { id: "t3", classId: "cs204", title: "Binary Trees Problem Set", description: "Problems 1-8 from the handout.", type: "assignment", dueAt: now(), createdBy: "u-classrep", createdAt: now() },
+  { id: "t1", classId: "bio101", title: "Cell Structure Lab Report", description: "Submit your write-up on the microscope lab.", dueAt: now(), createdBy: "u-classrep", createdAt: now() },
+  { id: "t3", classId: "cs204", title: "Binary Trees Problem Set", description: "Problems 1-8 from the handout.", dueAt: now(), createdBy: "u-classrep", createdAt: now() },
 ];
 
 let announcements: Announcement[] = [
-  { id: "n1", classId: "math150", title: "Midterm moved to Friday", content: "Rescheduled to Friday 9am.", createdBy: "u-classrep", createdAt: now() },
-  { id: "n2", classId: "cs204", title: "Guest lecture Thursday", content: "Industry speaker on graph databases.", createdBy: "u-classrep", createdAt: now() },
+  { id: "n1", classId: "math150", title: "Midterm moved to Friday", content: "Rescheduled to Friday 9am.", category: "deadline", createdBy: "u-classrep", createdAt: now() },
+  { id: "n2", classId: "cs204", title: "Guest lecture Thursday", content: "Industry speaker on graph databases.", category: "general", createdBy: "u-classrep", createdAt: now() },
 ];
 
 let materials: Material[] = [

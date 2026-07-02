@@ -13,15 +13,8 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { AddTaskModal } from "@/components/modals/add-task-modal";
-import { TASK_TYPE_LABEL, type TaskType } from "@/lib/types";
 import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
-
-const TYPE_STYLES: Record<TaskType, string> = {
-  assignment: "bg-primary/10 text-primary",
-  cat: "bg-destructive/10 text-destructive",
-  deadline: "bg-amber-500/10 text-amber-600",
-};
 
 export default function TaskDetail() {
   const router = useRouter();
@@ -104,10 +97,8 @@ export default function TaskDetail() {
       >
         <View className="flex-row items-start justify-between gap-3">
           <Text className="flex-1 text-2xl font-bold text-foreground">{task.title}</Text>
-          <View className={`rounded-full px-3 py-1 ${TYPE_STYLES[task.type].split(" ")[0]}`}>
-            <Text className={`text-xs font-semibold ${TYPE_STYLES[task.type].split(" ")[1]}`}>
-              {TASK_TYPE_LABEL[task.type]}
-            </Text>
+          <View className="rounded-full bg-primary/10 px-3 py-1">
+            <Text className="text-xs font-semibold text-primary">Assignment</Text>
           </View>
         </View>
 

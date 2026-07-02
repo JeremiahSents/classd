@@ -12,7 +12,6 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
-import { TASK_TYPE_LABEL, type TaskType } from "@/lib/types";
 import type { Classroom } from "@/lib/classes";
 import { useClasses } from "@/lib/classes-store";
 
@@ -22,8 +21,6 @@ interface QuickAddTaskModalProps {
   visible: boolean;
   onClose: () => void;
 }
-
-const TYPES: TaskType[] = ["assignment", "cat", "deadline"];
 
 function toIso(date: string, time: string): string | null {
   const clean = date.trim();
@@ -39,7 +36,6 @@ export function QuickAddTaskModal({ classes, visible, onClose }: QuickAddTaskMod
   const [classId, setClassId] = useState(classes[0]?.id ?? "");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [type, setType] = useState<TaskType>("assignment");
   const [dueDate, setDueDate] = useState("");
   const [dueTime, setDueTime] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -53,7 +49,6 @@ export function QuickAddTaskModal({ classes, visible, onClose }: QuickAddTaskMod
   function reset() {
     setTitle("");
     setDescription("");
-    setType("assignment");
     setDueDate("");
     setDueTime("");
     setError(null);
@@ -81,7 +76,7 @@ export function QuickAddTaskModal({ classes, visible, onClose }: QuickAddTaskMod
     setError(null);
     setSubmitting(true);
     try {
-      await addTask(classId, { title: title.trim(), description, type, dueAt });
+      await addTask(classId, { title: title.trim(), description, dueAt });
       reset();
       onClose();
     } catch (e) {
@@ -140,32 +135,6 @@ export function QuickAddTaskModal({ classes, visible, onClose }: QuickAddTaskMod
                     </Pressable>
                   ))}
                 </ScrollView>
-              </View>
-
-              {/* Type */}
-              <View className="gap-2">
-                <Text className="text-sm font-semibold text-foreground">Type</Text>
-                <View className="flex-row gap-2">
-                  {TYPES.map((t) => (
-                    <Pressable
-                      key={t}
-                      onPress={() => setType(t)}
-                      className={`flex-1 items-center rounded-xl border py-2.5 ${
-                        type === t
-                          ? "border-primary bg-primary/10"
-                          : "border-border bg-transparent"
-                      }`}
-                    >
-                      <Text
-                        className={`text-sm font-medium ${
-                          type === t ? "text-primary" : "text-muted-foreground"
-                        }`}
-                      >
-                        {TASK_TYPE_LABEL[t]}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
               </View>
 
               <View className="gap-2">

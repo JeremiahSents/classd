@@ -99,7 +99,6 @@ export default function Tasks() {
                   key={t.id}
                   title={t.title}
                   description={t.description}
-                  type={t.type}
                   dueLabel={t.dueLabel}
                   completed={isTaskComplete(t.id)}
                   onToggle={() => toggleTaskComplete(t.id)}

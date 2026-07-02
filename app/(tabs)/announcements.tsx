@@ -4,6 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Megaphone01Icon, PlusSignIcon, Search01Icon } from "@hugeicons/core-free-icons";
 import { QuickAddAnnouncementModal } from "@/components/modals/quick-add-announcement-modal";
+import { ANNOUNCEMENT_CATEGORY_LABEL } from "@/lib/types";
 import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
 
@@ -103,6 +104,34 @@ export default function Announcements() {
                       {a.title}
                     </Text>
                     <Text className="text-xs text-muted-foreground">{a.timeLabel}</Text>
+                  </View>
+                  <View className="flex-row items-center gap-2">
+                    <View
+                      className={`rounded-full px-2 py-0.5 ${
+                        a.category === "cat"
+                          ? "bg-destructive/10"
+                          : a.category === "deadline"
+                            ? "bg-amber-500/10"
+                            : "bg-primary/10"
+                      }`}
+                    >
+                      <Text
+                        className={`text-[11px] font-semibold ${
+                          a.category === "cat"
+                            ? "text-destructive"
+                            : a.category === "deadline"
+                              ? "text-amber-600"
+                              : "text-primary"
+                        }`}
+                      >
+                        {ANNOUNCEMENT_CATEGORY_LABEL[a.category]}
+                      </Text>
+                    </View>
+                    {a.dueLabel ? (
+                      <Text className="text-xs font-medium text-muted-foreground">
+                        {a.dueLabel}
+                      </Text>
+                    ) : null}
                   </View>
                   {a.content ? (
                     <Text className="text-sm text-muted-foreground">{a.content}</Text>

@@ -18,6 +18,7 @@ import { TaskRow } from "@/components/class/task-row";
 import { MaterialRow } from "@/components/class/material-row";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { EmptySectionHint } from "@/components/ui/section-header";
+import { ANNOUNCEMENT_CATEGORY_LABEL } from "@/lib/types";
 import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
 import { api, type Group } from "@/lib/api";
@@ -184,7 +185,6 @@ export default function ClassDetail() {
                 key={t.id}
                 title={t.title}
                 description={t.description}
-                type={t.type}
                 dueLabel={t.dueLabel}
                 completed={canManage ? undefined : isTaskComplete(t.id)}
                 onToggle={canManage ? undefined : () => toggleTaskComplete(t.id)}
@@ -238,6 +238,34 @@ export default function ClassDetail() {
                   <Text className="text-xs text-muted-foreground">
                     {a.timeLabel}
                   </Text>
+                </View>
+                <View className="flex-row items-center gap-2">
+                  <View
+                    className={`rounded-full px-2 py-0.5 ${
+                      a.category === "cat"
+                        ? "bg-destructive/10"
+                        : a.category === "deadline"
+                          ? "bg-amber-500/10"
+                          : "bg-primary/10"
+                    }`}
+                  >
+                    <Text
+                      className={`text-[11px] font-semibold ${
+                        a.category === "cat"
+                          ? "text-destructive"
+                          : a.category === "deadline"
+                            ? "text-amber-600"
+                            : "text-primary"
+                      }`}
+                    >
+                      {ANNOUNCEMENT_CATEGORY_LABEL[a.category]}
+                    </Text>
+                  </View>
+                  {a.dueLabel ? (
+                    <Text className="text-xs font-medium text-muted-foreground">
+                      {a.dueLabel}
+                    </Text>
+                  ) : null}
                 </View>
                 {a.content ? (
                   <Text className="text-sm text-muted-foreground">{a.content}</Text>
