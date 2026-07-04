@@ -26,14 +26,10 @@ import { auth, db, storage } from "@/lib/firebase";
 import { FirebaseError } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
-  onAuthStateChanged as fbOnAuthStateChanged,
-  signOut as fbSignOut,
-  updateProfile as fbUpdateProfile,
-  GoogleAuthProvider,
-  OAuthProvider,
-  signInWithCredential,
   signInWithEmailAndPassword,
-  type AuthCredential,
+  signOut as fbSignOut,
+  onAuthStateChanged as fbOnAuthStateChanged,
+  updateProfile as fbUpdateProfile,
 } from "firebase/auth";
 import {
   arrayRemove,
@@ -70,8 +66,15 @@ import {
   type CreateAnnouncementInput,
   type CreateClassInput,
   type CreateTaskInput,
-  type Material,
+  type CreateAnnouncementInput,
+  type CreateGroupTaskInput,
   type Member,
+  type Task,
+  type Announcement,
+  type Material,
+  type Group,
+  type GroupTask,
+  type GroupTaskStatus,
   type Role,
   type SignInInput,
   type SignUpInput,
@@ -99,7 +102,8 @@ function toUserProfile(uid: string, data: DocumentData): UserProfile {
     id: uid,
     name: (data.name as string) ?? "",
     email: (data.email as string) ?? "",
-    role: (data.role as Role) ?? "student",
+    // system role is only admin|student — coerce any legacy value to student
+    role: data.role === "admin" ? "admin" : "student",
     avatarUrl: (data.avatarUrl as string) ?? "",
     createdAt: tsToIso(data.createdAt),
   };
@@ -109,46 +113,6 @@ function toUserProfile(uid: string, data: DocumentData): UserProfile {
 async function loadProfile(uid: string): Promise<UserProfile | null> {
   const snap = await getDoc(doc(db, "users", uid));
   return snap.exists() ? toUserProfile(uid, snap.data()) : null;
-}
-
-/**
- * Sign in with a federated credential (Google/Apple) and, on first sign-in,
- * create the users/{uid} profile document. `role` is only used for new users.
- */
-async function signInWithOAuth(
-  credential: AuthCredential,
-  role: Role | undefined,
-): Promise<AuthResult> {
-  const cred = await signInWithCredential(auth, credential);
-  const uid = cred.user.uid;
-
-  const existing = await loadProfile(uid);
-  if (existing) return { user: existing, isNewUser: false };
-
-  // First sign-in for this account — create the profile.
-  const name =
-    cred.user.displayName?.trim() || cred.user.email?.split("@")[0] || "Student";
-  const email = cred.user.email ?? "";
-  const avatarUrl = cred.user.photoURL ?? getFaceFor(uid);
-  const newRole: Role = role ?? "student";
-
-  await setDoc(doc(db, "users", uid), {
-    name,
-    email,
-    role: newRole,
-    avatarUrl,
-    createdAt: serverTimestamp(),
-  });
-
-  const user: UserProfile = {
-    id: uid,
-    name,
-    email,
-    role: newRole,
-    avatarUrl,
-    createdAt: new Date().toISOString(),
-  };
-  return { user, isNewUser: true };
 }
 
 /** Map a raw Firebase error to an ApiError the UI knows how to show. */
@@ -214,7 +178,8 @@ function toMember(uid: string, data: DocumentData): Member {
     name: data.name ?? "",
     email: data.email ?? "",
     avatarUrl: data.avatarUrl ?? undefined,
-    role: (data.role as Role) ?? "student",
+    // per-class role: classRep or student (legacy values coerce to student)
+    role: data.role === "classRep" ? "classRep" : "student",
     joinedAt: tsToIso(data.joinedAt),
   };
 }
@@ -232,14 +197,15 @@ async function uniqueClassCode(): Promise<string> {
 /** Ids of the classes the current user can see: owned or joined. */
 async function visibleClassIds(): Promise<string[]> {
   const uid = requireUid();
-  const [ownedSnap, memberSnap] = await Promise.all([
-    getDocs(query(collection(db, "classes"), where("ownerId", "==", uid))),
-    getDocs(
-      query(collectionGroup(db, "members"), where("uid", "==", uid)),
-    ),
-  ]);
-  const ownedIds = ownedSnap.docs.map((d) => d.id);
-  const memberIds = memberSnap.docs
+  const profile = await loadProfile(uid);
+  if (profile?.role === "admin") {
+    const snap = await getDocs(collection(db, "classes"));
+    return snap.docs.map((d) => d.id);
+  }
+  const memberSnap = await getDocs(
+    query(collectionGroup(db, "members"), where("uid", "==", uid)),
+  );
+  return memberSnap.docs
     .map((d) => d.ref.parent.parent?.id)
     .filter((id): id is string => !!id);
   return Array.from(new Set([...ownedIds, ...memberIds]));
@@ -252,7 +218,6 @@ function toTask(id: string, classId: string, data: DocumentData): Task {
     classId,
     title: data.title ?? "",
     description: data.description ?? "",
-    type: data.type ?? "assignment",
     dueAt: tsToIso(data.dueAt),
     createdBy: data.createdBy ?? "",
     createdAt: tsToIso(data.createdAt),
@@ -266,22 +231,39 @@ function toAnnouncement(id: string, classId: string, data: DocumentData): Announ
     classId,
     title: data.title ?? "",
     content: data.content ?? "",
+    // legacy docs have no category; treat them as general
+    category:
+      data.category === "cat" || data.category === "deadline" ? data.category : "general",
+    ...(data.dueAt ? { dueAt: tsToIso(data.dueAt) } : {}),
     createdBy: data.createdBy ?? "",
     createdAt: tsToIso(data.createdAt),
   };
 }
 
-/** Shape a classes/{id}/materials/{id} document into a Material. */
-function toMaterial(id: string, classId: string, data: DocumentData): Material {
+/** Shape a groups/{id} document into a Group. */
+function toGroup(id: string, data: DocumentData, memberCount?: number): Group {
   return {
     id,
-    classId,
+    classId: data.classId ?? "",
     name: data.name ?? "",
-    sizeBytes: data.sizeBytes ?? undefined,
-    mimeType: data.mimeType ?? undefined,
-    url: data.url ?? "",
-    storagePath: data.storagePath ?? "",
-    uploadedBy: data.uploadedBy ?? "",
+    createdBy: data.createdBy ?? "",
+    createdAt: tsToIso(data.createdAt),
+    ...(memberCount !== undefined ? { memberCount } : {}),
+  };
+}
+
+/** Shape a groups/{id}/tasks/{taskId} document into a GroupTask. */
+function toGroupTask(id: string, groupId: string, data: DocumentData): GroupTask {
+  return {
+    id,
+    groupId,
+    title: data.title ?? "",
+    description: data.description ?? "",
+    dueAt: tsToIso(data.dueAt),
+    assignedTo: data.assignedTo ?? "",
+    assignedToName: data.assignedToName ?? "",
+    status: (data.status as GroupTaskStatus) ?? "pending",
+    createdBy: data.createdBy ?? "",
     createdAt: tsToIso(data.createdAt),
   };
 }
@@ -329,24 +311,6 @@ export const firebaseApi: ClassdApi = {
         throw new ApiError("not-found", "Your profile could not be found. Please sign up again.");
       }
       return { user, isNewUser: false };
-    } catch (e) {
-      throw toApiError(e);
-    }
-  },
-
-  async signInWithGoogle(idToken: string, role?: Role): Promise<AuthResult> {
-    try {
-      const credential = GoogleAuthProvider.credential(idToken);
-      return await signInWithOAuth(credential, role);
-    } catch (e) {
-      throw toApiError(e);
-    }
-  },
-
-  async signInWithApple(identityToken: string, role?: Role): Promise<AuthResult> {
-    try {
-      const credential = new OAuthProvider("apple.com").credential({ idToken: identityToken });
-      return await signInWithOAuth(credential, role);
     } catch (e) {
       throw toApiError(e);
     }
@@ -409,6 +373,187 @@ export const firebaseApi: ClassdApi = {
     }
   },
 
+  // ---- Project groups ----
+  async listGroups(classId: string): Promise<Group[]> {
+    try {
+      const snap = await getDocs(query(collection(db, "groups"), where("classId", "==", classId)));
+      return await Promise.all(
+        snap.docs.map(async (d) => {
+          const members = await getDocs(collection(db, "groups", d.id, "groupMembers"));
+          return toGroup(d.id, d.data(), members.size);
+        }),
+      );
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async listMyGroups(): Promise<Group[]> {
+    const uid = requireUid();
+    try {
+      const memberSnap = await getDocs(
+        query(collectionGroup(db, "groupMembers"), where("uid", "==", uid)),
+      );
+      const groupRefs = memberSnap.docs
+        .map((d) => d.ref.parent.parent)
+        .filter((ref): ref is NonNullable<typeof ref> => ref !== null);
+      const groups = await Promise.all(groupRefs.map((ref) => getDoc(ref)));
+      return groups.filter((g) => g.exists()).map((g) => toGroup(g.id, g.data()!));
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async getGroup(groupId: string): Promise<Group> {
+    try {
+      const snap = await getDoc(doc(db, "groups", groupId));
+      if (!snap.exists()) throw new ApiError("not-found", "Group not found");
+      return toGroup(snap.id, snap.data());
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async createGroup(classId: string, name: string): Promise<Group> {
+    const uid = requireUid();
+    try {
+      const profile = await loadProfile(uid);
+      const ref = doc(collection(db, "groups"));
+      const trimmed = name.trim();
+      await setDoc(ref, {
+        classId,
+        name: trimmed,
+        createdBy: uid,
+        createdAt: serverTimestamp(),
+      });
+      // creator auto-joins
+      await setDoc(doc(db, "groups", ref.id, "groupMembers", uid), {
+        uid,
+        name: profile?.name ?? "",
+        email: profile?.email ?? "",
+        joinedAt: serverTimestamp(),
+      });
+      return {
+        id: ref.id,
+        classId,
+        name: trimmed,
+        createdBy: uid,
+        createdAt: new Date().toISOString(),
+      };
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async updateGroup(groupId: string, patch: { name: string }): Promise<Group> {
+    requireUid();
+    try {
+      const ref = doc(db, "groups", groupId);
+      await updateDoc(ref, { name: patch.name.trim() });
+      const snap = await getDoc(ref);
+      if (!snap.exists()) throw new ApiError("not-found", "Group not found");
+      return toGroup(snap.id, snap.data());
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async joinGroup(groupId: string): Promise<void> {
+    const uid = requireUid();
+    try {
+      const profile = await loadProfile(uid);
+      await setDoc(doc(db, "groups", groupId, "groupMembers", uid), {
+        uid,
+        name: profile?.name ?? "",
+        email: profile?.email ?? "",
+        joinedAt: serverTimestamp(),
+      });
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async leaveGroup(groupId: string): Promise<void> {
+    const uid = requireUid();
+    try {
+      await deleteDoc(doc(db, "groups", groupId, "groupMembers", uid));
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async listGroupMembers(groupId: string): Promise<Member[]> {
+    try {
+      const snap = await getDocs(collection(db, "groups", groupId, "groupMembers"));
+      return snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          name: data.name ?? "",
+          email: data.email ?? "",
+          role: "student" as const,
+          joinedAt: tsToIso(data.joinedAt),
+        };
+      });
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async listGroupTasks(groupId: string): Promise<GroupTask[]> {
+    try {
+      const snap = await getDocs(collection(db, "groups", groupId, "tasks"));
+      return snap.docs.map((d) => toGroupTask(d.id, groupId, d.data()));
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async createGroupTask(groupId: string, input: CreateGroupTaskInput): Promise<GroupTask> {
+    const uid = requireUid();
+    try {
+      const ref = doc(collection(db, "groups", groupId, "tasks"));
+      const dueIso = new Date(input.dueAt).toISOString();
+      await setDoc(ref, {
+        title: input.title.trim(),
+        description: input.description,
+        dueAt: Timestamp.fromDate(new Date(input.dueAt)),
+        assignedTo: input.assignedTo,
+        assignedToName: input.assignedToName,
+        status: "pending",
+        createdBy: uid,
+        createdAt: serverTimestamp(),
+      });
+      return {
+        id: ref.id,
+        groupId,
+        title: input.title.trim(),
+        description: input.description,
+        dueAt: dueIso,
+        assignedTo: input.assignedTo,
+        assignedToName: input.assignedToName,
+        status: "pending",
+        createdBy: uid,
+        createdAt: new Date().toISOString(),
+      };
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async setGroupTaskStatus(
+    groupId: string,
+    taskId: string,
+    status: GroupTaskStatus,
+  ): Promise<void> {
+    requireUid();
+    try {
+      await updateDoc(doc(db, "groups", groupId, "tasks", taskId), { status });
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
   // ---- Push notifications ----
   async registerPushToken(token: string): Promise<void> {
     const uid = requireUid();
@@ -430,18 +575,23 @@ export const firebaseApi: ClassdApi = {
 
   // ---- Classes ----
   async listClasses(): Promise<Class[]> {
+    const uid = requireUid();
     try {
-      const ids = await visibleClassIds();
-      const classes = await Promise.all(
-        ids.map(async (classId) => {
-          const classSnap = await getDoc(doc(db, "classes", classId));
-          if (!classSnap.exists()) return null;
-
-          const membersSnap = await getDocs(collection(db, "classes", classId, "members"));
-          return toClass(classSnap.id, classSnap.data(), membersSnap.size);
-        }),
+      const profile = await loadProfile(uid);
+      if (profile?.role === "admin") {
+        // admin: every class in the system
+        const snap = await getDocs(collection(db, "classes"));
+        return snap.docs.map((d) => toClass(d.id, d.data()));
+      }
+      // members (students + assigned reps): classes where a members/{uid} doc exists
+      const memberSnap = await getDocs(
+        query(collectionGroup(db, "members"), where("uid", "==", uid)),
       );
-      return classes.filter((classroom): classroom is Class => classroom !== null);
+      const classRefs = memberSnap.docs
+        .map((d) => d.ref.parent.parent)
+        .filter((ref): ref is NonNullable<typeof ref> => ref !== null);
+      const classDocs = await Promise.all(classRefs.map((ref) => getDoc(ref)));
+      return classDocs.filter((d) => d.exists()).map((d) => toClass(d.id, d.data()!));
     } catch (e) {
       throw toApiError(e);
     }
@@ -531,6 +681,7 @@ export const firebaseApi: ClassdApi = {
         name: profile?.name ?? "",
         email: profile?.email ?? "",
         avatarUrl: profile?.avatarUrl ?? "",
+        // everyone joins as a regular student; an admin promotes to classRep later
         role: "student",
         joinedAt: serverTimestamp(),
       });
@@ -555,7 +706,20 @@ export const firebaseApi: ClassdApi = {
   async assignClassRep(classId: string, memberId: string): Promise<void> {
     requireUid();
     try {
+      // demote the previous rep's member doc, if any
+      const classSnap = await getDoc(doc(db, "classes", classId));
+      const previousRepId = classSnap.exists() ? classSnap.data().classRepId : undefined;
+      if (previousRepId && previousRepId !== memberId) {
+        await updateDoc(doc(db, "classes", classId, "members", previousRepId), {
+          role: "student",
+        }).catch(() => {}); // previous rep may have left the class
+      }
+
+      // promote the new rep on both the class doc and their member doc
       await updateDoc(doc(db, "classes", classId), { classRepId: memberId });
+      await updateDoc(doc(db, "classes", classId, "members", memberId), {
+        role: "classRep",
+      });
     } catch (e) {
       throw toApiError(e);
     }
@@ -619,7 +783,6 @@ export const firebaseApi: ClassdApi = {
       await setDoc(ref, {
         title: input.title.trim(),
         description: input.description,
-        type: input.type,
         dueAt: Timestamp.fromDate(new Date(input.dueAt)),
         createdBy: uid,
         createdAt: serverTimestamp(),
@@ -629,11 +792,41 @@ export const firebaseApi: ClassdApi = {
         classId,
         title: input.title.trim(),
         description: input.description,
-        type: input.type,
         dueAt: dueAtIso,
         createdBy: uid,
         createdAt: new Date().toISOString(),
       };
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async updateTask(
+    classId: string,
+    taskId: string,
+    patch: Partial<CreateTaskInput>,
+  ): Promise<Task> {
+    requireUid();
+    try {
+      const ref = doc(db, "classes", classId, "tasks", taskId);
+      const fields: Record<string, unknown> = {};
+      if (patch.title !== undefined) fields.title = patch.title.trim();
+      if (patch.description !== undefined) fields.description = patch.description;
+      if (patch.dueAt !== undefined) fields.dueAt = Timestamp.fromDate(new Date(patch.dueAt));
+      await updateDoc(ref, fields);
+
+      const snap = await getDoc(ref);
+      if (!snap.exists()) throw new ApiError("not-found", "Task not found");
+      return toTask(snap.id, classId, snap.data());
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async deleteTask(classId: string, taskId: string): Promise<void> {
+    requireUid();
+    try {
+      await deleteDoc(doc(db, "classes", classId, "tasks", taskId));
     } catch (e) {
       throw toApiError(e);
     }
@@ -699,6 +892,8 @@ export const firebaseApi: ClassdApi = {
       await setDoc(ref, {
         title: input.title.trim(),
         content: input.content,
+        category: input.category,
+        ...(input.dueAt ? { dueAt: Timestamp.fromDate(new Date(input.dueAt)) } : {}),
         createdBy: uid,
         createdAt: serverTimestamp(),
       });
@@ -707,6 +902,8 @@ export const firebaseApi: ClassdApi = {
         classId,
         title: input.title.trim(),
         content: input.content,
+        category: input.category,
+        ...(input.dueAt ? { dueAt: new Date(input.dueAt).toISOString() } : {}),
         createdBy: uid,
         createdAt: new Date().toISOString(),
       };

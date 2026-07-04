@@ -18,7 +18,9 @@ import { HugeiconsIcon } from "@hugeicons/react-native";
 import type { IconSvgElement } from "@hugeicons/react-native";
 import {
   Home01Icon,
+  Megaphone01Icon,
   Mortarboard02Icon,
+  UserGroupIcon,
   UserIcon,
 } from "@hugeicons/core-free-icons";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
@@ -29,7 +31,21 @@ import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 const ICONS: Record<string, IconSvgElement> = {
   index: Home01Icon,
   classes: Mortarboard02Icon,
+  groups: UserGroupIcon,
+  announcements: Megaphone01Icon,
   profile: UserIcon,
+};
+
+/**
+ * Detail screens live inside the tab navigator but aren't tabs themselves.
+ * Map each one to the tab it belongs to so that tab's pill stays highlighted
+ * while the detail screen is open.
+ */
+const PARENT_TAB: Record<string, string> = {
+  "class/[id]": "classes",
+  "group/[id]": "groups",
+  "task/[id]": "index",
+  tasks: "index",
 };
 
 /* ------------------------------------------------------------------ */
@@ -67,6 +83,10 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
   // Only show routes that have an explicit icon — hides detail screens like class/[id]
   const visibleRoutes = state.routes.filter((route) => route.name in ICONS);
 
+  // Resolve the active route to its tab: detail screens highlight their parent.
+  const activeName = state.routes[state.index].name;
+  const activeTabName = PARENT_TAB[activeName] ?? activeName;
+
   return (
     <View
       pointerEvents="box-none"
@@ -96,7 +116,12 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
         {/* Tabs */}
         {visibleRoutes.map((route) => {
           const icon = ICONS[route.name] ?? Home01Icon;
-          const focused = state.routes[state.index].key === route.key;
+          // highlighted when it's the active route OR the parent of the
+          // active detail screen (e.g. Classes stays lit on class/[id])
+          const focused = route.name === activeTabName;
+          // navigation must still fire when a detail screen is open, even
+          // though the parent tab is visually focused
+          const isCurrentRoute = state.routes[state.index].key === route.key;
 
           return (
             <TabItem
@@ -111,7 +136,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
                   target: route.key,
                   canPreventDefault: true,
                 });
-                if (!focused && !event.defaultPrevented) {
+                if (!isCurrentRoute && !event.defaultPrevented) {
                   navigation.navigate(route.name);
                 }
               }}

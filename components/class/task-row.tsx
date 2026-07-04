@@ -5,33 +5,25 @@ import {
   CheckmarkCircle02Icon,
   CircleIcon,
 } from "@hugeicons/core-free-icons";
-import { TASK_TYPE_LABEL, type TaskType } from "@/lib/types";
-import { formatDueDate } from "@/lib/utils";
 
 interface TaskRowProps {
   title: string;
   description: string;
-  type: TaskType;
-  /** ISO timestamp — formatted to a due label internally. */
-  dueAt: string;
+  dueLabel: string;
   /** When provided, shows a completion toggle (student view). */
   completed?: boolean;
   onToggle?: () => void;
+  /** Tap the row body to open task details. */
+  onPress?: () => void;
 }
-
-const TYPE_STYLES: Record<TaskType, string> = {
-  assignment: "bg-primary/10 text-primary",
-  cat: "bg-destructive/10 text-destructive",
-  deadline: "bg-amber-500/10 text-amber-600",
-};
 
 export function TaskRow({
   title,
   description,
-  type,
-  dueAt,
+  dueLabel,
   completed,
   onToggle,
+  onPress,
 }: TaskRowProps) {
   const checkable = !!onToggle;
   const dueLabel = formatDueDate(dueAt);
@@ -58,7 +50,7 @@ export function TaskRow({
         </Pressable>
       ) : null}
 
-      <View className="flex-1 gap-2">
+      <Pressable className="flex-1 gap-2 active:opacity-60" onPress={onPress} disabled={!onPress}>
         <View className="flex-row items-start justify-between gap-3">
           <Text
             className={`flex-1 text-base font-semibold text-foreground ${
@@ -67,10 +59,8 @@ export function TaskRow({
           >
             {title}
           </Text>
-          <View className={`rounded-full px-2.5 py-1 ${TYPE_STYLES[type].split(" ")[0]}`}>
-            <Text className={`text-xs font-semibold ${TYPE_STYLES[type].split(" ")[1]}`}>
-              {TASK_TYPE_LABEL[type]}
-            </Text>
+          <View className="rounded-full bg-primary/10 px-2.5 py-1">
+            <Text className="text-xs font-semibold text-primary">Assignment</Text>
           </View>
         </View>
         {description ? (
@@ -82,7 +72,7 @@ export function TaskRow({
           <HugeiconsIcon icon={Appointment01Icon} size={14} color="#71717a" />
           <Text className="text-xs font-medium text-muted-foreground">{dueLabel}</Text>
         </View>
-      </View>
+      </Pressable>
     </View>
   );
 }

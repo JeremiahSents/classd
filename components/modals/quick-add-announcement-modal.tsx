@@ -1,34 +1,20 @@
-import { Button } from "@/components/ui/button";
-import { api, type Announcement } from "@/lib/api";
-import { Cancel01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react-native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    View,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
-<<<<<<< HEAD
-=======
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { ANNOUNCEMENT_CATEGORY_LABEL, type AnnouncementCategory } from "@/lib/types";
+import type { Classroom } from "@/lib/classes";
 import { useClasses } from "@/lib/classes-store";
->>>>>>> d726cbf (refactor: tasks are assignments only; announcements gain categories)
-
-interface AddAnnouncementModalProps {
-  classId: string;
-  visible: boolean;
-  onClose: () => void;
-  /** Called after the announcement is successfully posted. */
-  onCreated?: (announcement: Announcement) => void;
-}
 
 const CATEGORIES: AnnouncementCategory[] = ["general", "cat", "deadline"];
 
@@ -42,12 +28,20 @@ function toIso(date: string, time: string): string | null {
   return isNaN(d.getTime()) ? null : d.toISOString();
 }
 
-export function AddAnnouncementModal({
-  classId,
+interface QuickAddAnnouncementModalProps {
+  /** Classes the current user can post to (the ones they rep). */
+  classes: Classroom[];
+  visible: boolean;
+  onClose: () => void;
+}
+
+export function QuickAddAnnouncementModal({
+  classes,
   visible,
   onClose,
-  onCreated,
-}: AddAnnouncementModalProps) {
+}: QuickAddAnnouncementModalProps) {
+  const { addAnnouncement } = useClasses();
+  const [classId, setClassId] = useState(classes[0]?.id ?? "");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [category, setCategory] = useState<AnnouncementCategory>("general");
@@ -55,6 +49,11 @@ export function AddAnnouncementModal({
   const [dueTime, setDueTime] = useState(""); // optional HH:MM
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // default to the first class whenever the list changes / modal opens
+  useEffect(() => {
+    if (visible && !classId && classes[0]) setClassId(classes[0].id);
+  }, [visible, classId, classes]);
 
   function reset() {
     setTitle("");
@@ -66,18 +65,19 @@ export function AddAnnouncementModal({
   }
 
   function handleClose() {
-<<<<<<< HEAD
-    setTitle("");
-    setContent("");
-    setError(null);
-=======
     reset();
->>>>>>> d726cbf (refactor: tasks are assignments only; announcements gain categories)
     onClose();
   }
 
   async function handleSave() {
-    if (!title.trim() || !content.trim()) return;
+    if (!classId) {
+      setError("Pick a class.");
+      return;
+    }
+    if (!title.trim() || !content.trim()) {
+      setError("Enter a title and a message.");
+      return;
+    }
     // due date is optional — but if given, it must parse
     let dueAt: string | undefined;
     if (dueDate.trim()) {
@@ -91,7 +91,12 @@ export function AddAnnouncementModal({
     setError(null);
     setSubmitting(true);
     try {
-      await addAnnouncement(classId, { title: title.trim(), content, category, dueAt });
+      await addAnnouncement(classId, {
+        title: title.trim(),
+        content: content.trim(),
+        category,
+        dueAt,
+      });
       reset();
       onClose();
     } catch (e) {
@@ -102,12 +107,7 @@ export function AddAnnouncementModal({
   }
 
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      transparent
-      onRequestClose={handleClose}
-    >
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         className="flex-1 justify-end bg-black/40"
@@ -115,9 +115,7 @@ export function AddAnnouncementModal({
         <View className="max-h-[88%] rounded-t-3xl bg-card">
           <View className="flex-row items-center justify-between border-b border-border p-4">
             <View className="w-8" />
-            <Text className="text-base font-bold text-foreground">
-              New Announcement
-            </Text>
+            <Text className="text-base font-bold text-foreground">New announcement</Text>
             <Pressable
               accessibilityRole="button"
               onPress={handleClose}
@@ -129,6 +127,36 @@ export function AddAnnouncementModal({
 
           <ScrollView className="px-6 py-4" showsVerticalScrollIndicator={false}>
             <View className="gap-5 pb-8">
+              {/* Class picker */}
+              <View className="gap-2">
+                <Text className="text-sm font-semibold text-foreground">Class</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerClassName="gap-2"
+                >
+                  {classes.map((c) => (
+                    <Pressable
+                      key={c.id}
+                      onPress={() => setClassId(c.id)}
+                      className={`rounded-xl border px-4 py-2.5 ${
+                        classId === c.id
+                          ? "border-primary bg-primary/10"
+                          : "border-border bg-transparent"
+                      }`}
+                    >
+                      <Text
+                        className={`text-sm font-medium ${
+                          classId === c.id ? "text-primary" : "text-muted-foreground"
+                        }`}
+                      >
+                        {c.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </View>
+
               {/* Category */}
               <View className="gap-2">
                 <Text className="text-sm font-semibold text-foreground">Category</Text>
@@ -156,23 +184,18 @@ export function AddAnnouncementModal({
               </View>
 
               <View className="gap-2">
-                <Text className="text-sm font-semibold text-foreground">
-                  Title *
-                </Text>
+                <Text className="text-sm font-semibold text-foreground">Title *</Text>
                 <TextInput
                   value={title}
                   onChangeText={setTitle}
                   placeholder="e.g. Midterm moved to Friday"
-                  textAlignVertical="center"
-                  className="h-14 rounded-xl border border-border bg-secondary/50 px-4 py-0 text-base leading-5 text-foreground"
+                  className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
                   placeholderTextColor="#9ca3af"
                 />
               </View>
 
               <View className="gap-2">
-                <Text className="text-sm font-semibold text-foreground">
-                  Message *
-                </Text>
+                <Text className="text-sm font-semibold text-foreground">Message *</Text>
                 <TextInput
                   value={content}
                   onChangeText={setContent}
@@ -184,12 +207,6 @@ export function AddAnnouncementModal({
                 />
               </View>
 
-<<<<<<< HEAD
-              {error ? (
-                <Text className="text-center text-sm text-destructive">
-                  {error}
-                </Text>
-=======
               {/* Optional due date — e.g. when a CAT sits or a deadline falls */}
               <View className="flex-row gap-3">
                 <View className="flex-[2] gap-2">
@@ -218,13 +235,10 @@ export function AddAnnouncementModal({
                 </View>
               </View>
 
-              {error ? (
-                <Text className="text-sm font-medium text-red-500">{error}</Text>
->>>>>>> d726cbf (refactor: tasks are assignments only; announcements gain categories)
-              ) : null}
+              {error ? <Text className="text-sm font-medium text-red-500">{error}</Text> : null}
 
               <Button
-                label="Post Announcement"
+                label="Post announcement"
                 onPress={handleSave}
                 loading={submitting}
                 disabled={!title.trim() || !content.trim()}

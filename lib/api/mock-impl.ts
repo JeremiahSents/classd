@@ -37,7 +37,8 @@ const CLASS_REP: UserProfile = {
   id: "u-classrep",
   name: "Jeremiah Sentomero",
   email: "sentomerojeremy@gmail.com",
-  role: "classRep",
+  // system role is student; rep status is per-class (classRepId on the class)
+  role: "student",
   avatarUrl: "https://www.notion.so/icons/user-circle-filled_gray.svg",
   createdAt: now(),
 };
@@ -65,13 +66,13 @@ const membersByClass: Record<string, Member[]> = {
 };
 
 let tasks: Task[] = [
-  { id: "t1", classId: "bio101", title: "Cell Structure Lab Report", description: "Submit your write-up on the microscope lab.", type: "assignment", dueAt: now(), createdBy: "u-classrep", createdAt: now() },
-  { id: "t3", classId: "cs204", title: "Binary Trees Problem Set", description: "Problems 1-8 from the handout.", type: "assignment", dueAt: now(), createdBy: "u-classrep", createdAt: now() },
+  { id: "t1", classId: "bio101", title: "Cell Structure Lab Report", description: "Submit your write-up on the microscope lab.", dueAt: now(), createdBy: "u-classrep", createdAt: now() },
+  { id: "t3", classId: "cs204", title: "Binary Trees Problem Set", description: "Problems 1-8 from the handout.", dueAt: now(), createdBy: "u-classrep", createdAt: now() },
 ];
 
 let announcements: Announcement[] = [
-  { id: "n1", classId: "math150", title: "Midterm moved to Friday", content: "Rescheduled to Friday 9am.", createdBy: "u-classrep", createdAt: now() },
-  { id: "n2", classId: "cs204", title: "Guest lecture Thursday", content: "Industry speaker on graph databases.", createdBy: "u-classrep", createdAt: now() },
+  { id: "n1", classId: "math150", title: "Midterm moved to Friday", content: "Rescheduled to Friday 9am.", category: "deadline", createdBy: "u-classrep", createdAt: now() },
+  { id: "n2", classId: "cs204", title: "Guest lecture Thursday", content: "Industry speaker on graph databases.", category: "general", createdBy: "u-classrep", createdAt: now() },
 ];
 
 let materials: Material[] = [
@@ -86,12 +87,10 @@ const requireAuth = () => {
   return currentUser;
 };
 
-/** Classes visible to the caller given their role. */
+/** Classes visible to the caller: ones they created or are enrolled in. */
 const visibleClasses = () => {
   const u = requireAuth();
-  return classes
-    .filter((c) => c.ownerId === u.id || enrolledClassIds.includes(c.id))
-    .map((c) => ({ ...c, memberCount: membersByClass[c.id]?.length ?? 0 }));
+  return classes.filter((c) => c.ownerId === u.id || enrolledClassIds.includes(c.id));
 };
 
 export const mockApi: ClassdApi = {
@@ -102,16 +101,6 @@ export const mockApi: ClassdApi = {
   },
   async signInWithEmail(input: SignInInput): Promise<AuthResult> {
     currentUser = { ...CLASS_REP, email: input.email };
-    emitAuth();
-    return { user: currentUser, isNewUser: false };
-  },
-  async signInWithGoogle(_idToken, role: Role = "student"): Promise<AuthResult> {
-    currentUser = { ...CLASS_REP, role };
-    emitAuth();
-    return { user: currentUser, isNewUser: false };
-  },
-  async signInWithApple(_token, role: Role = "student"): Promise<AuthResult> {
-    currentUser = { ...CLASS_REP, role };
     emitAuth();
     return { user: currentUser, isNewUser: false };
   },
@@ -132,6 +121,55 @@ export const mockApi: ClassdApi = {
     currentUser = { ...u, ...patch };
     emitAuth();
     return currentUser;
+  },
+
+  // ---- Project groups (mock) ----
+  async listGroups() {
+    return [];
+  },
+  async listMyGroups() {
+    return [];
+  },
+  async getGroup() {
+    throw new ApiError("not-found", "Group not found");
+  },
+  async createGroup(classId, name) {
+    const u = requireAuth();
+    return { id: id("g"), classId, name: name.trim(), createdBy: u.id, createdAt: now(), memberCount: 1 };
+  },
+  async updateGroup(groupId, patch) {
+    const u = requireAuth();
+    return { id: groupId, classId: "", name: patch.name.trim(), createdBy: u.id, createdAt: now() };
+  },
+  async joinGroup() {
+    /* no-op in mock */
+  },
+  async leaveGroup() {
+    /* no-op in mock */
+  },
+  async listGroupMembers() {
+    return [];
+  },
+  async listGroupTasks() {
+    return [];
+  },
+  async createGroupTask(groupId, input) {
+    const u = requireAuth();
+    return {
+      id: id("gt"),
+      groupId,
+      title: input.title,
+      description: input.description,
+      dueAt: input.dueAt,
+      assignedTo: input.assignedTo,
+      assignedToName: input.assignedToName,
+      status: "pending",
+      createdBy: u.id,
+      createdAt: now(),
+    };
+  },
+  async setGroupTaskStatus() {
+    /* no-op in mock */
   },
 
   async registerPushToken() {
@@ -222,6 +260,17 @@ export const mockApi: ClassdApi = {
     const t: Task = { id: id("t"), classId, createdBy: u.id, createdAt: now(), ...input };
     tasks = [t, ...tasks];
     return t;
+  },
+  async updateTask(classId, taskId, patch) {
+    requireAuth();
+    tasks = tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t));
+    const updated = tasks.find((t) => t.id === taskId);
+    if (!updated) throw new ApiError("not-found", "Task not found");
+    return updated;
+  },
+  async deleteTask(_classId, taskId) {
+    requireAuth();
+    tasks = tasks.filter((t) => t.id !== taskId);
   },
   async listCompletedTaskIds() {
     return completedTaskIds;

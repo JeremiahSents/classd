@@ -20,8 +20,19 @@
  *    never passes a userId for the caller.
  */
 
-export type Role = "classRep" | "student";
-export type TaskType = "assignment" | "cat" | "deadline";
+/** System-wide role, stored on users/{uid}. Everyone who isn't an admin is a student. */
+export type Role = "admin" | "student";
+/**
+ * Per-class role, stored on classes/{classId}/members/{uid}. A student can be
+ * the class rep of one class and a regular student in another. This — not the
+ * system role — is what grants task/announcement permissions in a class.
+ */
+export type MemberRole = "classRep" | "student";
+/**
+ * Tasks are assignments — actionable work students complete. CATs, deadlines
+ * and general notices are announcements, tagged with a category.
+ */
+export type AnnouncementCategory = "general" | "cat" | "deadline";
 
 /** Standard error the UI knows how to display. */
 export class ApiError extends Error {
@@ -85,16 +96,17 @@ export interface Member {
   name: string;
   email: string;
   avatarUrl?: string;
-  role: Role;
+  /** Role within THIS class — the one permissions key off. */
+  role: MemberRole;
   joinedAt: string; // ISO
 }
 
+/** A task is an assignment — actionable work a student marks complete. */
 export interface Task {
   id: string;
   classId: string;
   title: string;
   description: string;
-  type: TaskType;
   /** When the task is due. ISO; UI formats the label. */
   dueAt: string;
   createdBy: string; // uid
@@ -106,6 +118,9 @@ export interface Announcement {
   classId: string;
   title: string;
   content: string;
+  category: AnnouncementCategory;
+  /** Optional — e.g. when a CAT sits or a deadline falls. ISO. */
+  dueAt?: string;
   createdBy: string; // uid
   createdAt: string; // ISO
 }
@@ -121,6 +136,31 @@ export interface Material {
   /** Storage object path, needed for deletion. */
   storagePath: string;
   uploadedBy: string; // uid
+  createdAt: string; // ISO
+}
+
+export interface Group {
+  id: string;
+  classId: string;
+  name: string;
+  createdBy: string; // uid
+  createdAt: string; // ISO
+  /** Populated by listGroups/listMyGroups; omitted elsewhere. */
+  memberCount?: number;
+}
+
+export type GroupTaskStatus = "pending" | "completed";
+
+export interface GroupTask {
+  id: string;
+  groupId: string;
+  title: string;
+  description: string;
+  dueAt: string; // ISO
+  assignedTo: string; // uid
+  assignedToName: string;
+  status: GroupTaskStatus;
+  createdBy: string; // uid
   createdAt: string; // ISO
 }
 
@@ -154,13 +194,22 @@ export interface CreateClassInput {
 export interface CreateTaskInput {
   title: string;
   description: string;
-  type: TaskType;
   dueAt: string; // ISO
 }
 
 export interface CreateAnnouncementInput {
   title: string;
   content: string;
+  category: AnnouncementCategory;
+  dueAt?: string; // ISO, optional
+}
+
+export interface CreateGroupTaskInput {
+  title: string;
+  description: string;
+  dueAt: string; // ISO
+  assignedTo: string; // uid of a group member
+  assignedToName: string;
 }
 
 /** A file selected from the device, ready to upload. */
@@ -180,15 +229,29 @@ export interface ClassdApi {
   // ---- Auth ----
   signUpWithEmail(input: SignUpInput): Promise<AuthResult>;
   signInWithEmail(input: SignInInput): Promise<AuthResult>;
-  /** `idToken` from expo-auth-session / Google sign-in. `role` only used if new. */
-  signInWithGoogle(idToken: string, role?: Role): Promise<AuthResult>;
-  signInWithApple(identityToken: string, role?: Role): Promise<AuthResult>;
   signOut(): Promise<void>;
   /** Current signed-in profile, or null. */
   getCurrentUser(): Promise<UserProfile | null>;
   /** Subscribe to auth changes; returns an unsubscribe fn. */
   onAuthStateChanged(cb: (user: UserProfile | null) => void): () => void;
   updateProfile(patch: Partial<Pick<UserProfile, "name" | "avatarUrl">>): Promise<UserProfile>;
+
+  // ---- Project groups ----
+  /** Groups within a class (the "unit group section"). */
+  listGroups(classId: string): Promise<Group[]>;
+  /** Groups the current user belongs to, across all classes. */
+  listMyGroups(): Promise<Group[]>;
+  getGroup(groupId: string): Promise<Group>;
+  /** Any enrolled member can create a group in a class; creator auto-joins. */
+  createGroup(classId: string, name: string): Promise<Group>;
+  /** Rename a group (creator only, per security rules). */
+  updateGroup(groupId: string, patch: { name: string }): Promise<Group>;
+  joinGroup(groupId: string): Promise<void>;
+  leaveGroup(groupId: string): Promise<void>;
+  listGroupMembers(groupId: string): Promise<Member[]>;
+  listGroupTasks(groupId: string): Promise<GroupTask[]>;
+  createGroupTask(groupId: string, input: CreateGroupTaskInput): Promise<GroupTask>;
+  setGroupTaskStatus(groupId: string, taskId: string, status: GroupTaskStatus): Promise<void>;
 
   // ---- Push notifications ----
   /** Save an Expo push token for the current user's device. */
@@ -214,6 +277,9 @@ export interface ClassdApi {
   /** All tasks across the caller's classes (home dashboard). */
   listMyTasks(): Promise<Task[]>;
   createTask(classId: string, input: CreateTaskInput): Promise<Task>; // class rep
+  /** Edit an existing task (class rep). Only provided fields change. */
+  updateTask(classId: string, taskId: string, patch: Partial<CreateTaskInput>): Promise<Task>;
+  deleteTask(classId: string, taskId: string): Promise<void>; // class rep
   /** Per-user completion state. */
   listCompletedTaskIds(): Promise<string[]>;
   setTaskComplete(taskId: string, complete: boolean): Promise<void>;

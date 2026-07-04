@@ -28,29 +28,31 @@ interface SettingsItem {
 
 export default function Profile() {
   const router = useRouter();
-  const { user, name, email, avatarUrl, updateAvatar, signOut } = useSession();
-  const { classes, tasks, completedTaskIds } = useHomeData();
+  const { role, name, email, avatarUrl, user, updateAvatar, signOut } = useSession();
+  const { classes, tasks, isTaskComplete } = useClasses();
 
   const [avatarPickerVisible, setAvatarPickerVisible] = useState(false);
 
   async function handleSignOut() {
-    await signOut().catch(() => {});
-    router.replace("/(auth)/register");
+    try {
+      await signOut();
+    } finally {
+      router.replace("/(auth)/login");
+    }
   }
 
   function handleAvatarSelect(url: string) {
     updateAvatar(url).catch(() => {});
   }
 
+  // The badge reflects per-class status: rep of at least one class shows as
+  // Class Representative; the system role only distinguishes admins.
+  const repsAnyClass = classes.some((c) => c.classRepId === user?.id);
+  const roleLabel =
+    role === "admin" ? "Administrator" : repsAnyClass ? "Class Representative" : "Student";
+
   const activeClasses = classes.length;
-  const managedClasses = user
-    ? classes.filter((c) => c.ownerId === user.id || c.classRepId === user.id).length
-    : 0;
-  const pendingTasks = tasks.filter((t) => !completedTaskIds.includes(t.id)).length;
-  const profileBadge =
-    managedClasses > 0
-      ? `Rep for ${managedClasses} ${managedClasses === 1 ? "class" : "classes"}`
-      : "Class member";
+  const pendingTasks = tasks.filter((t) => !isTaskComplete(t.id)).length;
 
   const items: SettingsItem[] = [
     {
