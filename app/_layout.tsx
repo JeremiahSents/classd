@@ -5,6 +5,7 @@ import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SplashScreen from "expo-splash-screen";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { ClassesProvider } from "@/lib/classes-store";
 import { SessionProvider } from "@/lib/session";
 
 // Keep the native splash visible until the first screen is ready.

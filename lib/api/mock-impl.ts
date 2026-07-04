@@ -95,7 +95,7 @@ const visibleClasses = () => {
 
 export const mockApi: ClassdApi = {
   async signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
-    currentUser = { id: id("u"), name: input.name ?? input.email.split("@")[0], email: input.email, role: "student", avatarUrl: CLASS_REP.avatarUrl, createdAt: now() };
+    currentUser = { id: id("u"), name: input.name ?? input.email.split("@")[0], email: input.email, role: input.role, avatarUrl: CLASS_REP.avatarUrl, createdAt: now() };
     emitAuth();
     return { user: currentUser, isNewUser: true };
   },
@@ -189,48 +189,15 @@ export const mockApi: ClassdApi = {
   },
   async createClass(input: CreateClassInput) {
     const u = requireAuth();
-    const c: Class = {
-      id: id("c"),
-      name: input.name.trim(),
-      code: code(),
-      coverUrl: coverFor(id("seed")),
-      ownerId: u.id,
-      classRepId: u.id,
-      memberCount: 1,
-      schedules: input.schedules ?? [],
-      createdAt: now(),
-    };
+    const c: Class = { id: id("c"), name: input.name.trim(), code: code(), coverUrl: coverFor(id("seed")), ownerId: u.id, schedules: input.schedules ?? [], createdAt: now() };
     classes = [c, ...classes];
-    membersByClass[c.id] = [{
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      avatarUrl: u.avatarUrl,
-      role: "classRep",
-      joinedAt: now(),
-    }];
-    enrolledClassIds = Array.from(new Set([...enrolledClassIds, c.id]));
+    membersByClass[c.id] = [];
     return c;
   },
   async joinClassByCode(joinCode) {
-    const u = requireAuth();
     const c = classes.find((x) => x.code === joinCode.trim());
     if (!c) throw new ApiError("not-found", "No class with that code");
     if (!enrolledClassIds.includes(c.id)) enrolledClassIds = [...enrolledClassIds, c.id];
-    const members = membersByClass[c.id] ?? [];
-    if (!members.some((m) => m.id === u.id)) {
-      membersByClass[c.id] = [
-        ...members,
-        {
-          id: u.id,
-          name: u.name,
-          email: u.email,
-          avatarUrl: u.avatarUrl,
-          role: "student",
-          joinedAt: now(),
-        },
-      ];
-    }
     return c;
   },
   async leaveClass(classId) {

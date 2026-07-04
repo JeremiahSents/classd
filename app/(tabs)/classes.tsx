@@ -53,7 +53,12 @@ export default function Classes() {
             <ClassCard
               key={classroom.id}
               classroom={classroom}
-              onPress={() => router.push(`/(tabs)/class/${classroom.id}`)}
+              onPress={() =>
+                router.push({
+                  pathname: "/(tabs)/class/[id]",
+                  params: { id: classroom.id },
+                })
+              }
             />
           ))}
         </ScrollView>
@@ -62,7 +67,6 @@ export default function Classes() {
       <JoinClassModal
         visible={joinVisible}
         onClose={() => setJoinVisible(false)}
-        onJoined={handleClassJoined}
       />
     </SafeAreaView>
   );

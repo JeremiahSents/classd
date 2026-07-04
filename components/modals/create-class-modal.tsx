@@ -18,22 +18,18 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { api, type Class } from "@/lib/api";
+import { useClasses } from "@/lib/classes-store";
+import type { Classroom } from "@/lib/classes";
 
 interface CreateClassModalProps {
   visible: boolean;
   onClose: () => void;
-  /** Called with the newly created class so parent screens can refresh. */
-  onCreated?: (cls: Class) => void;
 }
 
-export function CreateClassModal({
-  visible,
-  onClose,
-  onCreated,
-}: CreateClassModalProps) {
+export function CreateClassModal({ visible, onClose }: CreateClassModalProps) {
+  const { addClass } = useClasses();
   const [name, setName] = useState("");
-  const [created, setCreated] = useState<Class | null>(null);
+  const [created, setCreated] = useState<Classroom | null>(null);
   const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -106,7 +102,7 @@ export function CreateClassModal({
               <View className="gap-6">
                 <View className="gap-2">
                   <Text className="text-base text-muted-foreground">
-                    You are now the class rep for {created.name}. Share this code so classmates can join as members.
+                    Share this code so students can join {created.name}.
                   </Text>
                   <View className="items-center rounded-2xl border border-border bg-card py-6">
                     <Text className="text-4xl font-bold tracking-[0.3em] text-foreground">
@@ -152,14 +148,6 @@ export function CreateClassModal({
                   returnKeyType="done"
                   onSubmitEditing={() => name.trim() && handleContinue()}
                 />
-                <Text className="text-sm leading-5 text-muted-foreground">
-                  You will be listed as the class rep and get a code to share.
-                </Text>
-                {error ? (
-                  <Text className="text-center text-sm text-destructive">
-                    {error}
-                  </Text>
-                ) : null}
                 <View className="flex-row gap-3">
                   <Button
                     className="flex-1"
@@ -172,7 +160,6 @@ export function CreateClassModal({
                     label="Continue"
                     loading={busy}
                     disabled={!name.trim()}
-                    loading={loading}
                     onPress={handleContinue}
                   />
                 </View>

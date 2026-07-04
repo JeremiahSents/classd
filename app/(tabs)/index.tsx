@@ -12,13 +12,7 @@ import { HomeHeader } from "@/components/home/home-header";
 import { TasksSection } from "@/components/home/tasks-section";
 import { GroupTasksSection } from "@/components/home/group-tasks-section";
 import { UpdatesSection } from "@/components/home/updates-section";
-import { CreateClassModal } from "@/components/modals/create-class-modal";
-import { JoinClassModal } from "@/components/modals/join-class-modal";
-import { BooksIcon } from "@/components/ui/books-icon";
-import { Button } from "@/components/ui/button";
-import type { Class } from "@/lib/api";
-import { api } from "@/lib/api";
-import { useHomeData } from "@/lib/hooks/use-home-data";
+import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
 
 /* ------------------------------------------------------------------ */
@@ -120,45 +114,10 @@ export default function Home() {
               onPress={() => setJoinVisible(true)}
             />
           </View>
-          {error || actionError ? (
-            <Text className="px-6 pt-4 text-center text-sm font-medium text-red-500">
-              {error ?? actionError}
-            </Text>
-          ) : null}
-
-          <View className="flex-1 items-center justify-center gap-9 px-6">
-            <BooksIcon size={150} />
-            <View className="items-center gap-2">
-              <Text className="text-center text-2xl font-black text-foreground">
-                Start with a class
-              </Text>
-              <Text className="max-w-xs text-center text-sm leading-6 text-muted-foreground">
-                Create a class or join an existing one with a code.
-              </Text>
-            </View>
-            <View className="w-full max-w-sm items-center gap-4">
-              <Button
-                label="Create a class"
-                className="h-15 w-full"
-                leftIcon={<HugeiconsIcon icon={DashboardCircleAddIcon} size={24} color="#fff" />}
-                onPress={() => setCreateVisible(true)}
-              />
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => setJoinVisible(true)}
-                hitSlop={8}
-                className="active:opacity-60"
-              >
-                <Text className="text-sm font-bold text-primary">
-                  Join with a code
-                </Text>
-              </Pressable>
-            </View>
-          </View>
         </View>
       ) : (
         <ScrollView
-          contentContainerClassName="gap-8 px-6 pb-32 pt-6"
+          contentContainerClassName="gap-8 px-6 pb-32 pt-2"
           showsVerticalScrollIndicator={false}
         >
           <HomeHeader firstName={firstName} />

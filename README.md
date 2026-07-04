@@ -78,31 +78,6 @@ npm run serve
 
 Use `npm run deploy` inside `functions` when you are ready to deploy functions to Firebase.
 
-## Temporary class representative setup
-
-All public signups are created as students. Until the invitation/promotion flow
-is implemented, create a class representative for testing by:
-
-1. Signing up normally in the app.
-2. Opening Firebase Console for the active project.
-3. Editing `users/{uid}.role` from `student` to `classRep`.
-4. Signing out and back in, or restarting the app, so the session reloads the
-   updated profile.
-
-Do not add a hidden promotion code in the app for this phase.
-
-## Google sign-in setup
-
-Google sign-in is wired through Expo AuthSession and Firebase Auth. To make the
-button work in a local build, add Google OAuth client IDs to `.env`:
-
-- `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
-- `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
-- `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID`
-
-New Google users are created as students. Class representative access is still
-assigned manually in Firebase for this phase.
-
 ## Project structure
 
 - **`app`**: Expo Router screens and navigation routes.

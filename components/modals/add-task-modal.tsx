@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    View,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
@@ -21,8 +21,6 @@ interface AddTaskModalProps {
   task?: Task;
   visible: boolean;
   onClose: () => void;
-  /** Called after the task is successfully created. */
-  onCreated?: (task: Task) => void;
 }
 
 /** Combine a YYYY-MM-DD date and HH:MM time into an ISO string, or null. */
@@ -128,20 +126,17 @@ export function AddTaskModal({ classId, task, visible, onClose }: AddTaskModalPr
 
           <ScrollView className="px-6 py-4" showsVerticalScrollIndicator={false}>
             <View className="gap-5 pb-8">
-              {/* Type selector */}
               <View className="gap-2">
                 <Text className="text-sm font-semibold text-foreground">Title *</Text>
                 <TextInput
                   value={title}
                   onChangeText={setTitle}
                   placeholder="e.g. Essay Draft"
-                  textAlignVertical="center"
-                  className="h-14 rounded-xl border border-border bg-secondary/50 px-4 py-0 text-base leading-5 text-foreground"
+                  className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
                   placeholderTextColor="#9ca3af"
                 />
               </View>
 
-              {/* Description */}
               <View className="gap-2">
                 <Text className="text-sm font-semibold text-foreground">Description</Text>
                 <TextInput

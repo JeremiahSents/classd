@@ -24,12 +24,7 @@ service cloud.firestore {
 
       // a user's own task-completion records
       match /completions/{taskId} {
-        allow read: if isSelf(uid);
-        allow create, update: if isSelf(uid) &&
-          request.resource.data.keys().hasOnly(["completedAt"]) &&
-          request.resource.data.keys().hasAll(["completedAt"]) &&
-          isRecentTimestamp(request.resource.data.completedAt);
-        allow delete: if isSelf(uid);
+        allow read, write: if request.auth != null && request.auth.uid == uid;
       }
     }
 
@@ -42,17 +37,7 @@ service cloud.firestore {
     // records across all classes. This authorizes the collectionGroup("members")
     // query in listClasses (a path-nested rule does not cover group queries).
     match /{path=**}/members/{memberId} {
-      allow read: if isSignedIn() && resource.data.uid == request.auth.uid;
-    }
-
-    // codes/{code}
-    // Signed-in users can get one code document by its exact 6-digit id, but
-    // cannot list all join codes.
-    match /codes/{code} {
-      allow get: if isSignedIn() && validCode(code);
-      allow list: if false;
-      allow create: if isSignedIn() && validCodeDoc(code, request.resource.data);
-      allow update, delete: if false;
+      allow read: if request.auth != null && resource.data.uid == request.auth.uid;
     }
 
     // Same idea for project-group membership (listMyGroups).
@@ -60,7 +45,6 @@ service cloud.firestore {
       allow read: if request.auth != null && resource.data.uid == request.auth.uid;
     }
 
-    // classes/{classId}
     match /classes/{classId} {
       // any signed-in user can read a class (to view it or join by code)
       allow read: if request.auth != null;

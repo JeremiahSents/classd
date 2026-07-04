@@ -1,33 +1,24 @@
-import { Button } from "@/components/ui/button";
-import { api, type Announcement } from "@/lib/api";
-import { Cancel01Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react-native";
 import { useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    View,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
-<<<<<<< HEAD
-=======
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { ANNOUNCEMENT_CATEGORY_LABEL, type AnnouncementCategory } from "@/lib/types";
 import { useClasses } from "@/lib/classes-store";
->>>>>>> d726cbf (refactor: tasks are assignments only; announcements gain categories)
 
 interface AddAnnouncementModalProps {
   classId: string;
   visible: boolean;
   onClose: () => void;
-  /** Called after the announcement is successfully posted. */
-  onCreated?: (announcement: Announcement) => void;
 }
 
 const CATEGORIES: AnnouncementCategory[] = ["general", "cat", "deadline"];
@@ -46,8 +37,8 @@ export function AddAnnouncementModal({
   classId,
   visible,
   onClose,
-  onCreated,
 }: AddAnnouncementModalProps) {
+  const { addAnnouncement } = useClasses();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [category, setCategory] = useState<AnnouncementCategory>("general");
@@ -66,13 +57,7 @@ export function AddAnnouncementModal({
   }
 
   function handleClose() {
-<<<<<<< HEAD
-    setTitle("");
-    setContent("");
-    setError(null);
-=======
     reset();
->>>>>>> d726cbf (refactor: tasks are assignments only; announcements gain categories)
     onClose();
   }
 
@@ -163,8 +148,7 @@ export function AddAnnouncementModal({
                   value={title}
                   onChangeText={setTitle}
                   placeholder="e.g. Midterm moved to Friday"
-                  textAlignVertical="center"
-                  className="h-14 rounded-xl border border-border bg-secondary/50 px-4 py-0 text-base leading-5 text-foreground"
+                  className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
                   placeholderTextColor="#9ca3af"
                 />
               </View>
@@ -184,12 +168,6 @@ export function AddAnnouncementModal({
                 />
               </View>
 
-<<<<<<< HEAD
-              {error ? (
-                <Text className="text-center text-sm text-destructive">
-                  {error}
-                </Text>
-=======
               {/* Optional due date — e.g. when a CAT sits or a deadline falls */}
               <View className="flex-row gap-3">
                 <View className="flex-[2] gap-2">
@@ -220,7 +198,6 @@ export function AddAnnouncementModal({
 
               {error ? (
                 <Text className="text-sm font-medium text-red-500">{error}</Text>
->>>>>>> d726cbf (refactor: tasks are assignments only; announcements gain categories)
               ) : null}
 
               <Button

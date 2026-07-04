@@ -1,8 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
-import type { Task } from "@/lib/api";
-import { formatDueDate } from "@/lib/utils";
+import type { Task } from "@/lib/types";
 import { SectionTitle } from "./section-title";
 
 /* ------------------------------------------------------------------ */
@@ -32,8 +31,7 @@ function TaskRow({
   onToggle: () => void;
   onPress?: () => void;
 }) {
-  const dueLabel = formatDueDate(task.dueAt);
-  const dotColor = urgencyColor(dueLabel);
+  const dotColor = urgencyColor(task.dueLabel);
 
   return (
     <View className="flex-row items-center gap-3 px-4 py-3.5">
@@ -57,7 +55,7 @@ function TaskRow({
             />
           )}
           <Text className="text-xs text-muted-foreground" numberOfLines={1}>
-            {dueLabel}
+            {task.dueLabel}
             {classLabel ? ` · ${classLabel}` : ""}
           </Text>
         </View>

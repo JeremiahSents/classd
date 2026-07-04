@@ -1,9 +1,9 @@
 /**
  * Firebase implementation of ClassdApi — THE FILE THE BACKEND DEV BUILDS.
  *
- * Real Firebase Auth / Firestore / Storage calls behind the ClassdApi
- * contract. The `db`, `auth`, and `storage` singletons are exported from
- * `@/lib/firebase`.
+ * Every method below currently throws `notImplemented()`. Replace each body
+ * with real Firebase Auth / Firestore / Storage calls. The `db`, `auth`, and
+ * `storage` singletons are exported from `@/lib/firebase`.
  *
  * Firestore data model (see BACKEND_INTEGRATION.md for full detail):
  *   users/{uid}
@@ -21,8 +21,6 @@
  *    `wrap()` helper that maps Firebase error codes is a good idea.
  */
 
-import { getFaceFor } from "@/lib/avatars";
-import { auth, db, storage } from "@/lib/firebase";
 import { FirebaseError } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
@@ -32,38 +30,29 @@ import {
   updateProfile as fbUpdateProfile,
 } from "firebase/auth";
 import {
-  arrayRemove,
-  arrayUnion,
   collection,
   collectionGroup,
-  deleteDoc,
-  deleteField,
   doc,
   getDoc,
   getDocs,
-  limit,
-  query,
-  serverTimestamp,
   setDoc,
-  Timestamp,
   updateDoc,
+  deleteDoc,
+  deleteField,
+  arrayUnion,
+  arrayRemove,
+  query,
   where,
-  writeBatch,
+  limit,
+  serverTimestamp,
+  Timestamp,
   type DocumentData,
 } from "firebase/firestore";
 import {
-  ref,
-  uploadBytes,
-  getDownloadURL,
-  deleteObject,
-} from "firebase/storage";
-import {
   ApiError,
-  type Announcement,
+  type ClassdApi,
   type AuthResult,
   type Class,
-  type ClassdApi,
-  type CreateAnnouncementInput,
   type CreateClassInput,
   type CreateTaskInput,
   type CreateAnnouncementInput,
@@ -78,10 +67,15 @@ import {
   type Role,
   type SignInInput,
   type SignUpInput,
-  type Task,
   type UploadFileInput,
   type UserProfile,
 } from "./contract";
+import { auth, db } from "@/lib/firebase";
+import { getFaceFor } from "@/lib/avatars";
+
+function notImplemented(method: string): never {
+  throw new ApiError("unknown", `firebase-impl: ${method} not implemented yet`);
+}
 
 /* ------------------------------------------------------------------ *
  * Auth helpers
@@ -136,11 +130,13 @@ function toApiError(e: unknown): ApiError {
         return new ApiError("unknown", "Too many attempts. Please try again later.");
       case "auth/network-request-failed":
         return new ApiError("unknown", "Network error. Check your connection and try again.");
+      case "auth/operation-not-allowed":
+        return new ApiError("permission-denied", "This sign-in method is not enabled.");
       default:
-        return new ApiError("unknown", `Firebase error: ${e.message}`);
+        return new ApiError("unknown", "Something went wrong. Please try again.");
     }
   }
-  return new ApiError("unknown", e instanceof Error ? e.message : "Something went wrong. Please try again.");
+  return new ApiError("unknown", "Something went wrong. Please try again.");
 }
 
 /* ------------------------------------------------------------------ *
@@ -157,7 +153,7 @@ function requireUid(): string {
 }
 
 /** Shape a classes/{id} document into a Class. */
-function toClass(id: string, data: DocumentData, memberCount?: number): Class {
+function toClass(id: string, data: DocumentData): Class {
   return {
     id,
     name: data.name ?? "",
@@ -165,7 +161,6 @@ function toClass(id: string, data: DocumentData, memberCount?: number): Class {
     coverUrl: data.coverUrl ?? coverFor(id),
     ownerId: data.ownerId ?? "",
     classRepId: data.classRepId ?? undefined,
-    memberCount,
     schedules: data.schedules ?? [],
     createdAt: tsToIso(data.createdAt),
   };
@@ -188,13 +183,15 @@ function toMember(uid: string, data: DocumentData): Member {
 async function uniqueClassCode(): Promise<string> {
   for (let i = 0; i < 5; i++) {
     const candidate = Math.floor(100000 + Math.random() * 900000).toString();
-    const existing = await getDoc(doc(db, "codes", candidate));
-    if (!existing.exists()) return candidate;
+    const existing = await getDocs(
+      query(collection(db, "classes"), where("code", "==", candidate), limit(1)),
+    );
+    if (existing.empty) return candidate;
   }
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-/** Ids of the classes the current user can see: owned or joined. */
+/** Ids of the classes the current user can see (owned for class rep, joined for student). */
 async function visibleClassIds(): Promise<string[]> {
   const uid = requireUid();
   const profile = await loadProfile(uid);
@@ -208,7 +205,6 @@ async function visibleClassIds(): Promise<string[]> {
   return memberSnap.docs
     .map((d) => d.ref.parent.parent?.id)
     .filter((id): id is string => !!id);
-  return Array.from(new Set([...ownedIds, ...memberIds]));
 }
 
 /** Shape a classes/{id}/tasks/{taskId} document into a Task. */
@@ -284,7 +280,7 @@ export const firebaseApi: ClassdApi = {
       await setDoc(doc(db, "users", uid), {
         name,
         email: input.email,
-        role: "student",
+        role: input.role,
         avatarUrl,
         createdAt: serverTimestamp(),
       });
@@ -293,7 +289,7 @@ export const firebaseApi: ClassdApi = {
         id: uid,
         name,
         email: input.email,
-        role: "student",
+        role: input.role,
         avatarUrl,
         createdAt: new Date().toISOString(),
       };
@@ -615,35 +611,15 @@ export const firebaseApi: ClassdApi = {
       const name = input.name.trim();
       const coverUrl = coverFor(ref.id);
       const schedules = input.schedules ?? [];
-      const profile = await loadProfile(uid);
-      const batch = writeBatch(db);
 
-      batch.set(ref, {
+      await setDoc(ref, {
         name,
         code: joinCode,
         coverUrl,
         ownerId: uid,
-        classRepId: uid,
         schedules,
         createdAt: serverTimestamp(),
       });
-
-      batch.set(doc(db, "classes", ref.id, "members", uid), {
-        uid,
-        name: profile?.name ?? "",
-        email: profile?.email ?? "",
-        avatarUrl: profile?.avatarUrl ?? "",
-        role: "classRep",
-        joinedAt: serverTimestamp(),
-      });
-
-      batch.set(doc(db, "codes", joinCode), {
-        classId: ref.id,
-        createdBy: uid,
-        createdAt: serverTimestamp(),
-      });
-
-      await batch.commit();
 
       return {
         id: ref.id,
@@ -651,8 +627,6 @@ export const firebaseApi: ClassdApi = {
         code: joinCode,
         coverUrl,
         ownerId: uid,
-        classRepId: uid,
-        memberCount: 1,
         schedules,
         createdAt: new Date().toISOString(),
       };
@@ -664,19 +638,14 @@ export const firebaseApi: ClassdApi = {
   async joinClassByCode(joinCode: string): Promise<Class> {
     const uid = requireUid();
     try {
-      const normalizedCode = joinCode.trim();
-      const codeSnap = await getDoc(doc(db, "codes", normalizedCode));
-      if (!codeSnap.exists()) {
-        throw new ApiError("not-found", "No class with that code");
-      }
-
-      const classId = codeSnap.data().classId;
-      if (typeof classId !== "string" || !classId) {
-        throw new ApiError("not-found", "No class with that code");
-      }
+      const found = await getDocs(
+        query(collection(db, "classes"), where("code", "==", joinCode.trim()), limit(1)),
+      );
+      if (found.empty) throw new ApiError("not-found", "No class with that code");
+      const classDoc = found.docs[0];
 
       const profile = await loadProfile(uid);
-      await setDoc(doc(db, "classes", classId, "members", uid), {
+      await setDoc(doc(db, "classes", classDoc.id, "members", uid), {
         uid,
         name: profile?.name ?? "",
         email: profile?.email ?? "",
@@ -685,9 +654,6 @@ export const firebaseApi: ClassdApi = {
         role: "student",
         joinedAt: serverTimestamp(),
       });
-
-      const classDoc = await getDoc(doc(db, "classes", classId));
-      if (!classDoc.exists()) throw new ApiError("not-found", "Class not found");
       return toClass(classDoc.id, classDoc.data());
     } catch (e) {
       throw toApiError(e);
@@ -913,78 +879,16 @@ export const firebaseApi: ClassdApi = {
   },
 
   // ---- Materials ----
-  async listMaterials(classId: string): Promise<Material[]> {
-    try {
-      const snap = await getDocs(collection(db, "classes", classId, "materials"));
-      return snap.docs.map((d) => toMaterial(d.id, classId, d.data()));
-    } catch (e) {
-      throw toApiError(e);
-    }
+  async listMaterials(_classId: string): Promise<Material[]> {
+    return notImplemented("listMaterials");
   },
-
-  async uploadMaterial(classId: string, file: UploadFileInput): Promise<Material> {
-    const uid = requireUid();
-    try {
-      // 1. Create a Firestore doc ref to get a stable id.
-      const docRef = doc(collection(db, "classes", classId, "materials"));
-      const storagePath = `materials/${classId}/${docRef.id}-${file.name}`;
-
-      // 2. Fetch the local file as a blob and upload to Cloud Storage.
-      const response = await fetch(file.uri);
-      const blob = await response.blob();
-      const storageRef = ref(storage, storagePath);
-      await uploadBytes(storageRef, blob, {
-        contentType: file.mimeType ?? "application/octet-stream",
-      });
-
-      // 3. Get the public download URL.
-      const url = await getDownloadURL(storageRef);
-
-      // 4. Write the Firestore metadata document.
-      await setDoc(docRef, {
-        name: file.name,
-        sizeBytes: file.sizeBytes ?? null,
-        mimeType: file.mimeType ?? null,
-        url,
-        storagePath,
-        uploadedBy: uid,
-        createdAt: serverTimestamp(),
-      });
-
-      return {
-        id: docRef.id,
-        classId,
-        name: file.name,
-        sizeBytes: file.sizeBytes,
-        mimeType: file.mimeType,
-        url,
-        storagePath,
-        uploadedBy: uid,
-        createdAt: new Date().toISOString(),
-      };
-    } catch (e) {
-      throw toApiError(e);
-    }
+  // uploadBytes to storage at materials/{classId}/{id}-{name}; getDownloadURL;
+  // then write the metadata doc.
+  async uploadMaterial(_classId: string, _file: UploadFileInput): Promise<Material> {
+    return notImplemented("uploadMaterial");
   },
-
-  async deleteMaterial(classId: string, materialId: string): Promise<void> {
-    try {
-      // Fetch the doc to get the storagePath before deleting.
-      const docRef = doc(db, "classes", classId, "materials", materialId);
-      const snap = await getDoc(docRef);
-      if (snap.exists()) {
-        const storagePath = snap.data().storagePath as string | undefined;
-        if (storagePath) {
-          try {
-            await deleteObject(ref(storage, storagePath));
-          } catch {
-            // Storage object may already be gone — don't block Firestore delete.
-          }
-        }
-      }
-      await deleteDoc(docRef);
-    } catch (e) {
-      throw toApiError(e);
-    }
+  // delete the doc + the storage object at material.storagePath.
+  async deleteMaterial(_classId: string, _materialId: string): Promise<void> {
+    return notImplemented("deleteMaterial");
   },
 };

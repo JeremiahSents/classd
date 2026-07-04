@@ -40,7 +40,6 @@ interface Session {
   signUpWithEmail: (input: SignUpInput) => Promise<UserProfile>;
   signInWithEmail: (input: SignInInput) => Promise<UserProfile>;
   signOut: () => Promise<void>;
-  updateProfile: (patch: Partial<Pick<UserProfile, "name" | "avatarUrl">>) => Promise<void>;
   updateAvatar: (url: string) => Promise<void>;
 }
 
@@ -79,10 +78,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       },
       signOut: async () => {
         await api.signOut();
-      },
-      updateProfile: async (patch) => {
-        const updated = await api.updateProfile(patch);
-        setUser(updated);
       },
       updateAvatar: async (url) => {
         // profile-doc change won't refire onAuthStateChanged, so update locally.

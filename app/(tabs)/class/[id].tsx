@@ -4,13 +4,10 @@ import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import * as DocumentPicker from "expo-document-picker";
-import * as Clipboard from "expo-clipboard";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import {
   ArrowLeft01Icon,
-  Copy01Icon,
   PlusSignIcon,
-  Tick02Icon,
   UserAdd01Icon,
 } from "@hugeicons/core-free-icons";
 import { InviteModal } from "@/components/modals/invite-modal";
@@ -29,10 +26,16 @@ import { CreateGroupModal } from "@/components/modals/create-group-modal";
 
 const TABS = ["Tasks", "Materials", "Updates", "Members", "Groups"];
 
+function formatSize(bytes?: number): string | undefined {
+  if (!bytes && bytes !== 0) return undefined;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export default function ClassDetail() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id?: string | string[] }>();
-  const classId = Array.isArray(id) ? id[0] : id;
+  const { id } = useLocalSearchParams<{ id: string }>();
   const {
     getClass,
     membersForClass,
@@ -71,15 +74,12 @@ export default function ClassDetail() {
 
   const classroom = getClass(id);
 
-  async function handleToggleTask(taskId: string) {
-    const isDone = completedTaskIds.includes(taskId);
-    setActionError(null);
-    try {
-      await api.setTaskComplete(taskId, !isDone);
-      reloadCompletions();
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Failed to update task.");
-    }
+  if (!classroom) {
+    return (
+      <SafeAreaView className="flex-1 items-center justify-center bg-background">
+        <Text className="text-base text-muted-foreground">Class not found.</Text>
+      </SafeAreaView>
+    );
   }
 
   const members = membersForClass(id);
@@ -101,26 +101,12 @@ export default function ClassDetail() {
     });
     if (result.canceled) return;
     const asset = result.assets[0];
-    setActionError(null);
-    try {
-      await api.uploadMaterial(classId ?? "", {
-        uri: asset.uri,
-        name: asset.name,
-        mimeType: asset.mimeType ?? undefined,
-        sizeBytes: asset.size ?? undefined,
-      });
-      reloadMaterials();
-    } catch (e) {
-      setActionError(e instanceof Error ? e.message : "Failed to upload material.");
-    }
-  }
-
-  async function handleCopyClassCode() {
-    const code = classroom?.code;
-    if (!code) return;
-    await Clipboard.setStringAsync(code);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 1500);
+    addMaterial(id, {
+      name: asset.name,
+      sizeLabel: formatSize(asset.size),
+      mimeType: asset.mimeType,
+      uri: asset.uri,
+    });
   }
 
   function handleAdd() {
@@ -129,24 +115,6 @@ export default function ClassDetail() {
     else if (tab === 2) setAddAnnouncementVisible(true);
     else if (tab === 3) setInviteVisible(true);
     else setCreateGroupVisible(true); // Groups tab — any member can create
-  }
-
-  if (loading) {
-    return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-background">
-        <ActivityIndicator size="large" />
-      </SafeAreaView>
-    );
-  }
-
-  if (error || !classroom) {
-    return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-background">
-        <Text className="text-base text-muted-foreground">
-          {error ?? "Class not found."}
-        </Text>
-      </SafeAreaView>
-    );
   }
 
   return (
@@ -191,11 +159,7 @@ export default function ClassDetail() {
             onPress={handleAdd}
             className="h-11 flex-row items-center gap-2 rounded-full bg-primary px-4 active:opacity-90"
           >
-            <HugeiconsIcon
-              icon={tab === 3 ? UserAdd01Icon : PlusSignIcon}
-              size={18}
-              color="#fff"
-            />
+            <HugeiconsIcon icon={tab === 3 ? UserAdd01Icon : PlusSignIcon} size={18} color="#fff" />
             <Text className="text-sm font-semibold text-primary-foreground">
               {tab === 3 ? "Invite" : "Add"}
             </Text>
@@ -213,16 +177,10 @@ export default function ClassDetail() {
         contentContainerClassName="gap-4 px-6 pb-32 pt-3"
         showsVerticalScrollIndicator={false}
       >
-        {actionError ? (
-          <Text className="text-center text-sm font-medium text-red-500">
-            {actionError}
-          </Text>
-        ) : null}
-
         {/* Tasks */}
         {tab === 0 ? (
           tasks.length > 0 ? (
-            tasks.map((t: Task) => (
+            tasks.map((t) => (
               <TaskRow
                 key={t.id}
                 title={t.title}
@@ -249,8 +207,8 @@ export default function ClassDetail() {
               <MaterialRow
                 key={m.id}
                 name={m.name}
-                sizeBytes={m.sizeBytes}
-                createdAt={m.createdAt}
+                sizeLabel={m.sizeLabel}
+                addedLabel={m.addedLabel}
                 mimeType={m.mimeType}
               />
             ))
@@ -268,7 +226,7 @@ export default function ClassDetail() {
         {/* Announcements */}
         {tab === 2 ? (
           announcements.length > 0 ? (
-            announcements.map((a: Announcement) => (
+            announcements.map((a) => (
               <View
                 key={a.id}
                 className="gap-1.5 rounded-2xl border border-border bg-card p-4"
@@ -278,7 +236,7 @@ export default function ClassDetail() {
                     {a.title}
                   </Text>
                   <Text className="text-xs text-muted-foreground">
-                    {formatTimeAgo(a.createdAt)}
+                    {a.timeLabel}
                   </Text>
                 </View>
                 <View className="flex-row items-center gap-2">
@@ -377,16 +335,14 @@ export default function ClassDetail() {
         onClose={() => setInviteVisible(false)}
       />
       <AddTaskModal
-        classId={classId ?? ""}
+        classId={id}
         visible={addTaskVisible}
         onClose={() => setAddTaskVisible(false)}
-        onCreated={() => reloadTasks()}
       />
       <AddAnnouncementModal
-        classId={classId ?? ""}
+        classId={id}
         visible={addAnnouncementVisible}
         onClose={() => setAddAnnouncementVisible(false)}
-        onCreated={() => reloadAnnouncements()}
       />
       <CreateGroupModal
         classId={id}

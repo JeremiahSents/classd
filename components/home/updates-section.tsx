@@ -1,8 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Calendar03Icon, Clock01Icon } from "@hugeicons/core-free-icons";
-import type { Announcement } from "@/lib/api";
-import { formatTimeAgo } from "@/lib/utils";
+import type { Announcement } from "@/lib/types";
 
 function AnnouncementPill({
   announcement,
@@ -21,7 +20,7 @@ function AnnouncementPill({
           {announcement.title}
         </Text>
         <Text className="text-xs text-slate-500" numberOfLines={1}>
-          {className(announcement.classId)} · {formatTimeAgo(announcement.createdAt)}
+          {className(announcement.classId)} · {announcement.timeLabel}
         </Text>
       </View>
     </View>

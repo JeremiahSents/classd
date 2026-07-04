@@ -26,7 +26,6 @@ export function TaskRow({
   onPress,
 }: TaskRowProps) {
   const checkable = !!onToggle;
-  const dueLabel = formatDueDate(dueAt);
 
   return (
     <View

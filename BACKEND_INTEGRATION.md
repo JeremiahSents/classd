@@ -27,10 +27,10 @@ what each method should return. When a method works, flip the env flag and the
 UI uses it with zero UI changes.
 
 > The UI currently reads from two React Context stores —
-> The active UI reads backend data through `api.*` hooks and the auth
-> [`session.tsx`](lib/session.tsx). The old dummy class store has been removed,
-> so new screens should call the typed API contract rather than reintroducing
-> local seed state.
+> [`classes-store.tsx`](lib/classes-store.tsx) and
+> [`session.tsx`](lib/session.tsx) — that still hold local state.
+> The last step (Section 7) is rewiring those stores to call `api.*`. Do the
+> contract first; rewire the stores last.
 
 ### Rules of the contract
 
@@ -203,9 +203,10 @@ Build bottom-up; the app keeps running on mock data the whole time.
    Storage upload/download on top of Firestore).
 7. **Security rules** (Section 5) — write and emulator-test as you go, harden
    before any real users.
-8. **Keep screens on the API hooks.** Add `loading`/`error` state per the
-   pattern below when creating new screens or mutations. Do not reintroduce
-   local seed stores for backend-backed data.
+8. **Rewire the stores.** Replace the in-memory mutations in
+   [`classes-store.tsx`](lib/classes-store.tsx) with `api.*` calls,
+   adding `loading`/`error` state per the pattern below. Then delete
+   [`dummy-data.ts`](lib/dummy-data.ts).
 9. Flip `EXPO_PUBLIC_API_BACKEND=firebase` and run the full app.
 
 ### Async rewire pattern (step 8)
@@ -233,10 +234,10 @@ optimistically update local state.
 
 ## 8. Definition of done
 
-- [x] Every `firebase-impl.ts` method implemented.
+- [ ] Every `firebase-impl.ts` method implemented; no `notImplemented` left.
 - [ ] App runs end-to-end with `EXPO_PUBLIC_API_BACKEND=firebase`.
 - [ ] Firestore + Storage security rules written and emulator-tested.
 - [ ] Sign up → create class → join by code (2nd account) → post task/
       announcement → upload material → mark complete, all persist across reload.
-- [x] Dummy data store removed; active screens read through `api`.
+- [ ] `dummy-data.ts` deleted; stores read from `api`.
 - [ ] `pnpm typecheck` passes.

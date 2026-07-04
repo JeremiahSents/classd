@@ -12,21 +12,16 @@ import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { api, type Class } from "@/lib/api";
+import { useClasses } from "@/lib/classes-store";
 
 interface JoinClassModalProps {
   visible: boolean;
   onClose: () => void;
-  /** Called with the joined class so parent screens can refresh. */
-  onJoined?: (cls: Class) => void;
 }
 
-export function JoinClassModal({
-  visible,
-  onClose,
-  onJoined,
-}: JoinClassModalProps) {
+export function JoinClassModal({ visible, onClose }: JoinClassModalProps) {
   const router = useRouter();
+  const { joinClass } = useClasses();
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [joining, setJoining] = useState(false);
@@ -70,7 +65,7 @@ export function JoinClassModal({
         <View>
           <View className="gap-6 rounded-t-3xl bg-background p-6 pb-10">
             <View className="flex-row items-center justify-between">
-              <Text className="text-xl font-bold text-foreground">Join with class code</Text>
+              <Text className="text-xl font-bold text-foreground">Join a class</Text>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Close"
@@ -93,9 +88,6 @@ export function JoinClassModal({
                 keyboardType="number-pad"
                 autoFocus
               />
-              <Text className="text-sm leading-5 text-muted-foreground">
-                You will join as a member. Create a class when you need to manage one.
-              </Text>
               {error ? (
                 <Text className="text-center text-sm text-destructive">{error}</Text>
               ) : null}
@@ -113,7 +105,6 @@ export function JoinClassModal({
                 label="Join"
                 loading={joining}
                 disabled={!code.trim()}
-                loading={loading}
                 onPress={handleJoin}
               />
             </View>
