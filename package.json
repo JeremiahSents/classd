@@ -13,7 +13,7 @@
     "ios": "cross-env EXPO_NO_DEPENDENCY_VALIDATION=1 expo start --ios --clear",
     "web": "cross-env EXPO_NO_DEPENDENCY_VALIDATION=1 expo start --web --clear",
     "eas:login": "eas login",
-    "eas:preview": "eas update --branch preview --message \"Preview for Expo Go\"",
+    "eas:preview": "eas update --branch preview --message Preview",
     "eas:build:preview": "eas build --platform all --profile preview",
     "eas:android": "eas build --platform android --profile production",
     "eas:ios": "eas build --platform ios --profile production",
