@@ -274,10 +274,10 @@ export interface ClassdApi {
   listTasks(classId: string): Promise<Task[]>;
   /** All tasks across the caller's classes (home dashboard). */
   listMyTasks(): Promise<Task[]>;
-  createTask(classId: string, input: CreateTaskInput): Promise<Task>; // class rep
-  /** Edit an existing task (class rep). Only provided fields change. */
+  createTask(classId: string, input: CreateTaskInput): Promise<Task>; // enrolled member
+  /** Edit an existing task (creator or class manager). Only provided fields change. */
   updateTask(classId: string, taskId: string, patch: Partial<CreateTaskInput>): Promise<Task>;
-  deleteTask(classId: string, taskId: string): Promise<void>; // class rep
+  deleteTask(classId: string, taskId: string): Promise<void>; // creator or class manager
   /** Per-user completion state. */
   listCompletedTaskIds(): Promise<string[]>;
   setTaskComplete(taskId: string, complete: boolean): Promise<void>;

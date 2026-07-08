@@ -77,8 +77,8 @@ export default function Home() {
     }, [refresh]),
   );
 
-  // Classes where this user is the assigned rep — they can quick-add tasks here.
-  // Recognised via the class's classRepId or their member-doc role.
+  // Classes where this user is the assigned rep. Announcements and manage
+  // controls still use this; task creation uses all enrolled classes below.
   const repClasses = classes.filter(
     (c) =>
       c.classRepId === user?.id ||
@@ -127,10 +127,10 @@ export default function Home() {
         >
           <HomeHeader firstName={firstName} />
 
-          {/* Quick add task — only for users who rep at least one class */}
-          {repClasses.length > 0 ? (
+          {/* Quick add task — available for the user's enrolled classes */}
+          {classes.length > 0 ? (
             <Button
-              label="Quick add task"
+              label="Add task"
               variant="outline"
               leftIcon={<HugeiconsIcon icon={PlusSignIcon} size={20} color="#111" />}
               onPress={() => setQuickAddVisible(true)}
@@ -175,7 +175,7 @@ export default function Home() {
 
       <JoinClassModal visible={joinVisible} onClose={() => setJoinVisible(false)} />
       <QuickAddTaskModal
-        classes={repClasses}
+        classes={classes}
         visible={quickAddVisible}
         onClose={() => setQuickAddVisible(false)}
       />

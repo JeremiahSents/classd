@@ -12,6 +12,8 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
+import { DateTimeField } from "@/components/ui/date-time-field";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { ANNOUNCEMENT_CATEGORY_LABEL, type AnnouncementCategory } from "@/lib/types";
 import type { Classroom } from "@/lib/classes";
@@ -187,13 +189,11 @@ export function QuickAddAnnouncementModal({
               </View>
 
               <View className="gap-2">
-                <Text className="text-sm font-semibold text-foreground">Title *</Text>
-                <TextInput
+                <Input
+                  label="Title *"
                   value={title}
                   onChangeText={setTitle}
                   placeholder="e.g. Midterm moved to Friday"
-                  className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
-                  placeholderTextColor="#9ca3af"
                 />
               </View>
 
@@ -205,37 +205,29 @@ export function QuickAddAnnouncementModal({
                   placeholder="Details..."
                   multiline
                   textAlignVertical="top"
-                  className="min-h-[100px] rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
+                  className="min-h-[112px] rounded-xl border border-input bg-card px-4 py-3 text-base leading-5 text-foreground"
                   placeholderTextColor="#9ca3af"
                 />
               </View>
 
               {/* Optional due date — e.g. when a CAT sits or a deadline falls */}
               <View className="flex-row gap-3">
-                <View className="flex-[2] gap-2">
-                  <Text className="text-sm font-semibold text-foreground">
-                    Due date (optional)
-                  </Text>
-                  <TextInput
-                    value={dueDate}
-                    onChangeText={setDueDate}
-                    placeholder="YYYY-MM-DD"
-                    autoCapitalize="none"
-                    className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
-                    placeholderTextColor="#9ca3af"
-                  />
-                </View>
-                <View className="flex-1 gap-2">
-                  <Text className="text-sm font-semibold text-foreground">Time</Text>
-                  <TextInput
-                    value={dueTime}
-                    onChangeText={setDueTime}
-                    placeholder="23:59"
-                    autoCapitalize="none"
-                    className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
-                    placeholderTextColor="#9ca3af"
-                  />
-                </View>
+                <DateTimeField
+                  containerClassName="flex-[1.45]"
+                  label="Due date"
+                  mode="date"
+                  value={dueDate}
+                  onChange={setDueDate}
+                  placeholder="Optional"
+                />
+                <DateTimeField
+                  containerClassName="flex-1"
+                  label="Time"
+                  mode="time"
+                  value={dueTime}
+                  onChange={setDueTime}
+                  placeholder="23:59"
+                />
               </View>
 
               {error ? <Text className="text-sm font-medium text-red-500">{error}</Text> : null}

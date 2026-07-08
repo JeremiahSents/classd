@@ -90,6 +90,7 @@ export default function ClassDetail() {
   const myMemberRole = members.find((m) => m.id === user?.id)?.role;
   const canManage =
     role === "admin" || classroom.classRepId === user?.id || myMemberRole === "classRep";
+  const canAddOnCurrentTab = tab === 0 || tab === 4 || canManage;
   const tasks = tasksForClass(id);
   const announcements = announcementsForClass(id);
   const materials = materialsForClass(id);
@@ -153,7 +154,7 @@ export default function ClassDetail() {
             ID {classroom.id.slice(0, 8).toUpperCase()}
           </Text>
         </View>
-        {canManage || tab === 4 ? (
+        {canAddOnCurrentTab ? (
           <Pressable
             accessibilityRole="button"
             onPress={handleAdd}
@@ -161,7 +162,7 @@ export default function ClassDetail() {
           >
             <HugeiconsIcon icon={tab === 3 ? UserAdd01Icon : PlusSignIcon} size={18} color="#fff" />
             <Text className="text-sm font-semibold text-primary-foreground">
-              {tab === 3 ? "Invite" : "Add"}
+              {tab === 3 ? "Invite" : tab === 0 ? "Add task" : "Add"}
             </Text>
           </Pressable>
         ) : null}
@@ -195,7 +196,7 @@ export default function ClassDetail() {
             ))
           ) : (
             <EmptySectionHint
-              text={canManage ? "No tasks yet — tap Add to post one" : "No tasks yet"}
+              text="No tasks yet - tap Add task to create one"
             />
           )
         ) : null}

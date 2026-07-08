@@ -17,6 +17,11 @@ service cloud.firestore {
                  || isAdmin());
     }
 
+    function isClassMember(classId) {
+      return request.auth != null
+             && exists(/databases/$(database)/documents/classes/$(classId)/members/$(request.auth.uid));
+    }
+
     match /users/{uid} {
       // a user reads their own profile; admins can read anyone (to list members)
       allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
@@ -73,13 +78,19 @@ service cloud.firestore {
                       && (memberId == request.auth.uid || canManageClass(classId));
       }
 
-      // tasks & announcements: anyone signed in can read; the class rep,
-      // owner, or an admin can write.
+      // tasks: anyone signed in can read. Enrolled members can create tasks
+      // for their own classes; task creators, the class owner/rep, or admins
+      // can edit/delete them.
       match /tasks/{taskId} {
         allow read: if request.auth != null;
-        allow write: if canManageClass(classId);
+        allow create: if (isClassMember(classId) || canManageClass(classId))
+                      && request.resource.data.createdBy == request.auth.uid;
+        allow update, delete: if canManageClass(classId)
+                              || resource.data.createdBy == request.auth.uid;
       }
 
+      // announcements: anyone signed in can read; the class rep, owner, or an
+      // admin can write.
       match /announcements/{announcementId} {
         allow read: if request.auth != null;
         allow write: if canManageClass(classId);

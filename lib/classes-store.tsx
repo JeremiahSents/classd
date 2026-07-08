@@ -75,6 +75,7 @@ const toTask = (t: ApiTask): Task => ({
   description: t.description,
   dueLabel: dueLabel(t.dueAt),
   dueAt: t.dueAt,
+  createdBy: t.createdBy,
 });
 
 const toAnnouncement = (a: ApiAnnouncement): Announcement => ({

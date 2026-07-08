@@ -49,6 +49,7 @@ export default function TaskDetail() {
   const myMemberRole = membersForClass(task.classId).find((m) => m.id === user?.id)?.role;
   const canManage =
     role === "admin" || classroom?.classRepId === user?.id || myMemberRole === "classRep";
+  const canEditTask = canManage || task.createdBy === user?.id;
   const completed = isTaskComplete(task.id);
 
   async function handleDelete() {
@@ -79,7 +80,7 @@ export default function TaskDetail() {
           <HugeiconsIcon icon={ArrowLeft01Icon} size={26} color="#111" />
         </Pressable>
         <Text className="flex-1 text-base font-semibold text-muted-foreground">Task</Text>
-        {canManage ? (
+        {canEditTask ? (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Edit task"
@@ -119,30 +120,34 @@ export default function TaskDetail() {
           </View>
         ) : null}
 
-        {/* Members complete tasks; the class rep/admin doesn't tick their own. */}
+        {/* Members complete tasks; class managers don't tick their own. */}
         {!canManage ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => toggleTaskComplete(task.id)}
-            className={`mt-2 h-14 flex-row items-center justify-center gap-3 rounded-xl ${
-              completed ? "bg-secondary" : "bg-primary"
-            } active:opacity-90`}
-          >
-            <HugeiconsIcon
-              icon={completed ? CheckmarkCircle02Icon : CircleIcon}
-              size={22}
-              color={completed ? "#22c55e" : "#ffffff"}
-            />
-            <Text
-              className={`text-base font-semibold ${
-                completed ? "text-foreground" : "text-primary-foreground"
-              }`}
-            >
-              {completed ? "Completed" : "Mark as complete"}
-            </Text>
-          </Pressable>
-        ) : (
           <View className="mt-2 gap-3">
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => toggleTaskComplete(task.id)}
+              className={`h-14 flex-row items-center justify-center gap-3 rounded-xl ${
+                completed ? "bg-secondary" : "bg-primary"
+              } active:opacity-90`}
+            >
+              <HugeiconsIcon
+                icon={completed ? CheckmarkCircle02Icon : CircleIcon}
+                size={22}
+                color={completed ? "#22c55e" : "#ffffff"}
+              />
+              <Text
+                className={`text-base font-semibold ${
+                  completed ? "text-foreground" : "text-primary-foreground"
+                }`}
+              >
+                {completed ? "Completed" : "Mark as complete"}
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        {canEditTask ? (
+          <View className="gap-3">
             <Button
               label="Edit task"
               variant="outline"
@@ -175,7 +180,7 @@ export default function TaskDetail() {
               </Text>
             </Pressable>
           </View>
-        )}
+        ) : null}
       </ScrollView>
 
       <AddTaskModal

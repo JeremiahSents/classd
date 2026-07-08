@@ -20,6 +20,8 @@ export interface Task {
   dueLabel: string;
   /** Raw ISO due date — used when editing a task. */
   dueAt: string;
+  /** User id of the task creator, used to allow editing personal tasks. */
+  createdBy: string;
 }
 
 export interface Announcement {

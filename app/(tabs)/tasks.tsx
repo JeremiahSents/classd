@@ -3,8 +3,14 @@ import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { HugeiconsIcon } from "@hugeicons/react-native";
-import { ArrowLeft01Icon, CheckmarkCircle02Icon, Search01Icon } from "@hugeicons/core-free-icons";
+import {
+  ArrowLeft01Icon,
+  CheckmarkCircle02Icon,
+  PlusSignIcon,
+  Search01Icon,
+} from "@hugeicons/core-free-icons";
 import { TaskRow } from "@/components/class/task-row";
+import { QuickAddTaskModal } from "@/components/modals/quick-add-task-modal";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { useClasses } from "@/lib/classes-store";
 
@@ -12,9 +18,10 @@ const FILTERS = ["All", "Pending", "Completed"];
 
 export default function Tasks() {
   const router = useRouter();
-  const { tasks, className, isTaskComplete, toggleTaskComplete } = useClasses();
+  const { tasks, classes, className, isTaskComplete, toggleTaskComplete } = useClasses();
   const [filter, setFilter] = useState(0); // 0 all, 1 pending, 2 completed
   const [search, setSearch] = useState("");
+  const [addVisible, setAddVisible] = useState(false);
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -53,7 +60,17 @@ export default function Tasks() {
         >
           <HugeiconsIcon icon={ArrowLeft01Icon} size={26} color="#111" />
         </Pressable>
-        <Text className="text-xl font-bold text-foreground">All tasks</Text>
+        <Text className="flex-1 text-xl font-bold text-foreground">All tasks</Text>
+        {classes.length > 0 ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Add task"
+            onPress={() => setAddVisible(true)}
+            className="h-10 w-10 items-center justify-center rounded-full bg-primary active:opacity-90"
+          >
+            <HugeiconsIcon icon={PlusSignIcon} size={20} color="#fff" />
+          </Pressable>
+        ) : null}
       </View>
 
       {/* Search */}
@@ -111,6 +128,11 @@ export default function Tasks() {
           ))}
         </ScrollView>
       )}
+      <QuickAddTaskModal
+        classes={classes}
+        visible={addVisible}
+        onClose={() => setAddVisible(false)}
+      />
     </SafeAreaView>
   );
 }
