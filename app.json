@@ -23,7 +23,6 @@
     },
     "android": {
       "package": "com.jsents.classd",
-      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/adaptive-icon.png"
