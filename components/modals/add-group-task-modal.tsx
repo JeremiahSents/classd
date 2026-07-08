@@ -12,6 +12,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { api, type Member } from "@/lib/api";
 
 interface Props {
@@ -32,6 +33,7 @@ function toIso(date: string, time: string): string | null {
 }
 
 export function AddGroupTaskModal({ groupId, members, visible, onClose, onCreated }: Props) {
+  const toast = useToast();
   const [assignedTo, setAssignedTo] = useState(members[0]?.id ?? "");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -85,6 +87,7 @@ export function AddGroupTaskModal({ groupId, members, visible, onClose, onCreate
       reset();
       onCreated?.();
       onClose();
+      toast.success(`Task assigned to ${assignee.name || assignee.email}!`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not add task.");
     } finally {

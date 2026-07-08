@@ -69,7 +69,9 @@ const toClassroom = (c: ApiClass): Classroom => ({
 const toTask = (t: ApiTask): Task => ({
   id: t.id,
   classId: t.classId,
-  title: t.title,
+  // Fall back to a visible placeholder so a task doc missing its title still
+  // reads as a real row instead of a blank line.
+  title: t.title?.trim() || "Untitled task",
   description: t.description,
   dueLabel: dueLabel(t.dueAt),
   dueAt: t.dueAt,
@@ -82,6 +84,7 @@ const toAnnouncement = (a: ApiAnnouncement): Announcement => ({
   content: a.content,
   category: a.category,
   timeLabel: relativeTime(a.createdAt),
+  createdAt: a.createdAt,
   ...(a.dueAt ? { dueLabel: dueLabel(a.dueAt), dueAt: a.dueAt } : {}),
 });
 
@@ -102,6 +105,8 @@ interface ClassesStore {
   tasks: Task[];
   announcements: Announcement[];
   groupTasks: GroupTaskItem[];
+  /** How many project groups the user belongs to (drives the dashboard section). */
+  groupCount: number;
   enrolledClassIds: string[];
 
   getClass: (classId: string) => Classroom | undefined;
@@ -152,6 +157,7 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [membersByClass, setMembersByClass] = useState<Record<string, Member[]>>({});
   const [groupTasks, setGroupTasks] = useState<GroupTaskItem[]>([]);
+  const [groupCount, setGroupCount] = useState(0);
   const [completedTaskIds, setCompletedTaskIds] = useState<string[]>([]);
   // Materials are local-only until the backend supports them.
   const [materials, setMaterials] = useState<Material[]>([]);
@@ -163,6 +169,7 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
       setAnnouncements([]);
       setMembersByClass({});
       setGroupTasks([]);
+      setGroupCount(0);
       setCompletedTaskIds([]);
       setLoading(false);
       return;
@@ -176,8 +183,11 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
         api.listCompletedTaskIds(),
       ]);
       setClasses(cls.map(toClassroom));
-      setTasks(myTasks.map(toTask));
-      setAnnouncements(myAnns.map(toAnnouncement));
+      // tasks soonest-due first; announcements newest first (ISO sorts chronologically)
+      setTasks([...myTasks].sort((a, b) => a.dueAt.localeCompare(b.dueAt)).map(toTask));
+      setAnnouncements(
+        [...myAnns].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map(toAnnouncement),
+      );
       setCompletedTaskIds(completed);
 
       const memberEntries = await Promise.all(
@@ -187,6 +197,9 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
 
       // group tasks across all of the user's project groups, for the dashboard
       const myGroups = await api.listMyGroups();
+      setGroupCount(myGroups.length);
+      // look up each group's class name so tasks can show which unit they're for
+      const classNameById = new Map(cls.map((c) => [c.id, c.name] as const));
       const perGroup = await Promise.all(
         myGroups.map(async (g) =>
           (await api.listGroupTasks(g.id)).map(
@@ -194,6 +207,8 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
               id: t.id,
               groupId: g.id,
               groupName: g.name,
+              classId: g.classId,
+              className: classNameById.get(g.classId) ?? "",
               title: t.title,
               description: t.description,
               dueLabel: dueLabel(t.dueAt),
@@ -224,6 +239,7 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
       tasks,
       announcements,
       groupTasks,
+      groupCount,
       enrolledClassIds,
 
       getClass: (classId) => classes.find((c) => c.id === classId),
@@ -293,27 +309,40 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
         void api.removeMember(classId, memberId).then(() => refresh());
       },
 
+      // Create/update/delete apply an optimistic local change and reconcile in
+      // the background, so posting feels instant instead of waiting on a full
+      // reload. (The notification Cloud Functions run server-side and never
+      // block these writes.)
       addTask: async (classId, input) => {
         const t = await api.createTask(classId, input);
-        await refresh();
-        return toTask(t);
+        const task = toTask(t);
+        setTasks((prev) =>
+          [...prev, task].sort((a, b) => a.dueAt.localeCompare(b.dueAt)),
+        );
+        void refresh(true);
+        return task;
       },
 
       updateTask: async (classId, taskId, patch) => {
         const t = await api.updateTask(classId, taskId, patch);
-        await refresh();
-        return toTask(t);
+        const task = toTask(t);
+        setTasks((prev) => prev.map((x) => (x.id === taskId ? task : x)));
+        void refresh(true);
+        return task;
       },
 
       deleteTask: async (classId, taskId) => {
         await api.deleteTask(classId, taskId);
-        await refresh();
+        setTasks((prev) => prev.filter((x) => x.id !== taskId));
+        void refresh(true);
       },
 
       addAnnouncement: async (classId, input) => {
         const a = await api.createAnnouncement(classId, input);
-        await refresh();
-        return toAnnouncement(a);
+        const announcement = toAnnouncement(a);
+        setAnnouncements((prev) => [announcement, ...prev]);
+        void refresh(true);
+        return announcement;
       },
 
       addMaterial: (classId, input) => {
@@ -322,7 +351,7 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
         return material;
       },
     };
-  }, [loading, classes, tasks, announcements, groupTasks, membersByClass, materials, completedTaskIds, refresh]);
+  }, [loading, classes, tasks, announcements, groupTasks, groupCount, membersByClass, materials, completedTaskIds, refresh]);
 
   return <ClassesContext.Provider value={value}>{children}</ClassesContext.Provider>;
 }

@@ -12,6 +12,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import type { Task } from "@/lib/types";
 import { useClasses } from "@/lib/classes-store";
 
@@ -34,6 +35,7 @@ function toIso(date: string, time: string): string | null {
 }
 
 export function AddTaskModal({ classId, task, visible, onClose }: AddTaskModalProps) {
+  const toast = useToast();
   const { addTask, updateTask } = useClasses();
   const isEdit = !!task;
   const [title, setTitle] = useState("");
@@ -96,6 +98,7 @@ export function AddTaskModal({ classId, task, visible, onClose }: AddTaskModalPr
       }
       reset();
       onClose();
+      toast.success(isEdit ? "Task updated" : "Task posted!");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not save task.");
     } finally {

@@ -30,6 +30,8 @@ export interface Announcement {
   category: AnnouncementCategory;
   /** Human-readable relative time for now (e.g. "2h ago"). */
   timeLabel: string;
+  /** Raw ISO creation time — used to tell recent posts from stale ones. */
+  createdAt: string;
   /** Human-readable due label, when the announcement has a due date. */
   dueLabel?: string;
   /** Raw ISO due date — used when editing. */
@@ -41,6 +43,9 @@ export interface GroupTaskItem {
   id: string;
   groupId: string;
   groupName: string;
+  /** The class the group belongs to, so the user knows which unit it's for. */
+  classId: string;
+  className: string;
   title: string;
   description: string;
   dueLabel: string;

@@ -12,6 +12,7 @@ import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast";
 import { api } from "@/lib/api";
 import type { Classroom } from "@/lib/classes";
 
@@ -26,6 +27,7 @@ interface Props {
 }
 
 export function CreateGroupModal({ classId, classes, visible, onClose, onCreated }: Props) {
+  const toast = useToast();
   const [name, setName] = useState("");
   const [selectedClassId, setSelectedClassId] = useState(classId ?? classes?.[0]?.id ?? "");
   const [busy, setBusy] = useState(false);
@@ -57,6 +59,7 @@ export function CreateGroupModal({ classId, classes, visible, onClose, onCreated
       setName("");
       onCreated?.();
       onClose();
+      toast.success(`Group "${name.trim()}" created!`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not create group.");
     } finally {

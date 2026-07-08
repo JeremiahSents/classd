@@ -236,6 +236,24 @@ function toAnnouncement(id: string, classId: string, data: DocumentData): Announ
   };
 }
 
+/**
+ * Ids of the groups the current user already belongs to within a class.
+ * Used to enforce "one group per class" on join/create.
+ */
+async function myGroupIdsInClass(classId: string): Promise<string[]> {
+  const uid = requireUid();
+  const memberSnap = await getDocs(
+    query(collectionGroup(db, "groupMembers"), where("uid", "==", uid)),
+  );
+  const refs = memberSnap.docs
+    .map((d) => d.ref.parent.parent)
+    .filter((ref): ref is NonNullable<typeof ref> => ref !== null);
+  const snaps = await Promise.all(refs.map((ref) => getDoc(ref)));
+  return snaps
+    .filter((s) => s.exists() && s.data()!.classId === classId)
+    .map((s) => s.id);
+}
+
 /** Shape a groups/{id} document into a Group. */
 function toGroup(id: string, data: DocumentData, memberCount?: number): Group {
   return {
@@ -413,6 +431,13 @@ export const firebaseApi: ClassdApi = {
   async createGroup(classId: string, name: string): Promise<Group> {
     const uid = requireUid();
     try {
+      // one group per class
+      if ((await myGroupIdsInClass(classId)).length > 0) {
+        throw new ApiError(
+          "already-exists",
+          "You're already in a group for this class. Leave it first to join or create another.",
+        );
+      }
       const profile = await loadProfile(uid);
       const ref = doc(collection(db, "groups"));
       const trimmed = name.trim();
@@ -457,6 +482,17 @@ export const firebaseApi: ClassdApi = {
   async joinGroup(groupId: string): Promise<void> {
     const uid = requireUid();
     try {
+      // one group per class: block joining if already in another group here
+      const groupSnap = await getDoc(doc(db, "groups", groupId));
+      if (!groupSnap.exists()) throw new ApiError("not-found", "Group not found");
+      const classId = groupSnap.data().classId as string;
+      const others = (await myGroupIdsInClass(classId)).filter((id) => id !== groupId);
+      if (others.length > 0) {
+        throw new ApiError(
+          "already-exists",
+          "You're already in a group for this class. Leave it first to join another.",
+        );
+      }
       const profile = await loadProfile(uid);
       await setDoc(doc(db, "groups", groupId, "groupMembers", uid), {
         uid,
