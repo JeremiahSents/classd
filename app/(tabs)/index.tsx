@@ -58,6 +58,7 @@ export default function Home() {
     tasks,
     announcements,
     groupTasks,
+    groupCount,
     className,
     membersForClass,
     isTaskComplete,
@@ -84,6 +85,10 @@ export default function Home() {
       membersForClass(c.id).find((m) => m.id === user?.id)?.role === "classRep",
   );
   const isEmpty = classes.length === 0;
+
+  // Dashboard shows only outstanding work; "See all" opens the full, filterable list.
+  const pendingTasks = tasks.filter((t) => !isTaskComplete(t.id)).slice(0, 5);
+  const pendingGroupTasks = groupTasks.filter((t) => !t.completed).slice(0, 5);
 
   function navigateToTask(taskId: string) {
     router.push({ pathname: "/(tabs)/task/[id]", params: { id: taskId } });
@@ -133,7 +138,7 @@ export default function Home() {
           ) : null}
 
           <TasksSection
-            tasks={tasks}
+            tasks={pendingTasks}
             className={className}
             isTaskComplete={isTaskComplete}
             toggleTaskComplete={toggleTaskComplete}
@@ -144,14 +149,21 @@ export default function Home() {
             }
           />
 
-          <GroupTasksSection
-            tasks={groupTasks}
-            onToggle={toggleGroupTask}
-            onTaskPress={(groupId) =>
-              // cast: typed routes regenerate for group/[id] on next `expo start`
-              router.push({ pathname: "/(tabs)/group/[id]", params: { id: groupId } } as never)
-            }
-          />
+          {/* Group tasks — only for users who belong to at least one group */}
+          {groupCount > 0 ? (
+            <GroupTasksSection
+              tasks={pendingGroupTasks}
+              onToggle={toggleGroupTask}
+              onTaskPress={(groupId) =>
+                // cast: typed routes regenerate for group/[id] on next `expo start`
+                router.push({ pathname: "/(tabs)/group/[id]", params: { id: groupId } } as never)
+              }
+              onSeeAll={() =>
+                // cast: typed routes regenerate for group-tasks on next `expo start`
+                router.push("/(tabs)/group-tasks" as never)
+              }
+            />
+          ) : null}
 
           <UpdatesSection
             announcements={announcements}

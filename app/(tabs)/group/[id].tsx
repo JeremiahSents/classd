@@ -25,8 +25,10 @@ import { Input } from "@/components/ui/input";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { EmptySectionHint } from "@/components/ui/section-header";
 import { AddGroupTaskModal } from "@/components/modals/add-group-task-modal";
-import { api, type Group, type GroupTask, type Member } from "@/lib/api";
+import { api, ApiError, type Group, type GroupTask, type Member } from "@/lib/api";
+import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
+import { useToast } from "@/components/ui/toast";
 
 const TABS = ["Tasks", "Members"];
 
@@ -43,6 +45,8 @@ export default function GroupDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useSession();
+  const { className } = useClasses();
+  const toast = useToast();
 
   const [group, setGroup] = useState<Group | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
@@ -88,6 +92,7 @@ export default function GroupDetail() {
       await api.updateGroup(id, { name: newName.trim() });
       setRenameVisible(false);
       await load();
+      toast.success("Group renamed");
     } finally {
       setRenaming(false);
     }
@@ -96,9 +101,20 @@ export default function GroupDetail() {
   async function toggleMembership() {
     setBusy(true);
     try {
-      if (isMember) await api.leaveGroup(id);
-      else await api.joinGroup(id);
-      await load();
+      if (isMember) {
+        await api.leaveGroup(id);
+        await load();
+        toast.show("You left the group", { tone: "info", emoji: "👋" });
+      } else {
+        await api.joinGroup(id);
+        await load();
+        toast.success("You're in the group!");
+      }
+    } catch (e) {
+      // most likely the "one group per class" rule
+      const msg =
+        e instanceof ApiError ? e.message : "Could not update your membership.";
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -141,9 +157,16 @@ export default function GroupDetail() {
         >
           <HugeiconsIcon icon={ArrowLeft01Icon} size={26} color="#111" />
         </Pressable>
-        <Text className="flex-1 text-xl font-bold text-foreground" numberOfLines={1}>
-          {group.name}
-        </Text>
+        <View className="flex-1">
+          <Text className="text-xl font-bold text-foreground" numberOfLines={1}>
+            {group.name}
+          </Text>
+          {className(group.classId) ? (
+            <Text className="text-xs font-medium text-primary" numberOfLines={1}>
+              {className(group.classId)}
+            </Text>
+          ) : null}
+        </View>
         {isCreator ? (
           <Pressable
             accessibilityRole="button"

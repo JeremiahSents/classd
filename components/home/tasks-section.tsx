@@ -1,7 +1,7 @@
-import { Pressable, Text, View } from "react-native";
-import { HugeiconsIcon } from "@hugeicons/react-native";
-import { CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
 import type { Task } from "@/lib/types";
+import { CheckmarkCircle02Icon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react-native";
+import { Pressable, Text, View } from "react-native";
 import { SectionTitle } from "./section-title";
 
 /* ------------------------------------------------------------------ */
@@ -113,7 +113,7 @@ export function TasksSection({
   if (tasks.length === 0) {
     return (
       <View className="gap-4">
-        <SectionTitle title="Your tasks" count={0} />
+        <SectionTitle title="Your tasks" count={0} onSeeAll={onSeeAll}/>
         <View className="items-center gap-2 rounded-2xl border border-dashed border-border bg-card py-8">
           <HugeiconsIcon icon={CheckmarkCircle02Icon} size={24} color="#22c55e" />
           <Text className="text-sm font-semibold text-muted-foreground">

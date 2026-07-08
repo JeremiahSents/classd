@@ -36,7 +36,21 @@ export async function registerForPushNotifications(): Promise<string | null> {
     return null;
   }
 
-  if (!Device.isDevice) {
+  // Show notifications even while the app is in the foreground; without this,
+  // Android silently drops the banner when the app is open.
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+
+  // Physical devices always work. Emulators can receive push too, but only if
+  // they run a Google Play Services system image — so we allow them in dev
+  // (e.g. an Android Studio emulator) and only hard-block in production builds.
+  if (!Device.isDevice && !__DEV__) {
     console.warn("[push] must use a physical device for push notifications");
     return null;
   }
@@ -58,11 +72,25 @@ export async function registerForPushNotifications(): Promise<string | null> {
     });
   }
 
-  const tokenResponse = await Notifications.getExpoPushTokenAsync();
-  const token = tokenResponse.data;
+  let token: string | null = null;
+  try {
+    const tokenResponse = await Notifications.getExpoPushTokenAsync();
+    token = tokenResponse.data;
+    console.log("[push] Expo push token:", token);
+  } catch (e) {
+    // Most common cause on Android: the build has no FCM config
+    // (google-services.json) or the emulator lacks Google Play Services.
+    console.warn("[push] getExpoPushTokenAsync failed:", e);
+    return null;
+  }
 
   if (token && token !== cachedToken) {
-    await api.registerPushToken(token);
+    try {
+      await api.registerPushToken(token);
+      console.log("[push] token saved to Firestore");
+    } catch (e) {
+      console.warn("[push] failed to save token to Firestore:", e);
+    }
     cachedToken = token;
   }
   return token;

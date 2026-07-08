@@ -18,6 +18,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast";
 import { useClasses } from "@/lib/classes-store";
 import type { Classroom } from "@/lib/classes";
 
@@ -27,6 +28,7 @@ interface CreateClassModalProps {
 }
 
 export function CreateClassModal({ visible, onClose }: CreateClassModalProps) {
+  const toast = useToast();
   const { addClass } = useClasses();
   const [name, setName] = useState("");
   const [created, setCreated] = useState<Classroom | null>(null);
@@ -50,6 +52,7 @@ export function CreateClassModal({ visible, onClose }: CreateClassModalProps) {
     try {
       const classroom = await addClass(name);
       setCreated(classroom);
+      toast.success(`${classroom.name} is live!`);
     } finally {
       setBusy(false);
     }

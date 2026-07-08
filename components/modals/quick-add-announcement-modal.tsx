@@ -12,6 +12,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { ANNOUNCEMENT_CATEGORY_LABEL, type AnnouncementCategory } from "@/lib/types";
 import type { Classroom } from "@/lib/classes";
 import { useClasses } from "@/lib/classes-store";
@@ -40,6 +41,7 @@ export function QuickAddAnnouncementModal({
   visible,
   onClose,
 }: QuickAddAnnouncementModalProps) {
+  const toast = useToast();
   const { addAnnouncement } = useClasses();
   const [classId, setClassId] = useState(classes[0]?.id ?? "");
   const [title, setTitle] = useState("");
@@ -99,6 +101,7 @@ export function QuickAddAnnouncementModal({
       });
       reset();
       onClose();
+      toast.success("Announcement posted!", "📣");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not post announcement.");
     } finally {

@@ -19,6 +19,10 @@ import {
   type SignUpInput,
   type UserProfile,
 } from "@/lib/api";
+import {
+  registerForPushNotifications,
+  unregisterForPushNotifications,
+} from "@/lib/push";
 
 export type { Role };
 
@@ -41,6 +45,8 @@ interface Session {
   signInWithEmail: (input: SignInInput) => Promise<UserProfile>;
   signOut: () => Promise<void>;
   updateAvatar: (url: string) => Promise<void>;
+  /** Change the user's display name. */
+  updateName: (name: string) => Promise<void>;
 }
 
 const SessionContext = createContext<Session | null>(null);
@@ -53,6 +59,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const unsubscribe = api.onAuthStateChanged((u) => {
       setUser(u);
       setLoading(false);
+      // Register this device for push once signed in. No-ops (logs a warning)
+      // until expo-notifications/expo-device are installed and on a real device.
+      if (u) void registerForPushNotifications().catch(() => {});
     });
     return unsubscribe;
   }, []);
@@ -77,11 +86,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         return result.user;
       },
       signOut: async () => {
+        // best-effort: drop this device's token so it stops getting pushes
+        await unregisterForPushNotifications().catch(() => {});
         await api.signOut();
       },
       updateAvatar: async (url) => {
         // profile-doc change won't refire onAuthStateChanged, so update locally.
         const updated = await api.updateProfile({ avatarUrl: url });
+        setUser(updated);
+      },
+      updateName: async (name) => {
+        const updated = await api.updateProfile({ name: name.trim() });
         setUser(updated);
       },
     }),

@@ -16,6 +16,7 @@ import {
 import { useSession } from "@/lib/session";
 import { useClasses } from "@/lib/classes-store";
 import { AvatarPickerModal } from "@/components/modals/avatar-picker-modal";
+import { EditProfileModal } from "@/components/modals/edit-profile-modal";
 
 interface SettingsItem {
   label: string;
@@ -30,6 +31,7 @@ export default function Profile() {
   const { classes, tasks, isTaskComplete } = useClasses();
 
   const [avatarPickerVisible, setAvatarPickerVisible] = useState(false);
+  const [editProfileVisible, setEditProfileVisible] = useState(false);
 
   async function handleSignOut() {
     try {
@@ -56,7 +58,7 @@ export default function Profile() {
     {
       label: "Edit Profile",
       icon: UserEdit01Icon,
-      onPress: () => {},
+      onPress: () => setEditProfileVisible(true),
     },
     {
       label: "App Settings",
@@ -78,6 +80,10 @@ export default function Profile() {
         currentAvatarUrl={avatarUrl}
         onClose={() => setAvatarPickerVisible(false)}
         onSelect={handleAvatarSelect}
+      />
+      <EditProfileModal
+        visible={editProfileVisible}
+        onClose={() => setEditProfileVisible(false)}
       />
       <ScrollView
         contentContainerClassName="px-6 pb-32 pt-8"

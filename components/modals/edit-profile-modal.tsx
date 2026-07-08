@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -7,59 +7,63 @@ import {
   Text,
   View,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
-import { useClasses } from "@/lib/classes-store";
+import { useSession } from "@/lib/session";
 
-interface JoinClassModalProps {
+interface EditProfileModalProps {
   visible: boolean;
   onClose: () => void;
 }
 
-export function JoinClassModal({ visible, onClose }: JoinClassModalProps) {
-  const router = useRouter();
+export function EditProfileModal({ visible, onClose }: EditProfileModalProps) {
+  const { name, updateName } = useSession();
   const toast = useToast();
-  const { joinClass } = useClasses();
-  const [code, setCode] = useState("");
+  const [value, setValue] = useState(name);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [joining, setJoining] = useState(false);
+
+  // reset the field to the current name each time the modal opens
+  useEffect(() => {
+    if (visible) {
+      setValue(name);
+      setError(null);
+    }
+  }, [visible, name]);
 
   function handleClose() {
-    setCode("");
     setError(null);
     onClose();
   }
 
-  async function handleJoin() {
-    setJoining(true);
-    setError(null);
-    try {
-      const match = await joinClass(code);
-      if (!match) {
-        setError("No class found with that code.");
-        return;
-      }
+  async function handleSave() {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      setError("Enter a display name.");
+      return;
+    }
+    if (trimmed === name) {
       handleClose();
-      toast.success(`Welcome to ${match.name}!`);
-      router.push({ pathname: "/(tabs)/class/[id]", params: { id: match.id } });
-    } catch {
-      setError("Could not join. Please try again.");
+      return;
+    }
+    setError(null);
+    setSaving(true);
+    try {
+      await updateName(trimmed);
+      onClose();
+      toast.success("Profile updated!", "✨");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save your name.");
     } finally {
-      setJoining(false);
+      setSaving(false);
     }
   }
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={handleClose}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <KeyboardAvoidingView
         className="flex-1 justify-end bg-black/50"
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -68,7 +72,7 @@ export function JoinClassModal({ visible, onClose }: JoinClassModalProps) {
         <View>
           <View className="gap-6 rounded-t-3xl bg-background p-6 pb-10">
             <View className="flex-row items-center justify-between">
-              <Text className="text-xl font-bold text-foreground">Join a class</Text>
+              <Text className="text-xl font-bold text-foreground">Edit profile</Text>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel="Close"
@@ -81,36 +85,29 @@ export function JoinClassModal({ visible, onClose }: JoinClassModalProps) {
 
             <View className="gap-2">
               <Input
-                label="Class code"
-                placeholder="Enter the 6-digit code"
-                value={code}
+                label="Display name"
+                placeholder="Your name"
+                value={value}
                 onChangeText={(v) => {
-                  setCode(v);
+                  setValue(v);
                   setError(null);
                 }}
-                keyboardType="number-pad"
+                autoCapitalize="words"
                 autoFocus
+                returnKeyType="done"
+                onSubmitEditing={() => value.trim() && handleSave()}
               />
               {error ? (
-                <Text className="text-center text-sm text-destructive">{error}</Text>
+                <Text className="text-sm text-destructive">{error}</Text>
               ) : null}
             </View>
 
-            <View className="flex-row gap-3">
-              <Button
-                className="flex-1"
-                variant="outline"
-                label="Cancel"
-                onPress={handleClose}
-              />
-              <Button
-                className="flex-1"
-                label="Join"
-                loading={joining}
-                disabled={!code.trim()}
-                onPress={handleJoin}
-              />
-            </View>
+            <Button
+              label="Save changes"
+              loading={saving}
+              disabled={!value.trim()}
+              onPress={handleSave}
+            />
           </View>
           {/* Solid filler to cover the gap left by keyboard padding */}
           <View className="absolute left-0 right-0 top-full h-[1000px] bg-background" />

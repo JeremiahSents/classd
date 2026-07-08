@@ -12,6 +12,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import type { Classroom } from "@/lib/classes";
 import { useClasses } from "@/lib/classes-store";
 
@@ -32,6 +33,7 @@ function toIso(date: string, time: string): string | null {
 }
 
 export function QuickAddTaskModal({ classes, visible, onClose }: QuickAddTaskModalProps) {
+  const toast = useToast();
   const { addTask } = useClasses();
   const [classId, setClassId] = useState(classes[0]?.id ?? "");
   const [title, setTitle] = useState("");
@@ -79,6 +81,7 @@ export function QuickAddTaskModal({ classes, visible, onClose }: QuickAddTaskMod
       await addTask(classId, { title: title.trim(), description, dueAt });
       reset();
       onClose();
+      toast.success("Task posted!");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not add task.");
     } finally {
