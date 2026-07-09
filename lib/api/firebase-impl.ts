@@ -132,6 +132,8 @@ function toApiError(e: unknown): ApiError {
         return new ApiError("unknown", "Network error. Check your connection and try again.");
       case "auth/operation-not-allowed":
         return new ApiError("permission-denied", "This sign-in method is not enabled.");
+      case "permission-denied":
+        return new ApiError("permission-denied", "You do not have permission to do that.");
       default:
         return new ApiError("unknown", "Something went wrong. Please try again.");
     }
@@ -799,6 +801,12 @@ export const firebaseApi: ClassdApi = {
         createdAt: new Date().toISOString(),
       };
     } catch (e) {
+      if (e instanceof FirebaseError && e.code === "permission-denied") {
+        throw new ApiError(
+          "permission-denied",
+          "You must be a class rep to create a task for this class.",
+        );
+      }
       throw toApiError(e);
     }
   },

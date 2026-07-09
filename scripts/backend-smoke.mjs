@@ -5,7 +5,7 @@
  * and runs the same Firestore operations that lib/api/firebase-impl.ts
  * performs — classes, join-by-code, tasks, completions, announcements, and
  * project groups — so it verifies both the data model AND the security rules.
- * Includes negative tests (student can't create class tasks; a non-member
+ * Includes negative tests (students can't create class tasks; a non-member
  * can't create group tasks).
  *
  * Run against the LOCAL EMULATOR (recommended — safe, no real data, needs Java):
@@ -307,10 +307,10 @@ async function main() {
   });
 
   console.log("\nSECURITY RULES (negative tests)");
-  await step("student is BLOCKED from creating a task", async () => {
+  await step("student is BLOCKED from creating a class task", async () => {
     try {
       await createTask(classId, "should be denied");
-      throw new Error("NOT blocked — rules are too permissive!");
+      throw new Error("NOT blocked - rules are too permissive!");
     } catch (e) {
       assert(e.code === "permission-denied", "expected permission-denied, got " + (e.code || e.message));
     }
