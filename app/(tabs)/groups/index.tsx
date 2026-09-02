@@ -80,8 +80,7 @@ export default function Groups() {
               key={g.id}
               accessibilityRole="button"
               onPress={() =>
-                // cast: expo-router typed routes regenerate for group/[id] on next `expo start`
-                router.push({ pathname: "/(tabs)/group/[id]", params: { id: g.id } } as never)
+                router.push({ pathname: "/(tabs)/groups/group/[id]", params: { id: g.id } } as never)
               }
               className="gap-1 rounded-2xl border border-border bg-card p-4 active:bg-secondary"
             >

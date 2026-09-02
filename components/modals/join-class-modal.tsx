@@ -45,7 +45,7 @@ export function JoinClassModal({ visible, onClose }: JoinClassModalProps) {
       }
       handleClose();
       toast.success(`Welcome to ${match.name}!`);
-      router.push({ pathname: "/(tabs)/class/[id]", params: { id: match.id } });
+      router.push({ pathname: "/(tabs)/classes/class/[id]", params: { id: match.id } } as never);
     } catch {
       setError("Could not join. Please try again.");
     } finally {

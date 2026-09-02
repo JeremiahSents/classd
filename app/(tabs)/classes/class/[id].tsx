@@ -310,8 +310,7 @@ export default function ClassDetail() {
                 key={g.id}
                 accessibilityRole="button"
                 onPress={() =>
-                  // cast: typed routes regenerate for group/[id] on next `expo start`
-                  router.push({ pathname: "/(tabs)/group/[id]", params: { id: g.id } } as never)
+                  router.push({ pathname: "/(tabs)/classes/group/[id]", params: { id: g.id } } as never)
                 }
                 className="gap-1 rounded-2xl border border-border bg-card p-4 active:bg-secondary"
               >

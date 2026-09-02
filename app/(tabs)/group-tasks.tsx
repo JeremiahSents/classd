@@ -150,7 +150,7 @@ export default function GroupTasks() {
                   task={t}
                   onToggle={() => toggleGroupTask(t.groupId, t.id)}
                   onPress={() =>
-                    router.push({ pathname: "/(tabs)/group/[id]", params: { id: t.groupId } } as never)
+                    router.push({ pathname: "/(tabs)/groups/group/[id]", params: { id: t.groupId } } as never)
                   }
                 />
               ))}

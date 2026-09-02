@@ -60,13 +60,12 @@ export default function Home() {
     groupTasks,
     groupCount,
     className,
-    membersForClass,
     isTaskComplete,
     toggleTaskComplete,
     toggleGroupTask,
     refresh,
   } = useClasses();
-  const { firstName, user } = useSession();
+  const { firstName } = useSession();
   const [joinVisible, setJoinVisible] = useState(false);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
 
@@ -77,13 +76,6 @@ export default function Home() {
     }, [refresh]),
   );
 
-  // Classes where this user is the assigned rep. Announcements and manage
-  // controls still use this; task creation uses all enrolled classes below.
-  const repClasses = classes.filter(
-    (c) =>
-      c.classRepId === user?.id ||
-      membersForClass(c.id).find((m) => m.id === user?.id)?.role === "classRep",
-  );
   const isEmpty = classes.length === 0;
 
   // Dashboard shows only outstanding work; "See all" opens the full, filterable list.
@@ -155,8 +147,7 @@ export default function Home() {
               tasks={pendingGroupTasks}
               onToggle={toggleGroupTask}
               onTaskPress={(groupId) =>
-                // cast: typed routes regenerate for group/[id] on next `expo start`
-                router.push({ pathname: "/(tabs)/group/[id]", params: { id: groupId } } as never)
+                router.push({ pathname: "/(tabs)/groups/group/[id]", params: { id: groupId } } as never)
               }
               onSeeAll={() =>
                 // cast: typed routes regenerate for group-tasks on next `expo start`
