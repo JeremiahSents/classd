@@ -23,6 +23,7 @@
     "lint": "expo lint",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
+    "test": "node --test \"tests/unit/*.test.mjs\"",
     "test:rules": "firebase emulators:exec --only firestore --project demo-classd \"node --test tests/rules/firestore.rules.test.mjs\""
   },
   "dependencies": {

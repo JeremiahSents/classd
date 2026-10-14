@@ -28,20 +28,12 @@ import { AddGroupTaskModal } from "@/components/modals/add-group-task-modal";
 import { api, ApiError, type Group, type GroupTask, type Member } from "@/lib/api";
 import { useRefreshControl } from "@/components/ui/refresh-control";
 import { useClasses } from "@/lib/classes-store";
+import { dueLabel } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import { useToast } from "@/components/ui/toast";
 import { confirmAction } from "@/lib/confirm";
 
 const TABS = ["Tasks", "Members"];
-
-function dueLabel(iso: string): string {
-  const diff = new Date(iso).getTime() - Date.now();
-  if (diff < 0) return "Overdue";
-  const days = Math.floor(diff / 86_400_000);
-  if (days < 1) return "Due today";
-  if (days < 2) return "Due tomorrow";
-  return `Due in ${days} days`;
-}
 
 export default function GroupDetail() {
   const router = useRouter();

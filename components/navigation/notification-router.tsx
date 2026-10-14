@@ -8,7 +8,7 @@ import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { useClasses } from "@/lib/classes-store";
-import { routeForNotification } from "@/lib/push";
+import { routeForNotification } from "@/lib/notification-route";
 import { useSession } from "@/lib/session";
 
 export function NotificationRouter() {

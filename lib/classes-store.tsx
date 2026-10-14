@@ -27,6 +27,7 @@ import {
   type UpdateAnnouncementInput,
   type UploadFileInput,
 } from "@/lib/api";
+import { dueLabel, formatSize, relativeTime } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import type { Classroom } from "@/lib/classes";
 import type { Announcement, AnnouncementCategory, GroupTaskItem, Material, Member, Task } from "@/lib/types";
@@ -34,32 +35,6 @@ import type { Announcement, AnnouncementCategory, GroupTaskItem, Material, Membe
 /* ------------------------------------------------------------------ *
  * API -> UI mappers
  * ------------------------------------------------------------------ */
-
-function relativeTime(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.round(diff / 60000);
-  if (min < 1) return "Just now";
-  if (min < 60) return `${min}m ago`;
-  const hr = Math.round(min / 60);
-  if (hr < 24) return `${hr}h ago`;
-  const day = Math.round(hr / 24);
-  if (day < 7) return `${day}d ago`;
-  return new Date(iso).toLocaleDateString();
-}
-
-function dueLabel(iso: string): string {
-  const dayMs = 86_400_000;
-  const diff = new Date(iso).getTime() - Date.now();
-  if (diff < 0) {
-    const over = Math.floor(-diff / dayMs);
-    return over < 1 ? "Overdue" : `Overdue by ${over}d`;
-  }
-  const days = Math.floor(diff / dayMs);
-  if (days < 1) return "Due today";
-  if (days < 2) return "Due tomorrow";
-  if (days < 7) return `Due in ${days} days`;
-  return `Due ${new Date(iso).toLocaleDateString()}`;
-}
 
 const toClassroom = (c: ApiClass): Classroom => ({
   id: c.id,
@@ -91,13 +66,6 @@ const toAnnouncement = (a: ApiAnnouncement): Announcement => ({
   createdAt: a.createdAt,
   ...(a.dueAt ? { dueLabel: dueLabel(a.dueAt), dueAt: a.dueAt } : {}),
 });
-
-function formatSize(bytes?: number): string | undefined {
-  if (bytes === undefined) return undefined;
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 const toMaterial = (m: ApiMaterial): Material => ({
   id: m.id,
