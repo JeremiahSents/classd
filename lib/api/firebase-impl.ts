@@ -513,6 +513,16 @@ export const firebaseApi: ClassdApi = {
     }
   },
 
+  async deleteGroup(groupId: string): Promise<void> {
+    requireUid();
+    try {
+      // the onGroupDeleted function removes its members and tasks
+      await deleteDoc(doc(db, "groups", groupId));
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
   async joinGroup(groupId: string): Promise<void> {
     const uid = requireUid();
     try {

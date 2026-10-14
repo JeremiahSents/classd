@@ -29,6 +29,7 @@ import { api, ApiError, type Group, type GroupTask, type Member } from "@/lib/ap
 import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
 import { useToast } from "@/components/ui/toast";
+import { confirmAction } from "@/lib/confirm";
 
 const TABS = ["Tasks", "Members"];
 
@@ -45,7 +46,7 @@ export default function GroupDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useSession();
-  const { className } = useClasses();
+  const { className, refresh } = useClasses();
   const toast = useToast();
 
   const [group, setGroup] = useState<Group | null>(null);
@@ -58,6 +59,7 @@ export default function GroupDetail() {
   const [renameVisible, setRenameVisible] = useState(false);
   const [newName, setNewName] = useState("");
   const [renaming, setRenaming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -93,8 +95,31 @@ export default function GroupDetail() {
       setRenameVisible(false);
       await load();
       toast.success("Group renamed");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not rename the group.");
     } finally {
       setRenaming(false);
+    }
+  }
+
+  async function handleDelete() {
+    const ok = await confirmAction({
+      title: `Delete ${group?.name ?? "this group"}?`,
+      message: "This removes the group and all of its tasks for every member.",
+      confirmLabel: "Delete group",
+    });
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      await api.deleteGroup(id);
+      setRenameVisible(false);
+      toast.success("Group deleted", "🗑️");
+      void refresh(true); // drop its tasks from the dashboard
+      router.back();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete the group.");
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -170,7 +195,7 @@ export default function GroupDetail() {
         {isCreator ? (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Rename group"
+            accessibilityLabel="Edit group"
             onPress={() => {
               setNewName(group.name);
               setRenameVisible(true);
@@ -279,7 +304,7 @@ export default function GroupDetail() {
         onCreated={load}
       />
 
-      {/* Rename group (creator only) */}
+      {/* Rename or delete the group (creator only) */}
       <Modal
         visible={renameVisible}
         transparent
@@ -293,7 +318,7 @@ export default function GroupDetail() {
           <Pressable className="absolute inset-0" onPress={() => setRenameVisible(false)} />
           <View className="gap-6 rounded-t-3xl bg-background p-6 pb-10">
             <View className="flex-row items-center justify-between">
-              <Text className="text-xl font-bold text-foreground">Rename group</Text>
+              <Text className="text-xl font-bold text-foreground">Edit group</Text>
               <Pressable
                 accessibilityRole="button"
                 onPress={() => setRenameVisible(false)}
@@ -312,9 +337,21 @@ export default function GroupDetail() {
             <Button
               label="Save"
               loading={renaming}
-              disabled={!newName.trim()}
+              disabled={!newName.trim() || deleting}
               onPress={handleRename}
             />
+            <Pressable
+              accessibilityRole="button"
+              disabled={deleting}
+              onPress={handleDelete}
+              className={`h-14 items-center justify-center rounded-xl border border-red-300 active:bg-red-500/10 ${
+                deleting ? "opacity-50" : ""
+              }`}
+            >
+              <Text className="text-base font-semibold text-red-500">
+                {deleting ? "Deleting..." : "Delete group"}
+              </Text>
+            </Pressable>
           </View>
         </KeyboardAvoidingView>
       </Modal>

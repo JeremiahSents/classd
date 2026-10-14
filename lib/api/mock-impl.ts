@@ -141,6 +141,9 @@ export const mockApi: ClassdApi = {
     const u = requireAuth();
     return { id: groupId, classId: "", name: patch.name.trim(), createdBy: u.id, createdAt: now() };
   },
+  async deleteGroup() {
+    /* no-op in mock */
+  },
   async joinGroup() {
     /* no-op in mock */
   },

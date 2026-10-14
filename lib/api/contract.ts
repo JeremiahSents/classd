@@ -252,6 +252,8 @@ export interface ClassdApi {
   createGroup(classId: string, name: string): Promise<Group>;
   /** Rename a group (creator only, per security rules). */
   updateGroup(groupId: string, patch: { name: string }): Promise<Group>;
+  /** Delete a group (creator only); a Cloud Function removes its members and tasks. */
+  deleteGroup(groupId: string): Promise<void>;
   joinGroup(groupId: string): Promise<void>;
   leaveGroup(groupId: string): Promise<void>;
   listGroupMembers(groupId: string): Promise<Member[]>;
