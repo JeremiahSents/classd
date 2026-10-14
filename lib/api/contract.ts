@@ -64,6 +64,8 @@ export interface UserProfile {
   role: Role;
   avatarUrl: string;
   createdAt: string; // ISO
+  /** Whether the user clicked the link in their verification email. */
+  emailVerified: boolean;
 }
 
 export interface ScheduleBlock {
@@ -241,6 +243,12 @@ export interface ClassdApi {
   /** Subscribe to auth changes; returns an unsubscribe fn. */
   onAuthStateChanged(cb: (user: UserProfile | null) => void): () => void;
   updateProfile(patch: Partial<Pick<UserProfile, "name" | "avatarUrl">>): Promise<UserProfile>;
+  /** Email a password-reset link. Succeeds even if no account exists (no enumeration). */
+  sendPasswordReset(email: string): Promise<void>;
+  /** (Re)send the verification email to the signed-in user. */
+  sendEmailVerification(): Promise<void>;
+  /** Re-fetch the signed-in user, e.g. to pick up a just-verified email. */
+  reloadCurrentUser(): Promise<UserProfile | null>;
 
   // ---- Project groups ----
   /** Groups within a class (the "unit group section"). */

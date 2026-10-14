@@ -12,6 +12,7 @@ import { HomeHeader } from "@/components/home/home-header";
 import { TasksSection } from "@/components/home/tasks-section";
 import { GroupTasksSection } from "@/components/home/group-tasks-section";
 import { UpdatesSection } from "@/components/home/updates-section";
+import { VerifyEmailBanner } from "@/components/home/verify-email-banner";
 import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
 
@@ -110,6 +111,9 @@ export default function Home() {
             <UserGreeting firstName={firstName} />
             <JoinButton onPress={() => setJoinVisible(true)} />
           </View>
+          <View className="px-6 pt-4">
+            <VerifyEmailBanner />
+          </View>
 
           <View className="flex-1 items-center justify-center gap-8 px-6">
             <BooksIcon size={140} />
@@ -126,6 +130,7 @@ export default function Home() {
           showsVerticalScrollIndicator={false}
         >
           <HomeHeader firstName={firstName} />
+          <VerifyEmailBanner />
 
           {/* Quick add task — only for users who rep at least one class */}
           {repClasses.length > 0 ? (

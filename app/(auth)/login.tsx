@@ -2,6 +2,7 @@ import { useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   Text,
   View,
@@ -16,7 +17,7 @@ import { useSession } from "@/lib/session";
 
 export default function AuthScreen() {
   const router = useRouter();
-  const { signInWithEmail, signUpWithEmail } = useSession();
+  const { signInWithEmail, signUpWithEmail, sendPasswordReset } = useSession();
 
   const [mode, setMode] = useState(0); // 0 = Login, 1 = Register
   const isRegister = mode === 1;
@@ -26,6 +27,27 @@ export default function AuthScreen() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // confirmation after a password-reset email is sent
+  const [notice, setNotice] = useState<string | null>(null);
+  const [sendingReset, setSendingReset] = useState(false);
+
+  async function handleForgotPassword() {
+    if (!email.trim()) {
+      setNotice(null);
+      setError("Enter your email above, then tap Forgot password.");
+      return;
+    }
+    setError(null);
+    setSendingReset(true);
+    try {
+      await sendPasswordReset(email.trim());
+      setNotice(`If an account exists for ${email.trim()}, we've emailed a link to reset your password.`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not send the reset email.");
+    } finally {
+      setSendingReset(false);
+    }
+  }
 
   async function handleSubmit() {
     if (!email.trim() || !password) {
@@ -33,6 +55,7 @@ export default function AuthScreen() {
       return;
     }
     setError(null);
+    setNotice(null);
     setSubmitting(true);
     try {
       const profile = isRegister
@@ -86,6 +109,7 @@ export default function AuthScreen() {
                 onChange={(i) => {
                   setMode(i);
                   setError(null);
+                  setNotice(null);
                 }}
               />
             </View>
@@ -124,6 +148,24 @@ export default function AuthScreen() {
                 autoCapitalize="none"
                 autoComplete={isRegister ? "password-new" : "password"}
               />
+
+              {!isRegister ? (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={handleForgotPassword}
+                  disabled={sendingReset}
+                  hitSlop={8}
+                  className="self-end"
+                >
+                  <Text className="text-sm font-semibold text-primary">
+                    {sendingReset ? "Sending..." : "Forgot password?"}
+                  </Text>
+                </Pressable>
+              ) : null}
+
+              {notice ? (
+                <Text className="text-center text-sm font-medium text-green-600">{notice}</Text>
+              ) : null}
 
               {error ? (
                 <Text className="text-center text-sm font-medium text-red-500">

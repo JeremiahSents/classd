@@ -38,6 +38,7 @@ interface Session {
   email: string;
   firstName: string;
   avatarUrl: string;
+  emailVerified: boolean;
 
   // Actions — all async, all throw ApiError on failure for the UI to display.
   // Sign-in/up return the signed-in profile so callers can route by role.
@@ -47,6 +48,10 @@ interface Session {
   updateAvatar: (url: string) => Promise<void>;
   /** Change the user's display name. */
   updateName: (name: string) => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<void>;
+  resendVerificationEmail: () => Promise<void>;
+  /** Re-check the signed-in user (e.g. after they verify their email). */
+  reloadUser: () => Promise<void>;
 }
 
 const SessionContext = createContext<Session | null>(null);
@@ -76,6 +81,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       email: user?.email ?? "",
       firstName: user?.name?.split(" ")[0] ?? "",
       avatarUrl: user?.avatarUrl ?? "",
+      emailVerified: user?.emailVerified ?? false,
 
       signUpWithEmail: async (input) => {
         const result = await api.signUpWithEmail(input);
@@ -98,6 +104,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       updateName: async (name) => {
         const updated = await api.updateProfile({ name: name.trim() });
         setUser(updated);
+      },
+      sendPasswordReset: (email) => api.sendPasswordReset(email),
+      resendVerificationEmail: () => api.sendEmailVerification(),
+      reloadUser: async () => {
+        const updated = await api.reloadCurrentUser();
+        if (updated) setUser(updated);
       },
     }),
     [user, loading],

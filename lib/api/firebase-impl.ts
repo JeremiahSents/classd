@@ -21,6 +21,9 @@
 import { FirebaseError } from "firebase/app";
 import {
   createUserWithEmailAndPassword,
+  reload,
+  sendEmailVerification as fbSendEmailVerification,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signOut as fbSignOut,
   onAuthStateChanged as fbOnAuthStateChanged,
@@ -102,6 +105,8 @@ function toUserProfile(uid: string, data: DocumentData): UserProfile {
     role: data.role === "admin" ? "admin" : "student",
     avatarUrl: (data.avatarUrl as string) ?? "",
     createdAt: tsToIso(data.createdAt),
+    // verification lives on the Auth user, not the profile doc
+    emailVerified: auth.currentUser?.uid === uid ? auth.currentUser.emailVerified : false,
   };
 }
 
@@ -122,6 +127,8 @@ function toApiError(e: unknown): ApiError {
         return new ApiError("invalid-argument", "That email address is not valid.");
       case "auth/weak-password":
         return new ApiError("invalid-argument", "Password should be at least 6 characters.");
+      case "auth/missing-email":
+        return new ApiError("invalid-argument", "Please enter your email.");
       case "auth/missing-password":
         return new ApiError("invalid-argument", "Please enter your password.");
       case "auth/invalid-credential":
@@ -327,6 +334,8 @@ export const firebaseApi: ClassdApi = {
 
       // mirror the name onto the Auth profile too (handy elsewhere)
       await fbUpdateProfile(cred.user, { displayName: name });
+      // best-effort: the home screen offers a resend if this fails
+      await fbSendEmailVerification(cred.user).catch(() => {});
 
       // create the Firestore profile document
       await setDoc(doc(db, "users", uid), {
@@ -344,6 +353,7 @@ export const firebaseApi: ClassdApi = {
         role: input.role,
         avatarUrl,
         createdAt: new Date().toISOString(),
+        emailVerified: false,
       };
       return { user, isNewUser: true };
     } catch (e) {
@@ -416,6 +426,37 @@ export const firebaseApi: ClassdApi = {
       const user = await loadProfile(current.uid);
       if (!user) throw new ApiError("not-found", "Profile not found");
       return user;
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async sendPasswordReset(email: string): Promise<void> {
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+    } catch (e) {
+      // don't reveal whether an account exists for this email
+      if (e instanceof FirebaseError && e.code === "auth/user-not-found") return;
+      throw toApiError(e);
+    }
+  },
+
+  async sendEmailVerification(): Promise<void> {
+    const current = auth.currentUser;
+    if (!current) throw new ApiError("unauthenticated", "Not signed in");
+    try {
+      await fbSendEmailVerification(current);
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async reloadCurrentUser(): Promise<UserProfile | null> {
+    const current = auth.currentUser;
+    if (!current) return null;
+    try {
+      await reload(current);
+      return await loadProfile(current.uid);
     } catch (e) {
       throw toApiError(e);
     }
