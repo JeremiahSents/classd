@@ -26,6 +26,7 @@ import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { EmptySectionHint } from "@/components/ui/section-header";
 import { AddGroupTaskModal } from "@/components/modals/add-group-task-modal";
 import { api, ApiError, type Group, type GroupTask, type Member } from "@/lib/api";
+import { useRefreshControl } from "@/components/ui/refresh-control";
 import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
 import { useToast } from "@/components/ui/toast";
@@ -83,6 +84,7 @@ export default function GroupDetail() {
       void load();
     }, [load]),
   );
+  const refreshControl = useRefreshControl(load);
 
   const isMember = members.some((m) => m.id === user?.id);
   const isCreator = group?.createdBy === user?.id;
@@ -240,7 +242,11 @@ export default function GroupDetail() {
         </View>
       ) : null}
 
-      <ScrollView contentContainerClassName="gap-3 px-6 pb-32 pt-2" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        refreshControl={refreshControl}
+        contentContainerClassName="gap-3 px-6 pb-32 pt-2"
+        showsVerticalScrollIndicator={false}
+      >
         {tab === 0 ? (
           tasks.length > 0 ? (
             tasks.map((t) => (

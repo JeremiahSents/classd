@@ -7,6 +7,7 @@ import { PlusSignIcon, UserGroupIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { CreateGroupModal } from "@/components/modals/create-group-modal";
 import { api, type Group } from "@/lib/api";
+import { useRefreshControl } from "@/components/ui/refresh-control";
 import { useClasses } from "@/lib/classes-store";
 
 export default function Groups() {
@@ -31,6 +32,7 @@ export default function Groups() {
       void load();
     }, [load]),
   );
+  const refreshControl = useRefreshControl(load);
 
   // creating a group needs at least one class to attach it to
   const canCreate = classes.length > 0;
@@ -74,7 +76,11 @@ export default function Groups() {
           )}
         </View>
       ) : (
-        <ScrollView contentContainerClassName="gap-3 px-6 pb-32" showsVerticalScrollIndicator={false}>
+        <ScrollView
+          refreshControl={refreshControl}
+          contentContainerClassName="gap-3 px-6 pb-32"
+          showsVerticalScrollIndicator={false}
+        >
           {groups.map((g) => (
             <Pressable
               key={g.id}

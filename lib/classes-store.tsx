@@ -6,6 +6,7 @@
 //
 // Materials are loaded per class, on demand (`loadMaterials`), since they're
 // only shown on the class screen.
+import { AppState } from "react-native";
 import {
   createContext,
   useCallback,
@@ -260,6 +261,15 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh();
   }, [refresh, user?.id]);
+
+  // pick up anything posted while the app was in the background
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") void refresh(true);
+    });
+    return () => sub.remove();
+  }, [isAuthenticated, refresh]);
 
   const value = useMemo<ClassesStore>(() => {
     const enrolledClassIds = classes.map((c) => c.id);

@@ -13,6 +13,7 @@ import { TasksSection } from "@/components/home/tasks-section";
 import { GroupTasksSection } from "@/components/home/group-tasks-section";
 import { UpdatesSection } from "@/components/home/updates-section";
 import { VerifyEmailBanner } from "@/components/home/verify-email-banner";
+import { useRefreshControl } from "@/components/ui/refresh-control";
 import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
 
@@ -70,6 +71,7 @@ export default function Home() {
   const { firstName, user } = useSession();
   const [joinVisible, setJoinVisible] = useState(false);
   const [quickAddVisible, setQuickAddVisible] = useState(false);
+  const refreshControl = useRefreshControl(() => refresh(true));
 
   // Keep data fresh — e.g. after an admin assigns this user as a class rep.
   useFocusEffect(
@@ -126,6 +128,7 @@ export default function Home() {
         </View>
       ) : (
         <ScrollView
+          refreshControl={refreshControl}
           contentContainerClassName="gap-8 px-6 pb-32 pt-2"
           showsVerticalScrollIndicator={false}
         >

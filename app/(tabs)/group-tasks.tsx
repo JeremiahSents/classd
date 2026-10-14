@@ -12,6 +12,7 @@ import {
 } from "@hugeicons/core-free-icons";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import type { GroupTaskItem } from "@/lib/types";
+import { useRefreshControl } from "@/components/ui/refresh-control";
 import { useClasses } from "@/lib/classes-store";
 
 const FILTERS = ["All", "Pending", "Completed"];
@@ -62,7 +63,8 @@ function GroupTaskRow({
 
 export default function GroupTasks() {
   const router = useRouter();
-  const { groupTasks, toggleGroupTask } = useClasses();
+  const { groupTasks, toggleGroupTask, refresh } = useClasses();
+  const refreshControl = useRefreshControl(() => refresh(true));
   const [filter, setFilter] = useState(0); // 0 all, 1 pending, 2 completed
   const [search, setSearch] = useState("");
 
@@ -134,6 +136,7 @@ export default function GroupTasks() {
         </View>
       ) : (
         <ScrollView
+          refreshControl={refreshControl}
           contentContainerClassName="gap-4 px-6 pb-32 pt-2"
           showsVerticalScrollIndicator={false}
         >

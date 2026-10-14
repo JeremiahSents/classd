@@ -6,13 +6,15 @@ import { HugeiconsIcon } from "@hugeicons/react-native";
 import { ArrowLeft01Icon, CheckmarkCircle02Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { TaskRow } from "@/components/class/task-row";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
+import { useRefreshControl } from "@/components/ui/refresh-control";
 import { useClasses } from "@/lib/classes-store";
 
 const FILTERS = ["All", "Pending", "Completed"];
 
 export default function Tasks() {
   const router = useRouter();
-  const { tasks, className, isTaskComplete, toggleTaskComplete } = useClasses();
+  const { tasks, className, isTaskComplete, toggleTaskComplete, refresh } = useClasses();
+  const refreshControl = useRefreshControl(() => refresh(true));
   const [filter, setFilter] = useState(0); // 0 all, 1 pending, 2 completed
   const [search, setSearch] = useState("");
 
@@ -85,6 +87,7 @@ export default function Tasks() {
         </View>
       ) : (
         <ScrollView
+          refreshControl={refreshControl}
           contentContainerClassName="gap-4 px-6 pb-32 pt-2"
           showsVerticalScrollIndicator={false}
         >

@@ -4,6 +4,7 @@
 // a persisted session) and on every sign-in / sign-out. The auth screens call
 // the sign-in/up methods, profile calls signOut/updateAvatar, and the rest of
 // the UI just reads role/name/avatarUrl off the current user.
+import { AppState } from "react-native";
 import {
   createContext,
   useContext,
@@ -68,12 +69,28 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const unsubscribe = api.onAuthStateChanged((u) => {
       setUser(u);
       setLoading(false);
-      // Register this device for push once signed in. No-ops (logs a warning)
-      // until expo-notifications/expo-device are installed and on a real device.
+      // Register this device for push once signed in (no-op on web/simulators).
       if (u) void registerForPushNotifications().catch(() => {});
     });
     return unsubscribe;
   }, []);
+
+  // Coming back from the email app? Re-check so the "verify your email"
+  // banner clears on its own once the link was tapped.
+  const needsVerification = !!user && !user.emailVerified;
+  useEffect(() => {
+    if (!needsVerification) return;
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      void api
+        .reloadCurrentUser()
+        .then((u) => {
+          if (u?.emailVerified) setUser(u);
+        })
+        .catch(() => {});
+    });
+    return () => sub.remove();
+  }, [needsVerification]);
 
   const value = useMemo<Session>(
     () => ({

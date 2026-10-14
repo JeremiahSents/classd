@@ -8,11 +8,13 @@ import { BooksIcon } from "@/components/ui/books-icon";
 import { Button } from "@/components/ui/button";
 import { ClassCard } from "@/components/class/class-card";
 import { JoinClassModal } from "@/components/modals/join-class-modal";
+import { useRefreshControl } from "@/components/ui/refresh-control";
 import { useClasses } from "@/lib/classes-store";
 
 export default function Classes() {
   const router = useRouter();
-  const { loading, classes } = useClasses();
+  const { loading, classes, refresh } = useClasses();
+  const refreshControl = useRefreshControl(() => refresh(true));
   const [joinVisible, setJoinVisible] = useState(false);
 
   const isEmpty = classes.length === 0;
@@ -46,6 +48,7 @@ export default function Classes() {
         </View>
       ) : (
         <ScrollView
+          refreshControl={refreshControl}
           contentContainerClassName="gap-4 px-6 pb-32"
           showsVerticalScrollIndicator={false}
         >

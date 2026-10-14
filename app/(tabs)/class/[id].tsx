@@ -20,6 +20,7 @@ import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { EmptySectionHint } from "@/components/ui/section-header";
 import { AnnouncementCard } from "@/components/class/announcement-card";
 import { AnnouncementDetailModal } from "@/components/modals/announcement-detail-modal";
+import { useRefreshControl } from "@/components/ui/refresh-control";
 import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
 import { confirmAction } from "@/lib/confirm";
@@ -77,6 +78,9 @@ export default function ClassDetail() {
       void loadGroups();
       void loadMaterials(id);
     }, [refresh, loadGroups, loadMaterials, id]),
+  );
+  const refreshControl = useRefreshControl(() =>
+    Promise.all([refresh(true), loadGroups(), loadMaterials(id)]),
   );
 
   const classroom = getClass(id);
@@ -247,6 +251,7 @@ export default function ClassDetail() {
 
       {/* Content */}
       <ScrollView
+        refreshControl={refreshControl}
         contentContainerClassName="gap-4 px-6 pb-32 pt-3"
         showsVerticalScrollIndicator={false}
       >

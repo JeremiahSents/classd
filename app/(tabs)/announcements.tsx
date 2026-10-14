@@ -7,10 +7,12 @@ import { QuickAddAnnouncementModal } from "@/components/modals/quick-add-announc
 import { AnnouncementCard } from "@/components/class/announcement-card";
 import { AnnouncementDetailModal } from "@/components/modals/announcement-detail-modal";
 import type { Announcement } from "@/lib/types";
+import { useRefreshControl } from "@/components/ui/refresh-control";
 import { useClasses } from "@/lib/classes-store";
 
 export default function Announcements() {
-  const { announcements, classes, className, canManageClass } = useClasses();
+  const { announcements, classes, className, canManageClass, refresh } = useClasses();
+  const refreshControl = useRefreshControl(() => refresh(true));
   const [search, setSearch] = useState("");
   const [addVisible, setAddVisible] = useState(false);
   const [selected, setSelected] = useState<Announcement | null>(null);
@@ -81,6 +83,7 @@ export default function Announcements() {
         </View>
       ) : (
         <ScrollView
+          refreshControl={refreshControl}
           contentContainerClassName="gap-5 px-6 pb-32 pt-2"
           showsVerticalScrollIndicator={false}
         >
