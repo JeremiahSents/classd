@@ -210,6 +210,9 @@ export interface CreateGroupTaskInput {
   assignedToName: string;
 }
 
+/** Largest material upload allowed (keep in sync with storage.rules). */
+export const MAX_MATERIAL_BYTES = 25 * 1024 * 1024;
+
 /** A file selected from the device, ready to upload. */
 export interface UploadFileInput {
   /** Local uri from expo-document-picker. */
@@ -264,7 +267,11 @@ export interface ClassdApi {
   createClass(input: CreateClassInput): Promise<Class>; // class rep only
   joinClassByCode(code: string): Promise<Class>; // student
   leaveClass(classId: string): Promise<void>; // student
-  assignClassRep(classId: string, memberId: string): Promise<void>; // class rep
+  assignClassRep(classId: string, memberId: string): Promise<void>; // admin
+  /** Issue a fresh join code (e.g. if the old one leaked). Owner/admin. */
+  regenerateClassCode(classId: string): Promise<Class>;
+  /** Delete a class; a Cloud Function removes everything inside it. Owner/admin. */
+  deleteClass(classId: string): Promise<void>;
 
   // ---- Members ----
   listMembers(classId: string): Promise<Member[]>;

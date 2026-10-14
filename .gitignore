@@ -50,3 +50,6 @@ functions/node_modules/
 
 
 google-services.json
+
+# Firebase emulator logs
+firestore-debug.log

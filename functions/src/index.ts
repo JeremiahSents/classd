@@ -12,10 +12,11 @@
 
 import { setGlobalOptions } from "firebase-functions";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { onRequest } from "firebase-functions/v2/https";
-import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
+import { onDocumentCreated, onDocumentDeleted } from "firebase-functions/v2/firestore";
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
+import { getStorage } from "firebase-admin/storage";
 import {
   getFirestore,
   Timestamp,
@@ -261,6 +262,128 @@ export const onAnnouncementPosted = onDocumentCreated(
         announcementId: event.params.announcementId,
         type: "new_announcement",
       },
+    );
+  },
+);
+
+export const onMaterialPosted = onDocumentCreated(
+  "classes/{classId}/materials/{materialId}",
+  async (event) => {
+    const material = event.data?.data();
+    if (!material) return;
+    await notifyClassMembers(
+      event.params.classId,
+      "New class material",
+      String(material.name ?? "A new file was shared"),
+      {
+        classId: event.params.classId,
+        materialId: event.params.materialId,
+        type: "new_material",
+      },
+    );
+  },
+);
+
+/* ------------------------------------------------------------------ *
+ * Join a class by code. Runs server-side so students never need read
+ * access to the classes collection — join codes can't be scraped.
+ * ------------------------------------------------------------------ */
+
+const JOIN_WINDOW = HOUR;
+const MAX_FAILED_JOINS = 10; // wrong codes allowed per user per hour
+
+export const joinClass = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Please sign in again.");
+
+  const code = String(request.data?.code ?? "").trim();
+  if (!/^\d{6}$/.test(code)) {
+    throw new HttpsError("invalid-argument", "Enter the 6-digit class code.");
+  }
+
+  // rate limit wrong guesses so codes can't be brute-forced
+  const attemptsRef = db.doc(`joinAttempts/${uid}`);
+  const attempts = await attemptsRef.get();
+  const windowStart: number = attempts.get("windowStart") ?? 0;
+  const failures: number =
+    Date.now() - windowStart < JOIN_WINDOW ? attempts.get("failures") ?? 0 : 0;
+  if (failures >= MAX_FAILED_JOINS) {
+    throw new HttpsError(
+      "resource-exhausted",
+      "Too many wrong codes. Please try again in an hour.",
+    );
+  }
+
+  const found = await db.collection("classes").where("code", "==", code).limit(1).get();
+  if (found.empty) {
+    await attemptsRef.set({
+      windowStart: failures === 0 ? Date.now() : windowStart,
+      failures: failures + 1,
+    });
+    throw new HttpsError("not-found", "No class with that code");
+  }
+
+  const classDoc = found.docs[0];
+  const memberRef = classDoc.ref.collection("members").doc(uid);
+  // re-entering the code must not demote an existing class rep
+  if (!(await memberRef.get()).exists) {
+    const user = await db.doc(`users/${uid}`).get();
+    await memberRef.set({
+      uid,
+      name: user.get("name") ?? "",
+      email: user.get("email") ?? "",
+      avatarUrl: user.get("avatarUrl") ?? "",
+      // everyone joins as a regular student; an admin promotes to classRep later
+      role: "student",
+      joinedAt: FieldValue.serverTimestamp(),
+    });
+  }
+  return { classId: classDoc.id };
+});
+
+/* ------------------------------------------------------------------ *
+ * Cleanup triggers. Clients only delete the top-level doc; these remove
+ * everything hanging off it so nothing is orphaned.
+ * ------------------------------------------------------------------ */
+
+/** Delete every group in a class, with its members and tasks. */
+async function deleteGroupsInClass(classId: string): Promise<void> {
+  const groups = await db.collection("groups").where("classId", "==", classId).get();
+  await Promise.all(groups.docs.map((g) => db.recursiveDelete(g.ref)));
+}
+
+// A class was deleted: remove its members, tasks, announcements, materials
+// (records and files) and project groups.
+export const onClassDeleted = onDocumentDeleted("classes/{classId}", async (event) => {
+  const classId = event.params.classId;
+  await db.recursiveDelete(db.collection("classes").doc(classId));
+  await deleteGroupsInClass(classId);
+  await getStorage()
+    .bucket()
+    .deleteFiles({ prefix: `classes/${classId}/` })
+    .catch((e) => logger.warn("Material file cleanup failed", { classId, error: String(e) }));
+});
+
+// A group was deleted: remove its members and tasks.
+export const onGroupDeleted = onDocumentDeleted("groups/{groupId}", async (event) => {
+  await db.recursiveDelete(db.collection("groups").doc(event.params.groupId));
+});
+
+// Someone left (or was removed from) a class: if they were its rep, clear the
+// rep slot so they lose manage rights, and take them out of the class's groups.
+export const onMemberRemoved = onDocumentDeleted(
+  "classes/{classId}/members/{uid}",
+  async (event) => {
+    const { classId, uid } = event.params;
+    const classRef = db.collection("classes").doc(classId);
+    const classSnap = await classRef.get();
+    if (!classSnap.exists) return; // whole class deleted — onClassDeleted handles it
+    if (classSnap.get("classRepId") === uid) {
+      await classRef.update({ classRepId: FieldValue.delete() });
+    }
+    const groups = await db.collection("groups").where("classId", "==", classId).get();
+    await Promise.all(
+      groups.docs.map((g) => g.ref.collection("groupMembers").doc(uid).delete()),
     );
   },
 );

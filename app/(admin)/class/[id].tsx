@@ -4,16 +4,21 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 import { api, type Class, type Member } from "@/lib/api";
+import { confirmAction } from "@/lib/confirm";
 
 export default function AdminClassDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const toast = useToast();
 
   const [cls, setCls] = useState<Class | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [busyAction, setBusyAction] = useState<"code" | "delete" | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -39,6 +44,62 @@ export default function AdminClassDetail() {
       await load();
     } finally {
       setBusyId(null);
+    }
+  }
+
+  async function removeMember(member: Member) {
+    const ok = await confirmAction({
+      title: `Remove ${member.name || member.email}?`,
+      message: "They'll lose access to this class until they join again with the code.",
+      confirmLabel: "Remove",
+    });
+    if (!ok) return;
+    setBusyId(member.id);
+    try {
+      await api.removeMember(id, member.id);
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not remove member.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function newJoinCode() {
+    const ok = await confirmAction({
+      title: "Generate a new join code?",
+      message: "The old code stops working. Current members stay in the class.",
+      confirmLabel: "Generate",
+      destructive: false,
+    });
+    if (!ok) return;
+    setBusyAction("code");
+    try {
+      setCls(await api.regenerateClassCode(id));
+      toast.success("New join code ready", "🔑");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not change the code.");
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function deleteClass() {
+    const ok = await confirmAction({
+      title: `Delete ${cls?.name ?? "this class"}?`,
+      message:
+        "This permanently removes the class with all its members, tasks, announcements, materials and groups.",
+      confirmLabel: "Delete class",
+    });
+    if (!ok) return;
+    setBusyAction("delete");
+    try {
+      await api.deleteClass(id);
+      toast.success("Class deleted", "🗑️");
+      router.back();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete the class.");
+      setBusyAction(null);
     }
   }
 
@@ -121,10 +182,42 @@ export default function AdminClassDetail() {
                     </Text>
                   </Pressable>
                 )}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Remove ${m.name || m.email}`}
+                  disabled={busyId === m.id}
+                  onPress={() => removeMember(m)}
+                  className="rounded-full border border-red-300 px-3 py-1.5 active:bg-red-500/10"
+                >
+                  <Text className="text-xs font-semibold text-red-500">Remove</Text>
+                </Pressable>
               </View>
             );
           })
         )}
+
+        {/* Class settings */}
+        <View className="mt-4 gap-3">
+          <Button
+            label="Generate new join code"
+            variant="outline"
+            loading={busyAction === "code"}
+            disabled={busyAction !== null}
+            onPress={newJoinCode}
+          />
+          <Pressable
+            accessibilityRole="button"
+            disabled={busyAction !== null}
+            onPress={deleteClass}
+            className={`h-14 items-center justify-center rounded-xl border border-red-300 active:bg-red-500/10 ${
+              busyAction !== null ? "opacity-50" : ""
+            }`}
+          >
+            <Text className="text-base font-semibold text-red-500">
+              {busyAction === "delete" ? "Deleting..." : "Delete class"}
+            </Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );

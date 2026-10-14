@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
@@ -21,17 +21,13 @@ import { EmptySectionHint } from "@/components/ui/section-header";
 import { ANNOUNCEMENT_CATEGORY_LABEL } from "@/lib/types";
 import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
-import { api, type Group } from "@/lib/api";
+import { confirmAction } from "@/lib/confirm";
+import { api, MAX_MATERIAL_BYTES, type Group } from "@/lib/api";
+import type { Material } from "@/lib/types";
 import { CreateGroupModal } from "@/components/modals/create-group-modal";
+import { useToast } from "@/components/ui/toast";
 
 const TABS = ["Tasks", "Materials", "Updates", "Members", "Groups"];
-
-function formatSize(bytes?: number): string | undefined {
-  if (!bytes && bytes !== 0) return undefined;
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 export default function ClassDetail() {
   const router = useRouter();
@@ -42,12 +38,17 @@ export default function ClassDetail() {
     tasksForClass,
     announcementsForClass,
     materialsForClass,
-    addMaterial,
+    loadMaterials,
+    uploadMaterial,
+    deleteMaterial,
+    removeMember,
+    leaveClass,
     isTaskComplete,
     toggleTaskComplete,
     refresh,
   } = useClasses();
   const { role, user } = useSession();
+  const toast = useToast();
 
   const [tab, setTab] = useState(0);
   const [inviteVisible, setInviteVisible] = useState(false);
@@ -55,6 +56,7 @@ export default function ClassDetail() {
   const [addAnnouncementVisible, setAddAnnouncementVisible] = useState(false);
   const [createGroupVisible, setCreateGroupVisible] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const loadGroups = useCallback(async () => {
     try {
@@ -69,7 +71,8 @@ export default function ClassDetail() {
     useCallback(() => {
       void refresh(true);
       void loadGroups();
-    }, [refresh, loadGroups]),
+      void loadMaterials(id);
+    }, [refresh, loadGroups, loadMaterials, id]),
   );
 
   const classroom = getClass(id);
@@ -101,17 +104,85 @@ export default function ClassDetail() {
     });
     if (result.canceled) return;
     const asset = result.assets[0];
-    addMaterial(id, {
-      name: asset.name,
-      sizeLabel: formatSize(asset.size),
-      mimeType: asset.mimeType,
-      uri: asset.uri,
+    if (asset.size !== undefined && asset.size > MAX_MATERIAL_BYTES) {
+      toast.error("Files must be 25 MB or smaller.");
+      return;
+    }
+    setUploading(true);
+    try {
+      await uploadMaterial(id, {
+        uri: asset.uri,
+        name: asset.name,
+        mimeType: asset.mimeType,
+        sizeBytes: asset.size,
+      });
+      toast.success("Material uploaded!", "📎");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed. Please try again.");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function openMaterial(material: Material) {
+    try {
+      await Linking.openURL(material.url);
+    } catch {
+      toast.error("Couldn't open this file.");
+    }
+  }
+
+  async function handleDeleteMaterial(material: Material) {
+    const ok = await confirmAction({
+      title: "Delete this file?",
+      message: `"${material.name}" will be removed for everyone in the class.`,
+      confirmLabel: "Delete",
     });
+    if (!ok) return;
+    try {
+      await deleteMaterial(id, material.id);
+      toast.success("File deleted", "🗑️");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not delete the file.");
+    }
+  }
+
+  async function handleRemoveMember(memberId: string, memberName: string) {
+    const ok = await confirmAction({
+      title: `Remove ${memberName || "this member"}?`,
+      message: "They'll lose access to this class until they join again with the code.",
+      confirmLabel: "Remove",
+    });
+    if (!ok) return;
+    try {
+      await removeMember(id, memberId);
+      toast.success("Member removed", "👋");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not remove member.");
+    }
+  }
+
+  async function handleLeave() {
+    const ok = await confirmAction({
+      title: `Leave ${classroom?.name ?? "this class"}?`,
+      message: "You'll stop seeing its tasks and announcements. You can rejoin with the class code.",
+      confirmLabel: "Leave",
+    });
+    if (!ok) return;
+    try {
+      await leaveClass(id);
+      toast.success("You left the class", "👋");
+      router.replace("/(tabs)/classes");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not leave the class.");
+    }
   }
 
   function handleAdd() {
     if (tab === 0) setAddTaskVisible(true);
-    else if (tab === 1) pickFile();
+    else if (tab === 1) {
+      if (!uploading) void pickFile();
+    }
     else if (tab === 2) setAddAnnouncementVisible(true);
     else if (tab === 3) setInviteVisible(true);
     else setCreateGroupVisible(true); // Groups tab — any member can create
@@ -201,6 +272,12 @@ export default function ClassDetail() {
         ) : null}
 
         {/* Materials */}
+        {tab === 1 && uploading ? (
+          <View className="flex-row items-center gap-3 rounded-2xl border border-dashed border-border p-4">
+            <ActivityIndicator color="#4f46e5" />
+            <Text className="text-sm font-medium text-muted-foreground">Uploading…</Text>
+          </View>
+        ) : null}
         {tab === 1 ? (
           materials.length > 0 ? (
             materials.map((m) => (
@@ -210,9 +287,11 @@ export default function ClassDetail() {
                 sizeLabel={m.sizeLabel}
                 addedLabel={m.addedLabel}
                 mimeType={m.mimeType}
+                onPress={() => openMaterial(m)}
+                onDelete={canManage ? () => handleDeleteMaterial(m) : undefined}
               />
             ))
-          ) : (
+          ) : uploading ? null : (
             <EmptySectionHint
               text={
                 canManage
@@ -287,18 +366,44 @@ export default function ClassDetail() {
         {tab === 3 ? (
           members.length > 0 ? (
             <View className="gap-3">
-              {members.map((member) => (
-                <MemberRow
-                  key={member.id}
-                  name={member.name}
-                  email={member.email}
-                  isRep={classroom.classRepId === member.id}
-                />
-              ))}
+              {members.map((member) => {
+                const isRep = classroom.classRepId === member.id;
+                // managers can remove students (not themselves or the rep)
+                const removable = canManage && !isRep && member.id !== user?.id;
+                return (
+                  <MemberRow
+                    key={member.id}
+                    name={member.name}
+                    email={member.email}
+                    isRep={isRep}
+                    trailing={
+                      removable ? (
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={`Remove ${member.name}`}
+                          onPress={() => handleRemoveMember(member.id, member.name)}
+                          className="rounded-full border border-red-300 px-3 py-1.5 active:bg-red-500/10"
+                        >
+                          <Text className="text-xs font-semibold text-red-500">Remove</Text>
+                        </Pressable>
+                      ) : undefined
+                    }
+                  />
+                );
+              })}
             </View>
           ) : (
             <EmptySectionHint text="No one has joined with the code yet" />
           )
+        ) : null}
+        {tab === 3 && myMemberRole ? (
+          <Pressable
+            accessibilityRole="button"
+            onPress={handleLeave}
+            className="mt-2 h-12 items-center justify-center rounded-xl border border-red-300 active:bg-red-500/10"
+          >
+            <Text className="text-base font-semibold text-red-500">Leave class</Text>
+          </Pressable>
         ) : null}
 
         {/* Groups */}

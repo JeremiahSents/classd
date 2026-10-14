@@ -4,8 +4,8 @@
 // mutations. UI-shaped types (with human labels like "Due tomorrow") are mapped
 // from the API's ISO-timestamp shapes here, so screens stay presentation-only.
 //
-// NOTE: Materials are kept local-only for now — the Materials backend isn't
-// implemented yet, so uploaded files live in memory and are not persisted.
+// Materials are loaded per class, on demand (`loadMaterials`), since they're
+// only shown on the class screen.
 import {
   createContext,
   useCallback,
@@ -20,8 +20,10 @@ import {
   ApiError,
   type Announcement as ApiAnnouncement,
   type Class as ApiClass,
+  type Material as ApiMaterial,
   type Member as ApiMember,
   type Task as ApiTask,
+  type UploadFileInput,
 } from "@/lib/api";
 import { useSession } from "@/lib/session";
 import type { Classroom } from "@/lib/classes";
@@ -88,6 +90,24 @@ const toAnnouncement = (a: ApiAnnouncement): Announcement => ({
   ...(a.dueAt ? { dueLabel: dueLabel(a.dueAt), dueAt: a.dueAt } : {}),
 });
 
+function formatSize(bytes?: number): string | undefined {
+  if (bytes === undefined) return undefined;
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+const toMaterial = (m: ApiMaterial): Material => ({
+  id: m.id,
+  classId: m.classId,
+  name: m.name,
+  sizeLabel: formatSize(m.sizeBytes),
+  mimeType: m.mimeType,
+  url: m.url,
+  addedLabel: relativeTime(m.createdAt),
+  createdAt: m.createdAt,
+});
+
 const toMember = (m: ApiMember): Member => ({
   id: m.id,
   name: m.name,
@@ -125,7 +145,9 @@ interface ClassesStore {
   joinClass: (code: string) => Promise<Classroom | null>;
   addClass: (name: string) => Promise<Classroom>;
   assignCR: (classId: string, memberId: string) => void;
-  removeMember: (classId: string, memberId: string) => void;
+  removeMember: (classId: string, memberId: string) => Promise<void>;
+  /** Leave a class the current user is enrolled in. */
+  leaveClass: (classId: string) => Promise<void>;
   addTask: (
     classId: string,
     input: { title: string; description: string; dueAt: string },
@@ -140,10 +162,10 @@ interface ClassesStore {
     classId: string,
     input: { title: string; content: string; category: AnnouncementCategory; dueAt?: string },
   ) => Promise<Announcement>;
-  addMaterial: (
-    classId: string,
-    input: { name: string; sizeLabel?: string; mimeType?: string; uri?: string },
-  ) => Material;
+  /** Fetch a class's materials (called when the class screen opens). */
+  loadMaterials: (classId: string) => Promise<void>;
+  uploadMaterial: (classId: string, file: UploadFileInput) => Promise<Material>;
+  deleteMaterial: (classId: string, materialId: string) => Promise<void>;
 }
 
 const ClassesContext = createContext<ClassesStore | null>(null);
@@ -159,8 +181,7 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
   const [groupTasks, setGroupTasks] = useState<GroupTaskItem[]>([]);
   const [groupCount, setGroupCount] = useState(0);
   const [completedTaskIds, setCompletedTaskIds] = useState<string[]>([]);
-  // Materials are local-only until the backend supports them.
-  const [materials, setMaterials] = useState<Material[]>([]);
+  const [materialsByClass, setMaterialsByClass] = useState<Record<string, Material[]>>({});
 
   const refresh = useCallback(async (silent = false) => {
     if (!isAuthenticated) {
@@ -171,6 +192,7 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
       setGroupTasks([]);
       setGroupCount(0);
       setCompletedTaskIds([]);
+      setMaterialsByClass({});
       setLoading(false);
       return;
     }
@@ -247,7 +269,7 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
       membersForClass: (classId) => membersByClass[classId] ?? [],
       tasksForClass: (classId) => tasks.filter((t) => t.classId === classId),
       announcementsForClass: (classId) => announcements.filter((a) => a.classId === classId),
-      materialsForClass: (classId) => materials.filter((m) => m.classId === classId),
+      materialsForClass: (classId) => materialsByClass[classId] ?? [],
       className: (classId) => classes.find((c) => c.id === classId)?.name ?? "",
 
       isTaskComplete: (taskId) => completedTaskIds.includes(taskId),
@@ -305,8 +327,22 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
         void api.assignClassRep(classId, memberId).then(() => refresh());
       },
 
-      removeMember: (classId, memberId) => {
-        void api.removeMember(classId, memberId).then(() => refresh());
+      removeMember: async (classId, memberId) => {
+        await api.removeMember(classId, memberId);
+        setMembersByClass((prev) => ({
+          ...prev,
+          [classId]: (prev[classId] ?? []).filter((m) => m.id !== memberId),
+        }));
+        void refresh(true);
+      },
+
+      leaveClass: async (classId) => {
+        await api.leaveClass(classId);
+        // drop the class and everything in it from local state right away
+        setClasses((prev) => prev.filter((c) => c.id !== classId));
+        setTasks((prev) => prev.filter((t) => t.classId !== classId));
+        setAnnouncements((prev) => prev.filter((a) => a.classId !== classId));
+        void refresh(true);
       },
 
       // Create/update/delete apply an optimistic local change and reconcile in
@@ -345,13 +381,37 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
         return announcement;
       },
 
-      addMaterial: (classId, input) => {
-        const material: Material = { id: `mat-${Date.now()}`, classId, addedLabel: "Just now", ...input };
-        setMaterials((prev) => [material, ...prev]);
+      loadMaterials: async (classId) => {
+        try {
+          const list = await api.listMaterials(classId);
+          // newest first (ISO sorts chronologically)
+          const sorted = [...list]
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+            .map(toMaterial);
+          setMaterialsByClass((prev) => ({ ...prev, [classId]: sorted }));
+        } catch (e) {
+          console.warn("[classes-store] listMaterials failed", e);
+        }
+      },
+
+      uploadMaterial: async (classId, file) => {
+        const material = toMaterial(await api.uploadMaterial(classId, file));
+        setMaterialsByClass((prev) => ({
+          ...prev,
+          [classId]: [material, ...(prev[classId] ?? [])],
+        }));
         return material;
       },
+
+      deleteMaterial: async (classId, materialId) => {
+        await api.deleteMaterial(classId, materialId);
+        setMaterialsByClass((prev) => ({
+          ...prev,
+          [classId]: (prev[classId] ?? []).filter((m) => m.id !== materialId),
+        }));
+      },
     };
-  }, [loading, classes, tasks, announcements, groupTasks, groupCount, membersByClass, materials, completedTaskIds, refresh]);
+  }, [loading, classes, tasks, announcements, groupTasks, groupCount, membersByClass, materialsByClass, completedTaskIds, refresh]);
 
   return <ClassesContext.Provider value={value}>{children}</ClassesContext.Provider>;
 }

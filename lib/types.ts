@@ -61,10 +61,12 @@ export interface Material {
   /** Human-readable size, e.g. "2.4 MB". */
   sizeLabel?: string;
   mimeType?: string;
-  /** Local uri from the picker; no cloud upload yet. */
-  uri?: string;
+  /** Download URL in Cloud Storage. */
+  url: string;
   /** Human-readable added time, e.g. "Just now" / "2 days ago". */
   addedLabel: string;
+  /** Raw ISO upload time — used for sorting. */
+  createdAt: string;
 }
 
 export const ANNOUNCEMENT_CATEGORY_LABEL: Record<AnnouncementCategory, string> = {

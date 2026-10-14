@@ -206,6 +206,14 @@ export const mockApi: ClassdApi = {
   async assignClassRep(classId, memberId) {
     classes = classes.map((c) => (c.id === classId ? { ...c, classRepId: memberId } : c));
   },
+  async regenerateClassCode(classId) {
+    classes = classes.map((c) => (c.id === classId ? { ...c, code: code() } : c));
+    return mockApi.getClass(classId);
+  },
+  async deleteClass(classId) {
+    classes = classes.filter((c) => c.id !== classId);
+    enrolledClassIds = enrolledClassIds.filter((x) => x !== classId);
+  },
 
   async listMembers(classId) {
     return membersByClass[classId] ?? [];

@@ -1,24 +1,21 @@
 /**
- * Firebase implementation of ClassdApi — THE FILE THE BACKEND DEV BUILDS.
+ * Firebase implementation of ClassdApi — every method talks to Firebase Auth,
+ * Firestore, Storage, or a Cloud Function (`functions/src/index.ts`).
  *
- * Every method below currently throws `notImplemented()`. Replace each body
- * with real Firebase Auth / Firestore / Storage calls. The `db`, `auth`, and
- * `storage` singletons are exported from `@/lib/firebase`.
- *
- * Firestore data model (see BACKEND_INTEGRATION.md for full detail):
+ * Firestore data model (see ARCHITECTURE.md for full detail):
  *   users/{uid}
  *   classes/{classId}
  *   classes/{classId}/members/{uid}
  *   classes/{classId}/tasks/{taskId}
  *   classes/{classId}/announcements/{announcementId}
- *   classes/{classId}/materials/{materialId}
+ *   classes/{classId}/materials/{materialId}   (file in Storage at storagePath)
  *   users/{uid}/completions/{taskId}    (per-user task completion)
  *
- * Tips:
- *  - Map Firestore Timestamps to ISO strings (`.toDate().toISOString()`) before
- *    returning — the contract requires ISO strings, not Timestamp objects.
- *  - Throw `ApiError` (not raw Firebase errors) so the UI can react. A small
- *    `wrap()` helper that maps Firebase error codes is a good idea.
+ * Conventions:
+ *  - Firestore Timestamps are mapped to ISO strings before returning — the
+ *    contract requires ISO strings, not Timestamp objects.
+ *  - Every method throws `ApiError` (via `toApiError`), never a raw Firebase
+ *    error, so the UI can show a friendly message.
  */
 
 import { FirebaseError } from "firebase/app";
@@ -50,6 +47,7 @@ import {
 } from "firebase/firestore";
 import {
   ApiError,
+  MAX_MATERIAL_BYTES,
   type ClassdApi,
   type AuthResult,
   type Class,
@@ -70,12 +68,15 @@ import {
   type UploadFileInput,
   type UserProfile,
 } from "./contract";
-import { auth, db } from "@/lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import {
+  deleteObject,
+  getDownloadURL,
+  ref as storageRef,
+  uploadBytes,
+} from "firebase/storage";
+import { auth, db, functions, storage } from "@/lib/firebase";
 import { getFaceFor } from "@/lib/avatars";
-
-function notImplemented(method: string): never {
-  throw new ApiError("unknown", `firebase-impl: ${method} not implemented yet`);
-}
 
 /* ------------------------------------------------------------------ *
  * Auth helpers
@@ -132,6 +133,23 @@ function toApiError(e: unknown): ApiError {
         return new ApiError("unknown", "Network error. Check your connection and try again.");
       case "auth/operation-not-allowed":
         return new ApiError("permission-denied", "This sign-in method is not enabled.");
+      case "permission-denied":
+        return new ApiError("permission-denied", "You don't have permission to do that.");
+      // Cloud Function errors carry a message written for the user
+      case "functions/unauthenticated":
+        return new ApiError("unauthenticated", e.message);
+      case "functions/invalid-argument":
+        return new ApiError("invalid-argument", e.message);
+      case "functions/not-found":
+        return new ApiError("not-found", e.message);
+      case "functions/permission-denied":
+        return new ApiError("permission-denied", e.message);
+      case "functions/resource-exhausted":
+        return new ApiError("unknown", e.message);
+      case "storage/unauthorized":
+        return new ApiError("permission-denied", "You don't have permission to do that.");
+      case "storage/quota-exceeded":
+        return new ApiError("unknown", "Storage is full. Please contact your administrator.");
       default:
         return new ApiError("unknown", "Something went wrong. Please try again.");
     }
@@ -232,6 +250,21 @@ function toAnnouncement(id: string, classId: string, data: DocumentData): Announ
       data.category === "cat" || data.category === "deadline" ? data.category : "general",
     ...(data.dueAt ? { dueAt: tsToIso(data.dueAt) } : {}),
     createdBy: data.createdBy ?? "",
+    createdAt: tsToIso(data.createdAt),
+  };
+}
+
+/** Shape a classes/{id}/materials/{id} document into a Material. */
+function toMaterial(id: string, classId: string, data: DocumentData): Material {
+  return {
+    id,
+    classId,
+    name: data.name ?? "",
+    ...(typeof data.sizeBytes === "number" ? { sizeBytes: data.sizeBytes } : {}),
+    ...(data.mimeType ? { mimeType: data.mimeType } : {}),
+    url: data.url ?? "",
+    storagePath: data.storagePath ?? "",
+    uploadedBy: data.uploadedBy ?? "",
     createdAt: tsToIso(data.createdAt),
   };
 }
@@ -672,25 +705,14 @@ export const firebaseApi: ClassdApi = {
   },
 
   async joinClassByCode(joinCode: string): Promise<Class> {
-    const uid = requireUid();
+    requireUid();
     try {
-      const found = await getDocs(
-        query(collection(db, "classes"), where("code", "==", joinCode.trim()), limit(1)),
-      );
-      if (found.empty) throw new ApiError("not-found", "No class with that code");
-      const classDoc = found.docs[0];
-
-      const profile = await loadProfile(uid);
-      await setDoc(doc(db, "classes", classDoc.id, "members", uid), {
-        uid,
-        name: profile?.name ?? "",
-        email: profile?.email ?? "",
-        avatarUrl: profile?.avatarUrl ?? "",
-        // everyone joins as a regular student; an admin promotes to classRep later
-        role: "student",
-        joinedAt: serverTimestamp(),
-      });
-      return toClass(classDoc.id, classDoc.data());
+      // runs in the joinClass Cloud Function, so students never list classes
+      const join = httpsCallable<{ code: string }, { classId: string }>(functions, "joinClass");
+      const { data } = await join({ code: joinCode.trim() });
+      const snap = await getDoc(doc(db, "classes", data.classId));
+      if (!snap.exists()) throw new ApiError("not-found", "Class not found");
+      return toClass(snap.id, snap.data());
     } catch (e) {
       throw toApiError(e);
     }
@@ -722,6 +744,29 @@ export const firebaseApi: ClassdApi = {
       await updateDoc(doc(db, "classes", classId, "members", memberId), {
         role: "classRep",
       });
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async regenerateClassCode(classId: string): Promise<Class> {
+    requireUid();
+    try {
+      const ref = doc(db, "classes", classId);
+      await updateDoc(ref, { code: await uniqueClassCode() });
+      const snap = await getDoc(ref);
+      if (!snap.exists()) throw new ApiError("not-found", "Class not found");
+      return toClass(snap.id, snap.data());
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async deleteClass(classId: string): Promise<void> {
+    requireUid();
+    try {
+      // the onClassDeleted function removes members, posts, files and groups
+      await deleteDoc(doc(db, "classes", classId));
     } catch (e) {
       throw toApiError(e);
     }
@@ -915,16 +960,77 @@ export const firebaseApi: ClassdApi = {
   },
 
   // ---- Materials ----
-  async listMaterials(_classId: string): Promise<Material[]> {
-    return notImplemented("listMaterials");
+  async listMaterials(classId: string): Promise<Material[]> {
+    try {
+      const snap = await getDocs(collection(db, "classes", classId, "materials"));
+      return snap.docs.map((d) => toMaterial(d.id, classId, d.data()));
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
-  // uploadBytes to storage at materials/{classId}/{id}-{name}; getDownloadURL;
-  // then write the metadata doc.
-  async uploadMaterial(_classId: string, _file: UploadFileInput): Promise<Material> {
-    return notImplemented("uploadMaterial");
+
+  async uploadMaterial(classId: string, file: UploadFileInput): Promise<Material> {
+    const uid = requireUid();
+    if (file.sizeBytes !== undefined && file.sizeBytes > MAX_MATERIAL_BYTES) {
+      throw new ApiError("invalid-argument", "Files must be 25 MB or smaller.");
+    }
+    try {
+      const ref = doc(collection(db, "classes", classId, "materials"));
+      // prefix with the doc id so two files with the same name never collide
+      const safeName = file.name.replace(/[^\w.\- ]+/g, "_");
+      const storagePath = `classes/${classId}/materials/${ref.id}-${safeName}`;
+      const objectRef = storageRef(storage, storagePath);
+
+      // read the picked file from the device, then upload it
+      const blob = await (await fetch(file.uri)).blob();
+      await uploadBytes(
+        objectRef,
+        blob,
+        file.mimeType ? { contentType: file.mimeType } : undefined,
+      );
+      const url = await getDownloadURL(objectRef);
+
+      const sizeBytes = file.sizeBytes ?? blob.size;
+      await setDoc(ref, {
+        name: file.name,
+        sizeBytes,
+        ...(file.mimeType ? { mimeType: file.mimeType } : {}),
+        url,
+        storagePath,
+        uploadedBy: uid,
+        createdAt: serverTimestamp(),
+      });
+      return {
+        id: ref.id,
+        classId,
+        name: file.name,
+        sizeBytes,
+        ...(file.mimeType ? { mimeType: file.mimeType } : {}),
+        url,
+        storagePath,
+        uploadedBy: uid,
+        createdAt: new Date().toISOString(),
+      };
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
-  // delete the doc + the storage object at material.storagePath.
-  async deleteMaterial(_classId: string, _materialId: string): Promise<void> {
-    return notImplemented("deleteMaterial");
+
+  async deleteMaterial(classId: string, materialId: string): Promise<void> {
+    requireUid();
+    try {
+      const ref = doc(db, "classes", classId, "materials", materialId);
+      const snap = await getDoc(ref);
+      const storagePath = snap.exists() ? (snap.data().storagePath as string | undefined) : undefined;
+      if (storagePath) {
+        // the file may already be gone; still remove the record
+        await deleteObject(storageRef(storage, storagePath)).catch((e: unknown) => {
+          if (!(e instanceof FirebaseError && e.code === "storage/object-not-found")) throw e;
+        });
+      }
+      await deleteDoc(ref);
+    } catch (e) {
+      throw toApiError(e);
+    }
   },
 };

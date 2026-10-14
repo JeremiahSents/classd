@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Logout01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
@@ -42,9 +42,12 @@ export default function AdminHome() {
     }
   }, []);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // reload on focus so classes deleted or renamed elsewhere are reflected
+  useFocusEffect(
+    useCallback(() => {
+      void load();
+    }, [load]),
+  );
 
   async function handleCreate() {
     if (!newName.trim()) return;
