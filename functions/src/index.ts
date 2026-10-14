@@ -16,6 +16,7 @@ import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 import { onDocumentCreated, onDocumentDeleted } from "firebase-functions/v2/firestore";
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 import { getStorage } from "firebase-admin/storage";
 import {
   getFirestore,
@@ -52,6 +53,17 @@ interface Candidate {
   /** Announcement category (cat/deadline/general), when kind is announcement. */
   category?: string;
   type: ReminderType;
+}
+
+/**
+ * Whether a user wants this kind of notification. Both are on unless the user
+ * switched them off in Settings (users/{uid}.notificationPrefs).
+ */
+function wantsNotification(
+  userSnap: FirebaseFirestore.DocumentSnapshot,
+  kind: "newPosts" | "reminders",
+): boolean {
+  return userSnap.get(`notificationPrefs.${kind}`) !== false;
 }
 
 /** POST messages to Expo's push service in batches of 100. */
@@ -156,8 +168,9 @@ async function processReminders(): Promise<{ candidates: number; sent: number }>
       const logRef = db.doc(`sentNotifications/${markerId}`);
       if ((await logRef.get()).exists) continue;
 
-      // need at least one device token
+      // need at least one device token, and reminders switched on
       const userSnap = await db.doc(`users/${uid}`).get();
+      if (!wantsNotification(userSnap, "reminders")) continue;
       const tokens: string[] = userSnap.get("expoPushTokens") ?? [];
       if (tokens.length === 0) continue;
 
@@ -226,6 +239,7 @@ async function notifyClassMembers(
   const messages: ExpoMessage[] = [];
   for (const member of members.docs) {
     const userSnap = await db.doc(`users/${member.id}`).get();
+    if (!wantsNotification(userSnap, "newPosts")) continue;
     const tokens: string[] = userSnap.get("expoPushTokens") ?? [];
     for (const token of tokens) {
       messages.push({ to: token, title, body, data });
@@ -387,3 +401,33 @@ export const onMemberRemoved = onDocumentDeleted(
     );
   },
 );
+
+/* ------------------------------------------------------------------ *
+ * Account deletion (required by the App Store and Google Play). The app
+ * re-checks the password first; this removes the user's data and their
+ * Auth account. Classes and groups they created stay for everyone else.
+ * ------------------------------------------------------------------ */
+
+export const deleteAccount = onCall(async (request) => {
+  const uid = request.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Please sign in again.");
+
+  // leave every class (onMemberRemoved clears rep slots and class groups)
+  const memberships = await db.collectionGroup("members").where("uid", "==", uid).get();
+  await Promise.all(memberships.docs.map((d) => d.ref.delete()));
+
+  // leave any remaining project groups
+  const groupMemberships = await db
+    .collectionGroup("groupMembers")
+    .where("uid", "==", uid)
+    .get();
+  await Promise.all(groupMemberships.docs.map((d) => d.ref.delete()));
+
+  // profile, push tokens and task completions
+  await db.recursiveDelete(db.doc(`users/${uid}`));
+  await db.doc(`joinAttempts/${uid}`).delete();
+
+  await getAuth().deleteUser(uid);
+  logger.info("Account deleted", { uid });
+  return { ok: true };
+});

@@ -20,7 +20,9 @@
 
 import { FirebaseError } from "firebase/app";
 import {
+  EmailAuthProvider,
   createUserWithEmailAndPassword,
+  reauthenticateWithCredential,
   reload,
   sendEmailVerification as fbSendEmailVerification,
   sendPasswordResetEmail,
@@ -107,6 +109,10 @@ function toUserProfile(uid: string, data: DocumentData): UserProfile {
     createdAt: tsToIso(data.createdAt),
     // verification lives on the Auth user, not the profile doc
     emailVerified: auth.currentUser?.uid === uid ? auth.currentUser.emailVerified : false,
+    notificationPrefs: {
+      newPosts: data.notificationPrefs?.newPosts !== false,
+      reminders: data.notificationPrefs?.reminders !== false,
+    },
   };
 }
 
@@ -354,6 +360,7 @@ export const firebaseApi: ClassdApi = {
         avatarUrl,
         createdAt: new Date().toISOString(),
         emailVerified: false,
+        notificationPrefs: { newPosts: true, reminders: true },
       };
       return { user, isNewUser: true };
     } catch (e) {
@@ -409,7 +416,7 @@ export const firebaseApi: ClassdApi = {
   },
 
   async updateProfile(
-    patch: Partial<Pick<UserProfile, "name" | "avatarUrl">>,
+    patch: Partial<Pick<UserProfile, "name" | "avatarUrl" | "notificationPrefs">>,
   ): Promise<UserProfile> {
     const current = auth.currentUser;
     if (!current) throw new ApiError("unauthenticated", "Not signed in");
@@ -417,6 +424,7 @@ export const firebaseApi: ClassdApi = {
       const fields: Record<string, unknown> = {};
       if (patch.name !== undefined) fields.name = patch.name;
       if (patch.avatarUrl !== undefined) fields.avatarUrl = patch.avatarUrl;
+      if (patch.notificationPrefs !== undefined) fields.notificationPrefs = patch.notificationPrefs;
 
       await updateDoc(doc(db, "users", current.uid), fields);
       if (patch.name !== undefined) {
@@ -427,6 +435,29 @@ export const firebaseApi: ClassdApi = {
       if (!user) throw new ApiError("not-found", "Profile not found");
       return user;
     } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async deleteAccount(password: string): Promise<void> {
+    const current = auth.currentUser;
+    if (!current?.email) throw new ApiError("unauthenticated", "Not signed in");
+    try {
+      // proves it's really them (and satisfies Firebase's recent-login rule)
+      await reauthenticateWithCredential(
+        current,
+        EmailAuthProvider.credential(current.email, password),
+      );
+      // data + Auth account are removed server-side by the deleteAccount function
+      await httpsCallable(functions, "deleteAccount")();
+      await fbSignOut(auth);
+    } catch (e) {
+      if (
+        e instanceof FirebaseError &&
+        (e.code === "auth/invalid-credential" || e.code === "auth/wrong-password")
+      ) {
+        throw new ApiError("unauthenticated", "That password isn't right.");
+      }
       throw toApiError(e);
     }
   },

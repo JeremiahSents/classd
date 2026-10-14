@@ -46,6 +46,8 @@ const PARENT_TAB: Record<string, string> = {
   "group/[id]": "groups",
   "task/[id]": "index",
   tasks: "index",
+  "group-tasks": "index",
+  settings: "profile",
 };
 
 /* ------------------------------------------------------------------ */

@@ -14,6 +14,7 @@ import {
 } from "react";
 import {
   api,
+  type NotificationPrefs,
   type Role,
   type SignInInput,
   type SignUpInput,
@@ -52,6 +53,9 @@ interface Session {
   resendVerificationEmail: () => Promise<void>;
   /** Re-check the signed-in user (e.g. after they verify their email). */
   reloadUser: () => Promise<void>;
+  updateNotificationPrefs: (prefs: NotificationPrefs) => Promise<void>;
+  /** Permanently delete the account (re-checks the password). Signs out. */
+  deleteAccount: (password: string) => Promise<void>;
 }
 
 const SessionContext = createContext<Session | null>(null);
@@ -110,6 +114,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       reloadUser: async () => {
         const updated = await api.reloadCurrentUser();
         if (updated) setUser(updated);
+      },
+      updateNotificationPrefs: async (prefs) => {
+        const updated = await api.updateProfile({ notificationPrefs: prefs });
+        setUser(updated);
+      },
+      deleteAccount: async (password) => {
+        await api.deleteAccount(password);
+        // forget this device's cached token so a new account re-registers it
+        // (the server already deleted it with the profile)
+        await unregisterForPushNotifications().catch(() => {});
+        // onAuthStateChanged also fires, but clear right away for the redirect
+        setUser(null);
       },
     }),
     [user, loading],

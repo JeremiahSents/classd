@@ -178,6 +178,19 @@ export default function AuthScreen() {
                 onPress={handleSubmit}
                 loading={submitting}
               />
+
+              <Pressable
+                accessibilityRole="link"
+                // cast: typed routes regenerate for privacy on next `expo start`
+                onPress={() => router.push("/privacy" as never)}
+                hitSlop={8}
+                className="self-center pt-2"
+              >
+                <Text className="text-xs text-muted-foreground">
+                  By continuing you agree to our{" "}
+                  <Text className="font-semibold text-primary">Privacy Policy</Text>
+                </Text>
+              </Pressable>
             </View>
           </View>
         </ScrollView>

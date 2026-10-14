@@ -57,6 +57,14 @@ export type ApiErrorCode =
  * Entities (server shapes)
  * ------------------------------------------------------------------ */
 
+/** Which push notifications a user gets. Both default to on. */
+export interface NotificationPrefs {
+  /** New tasks, announcements and materials in their classes. */
+  newPosts: boolean;
+  /** Due-soon and overdue reminders. */
+  reminders: boolean;
+}
+
 export interface UserProfile {
   id: string; // Firebase Auth uid
   name: string;
@@ -66,6 +74,7 @@ export interface UserProfile {
   createdAt: string; // ISO
   /** Whether the user clicked the link in their verification email. */
   emailVerified: boolean;
+  notificationPrefs: NotificationPrefs;
 }
 
 export interface ScheduleBlock {
@@ -242,7 +251,14 @@ export interface ClassdApi {
   getCurrentUser(): Promise<UserProfile | null>;
   /** Subscribe to auth changes; returns an unsubscribe fn. */
   onAuthStateChanged(cb: (user: UserProfile | null) => void): () => void;
-  updateProfile(patch: Partial<Pick<UserProfile, "name" | "avatarUrl">>): Promise<UserProfile>;
+  updateProfile(
+    patch: Partial<Pick<UserProfile, "name" | "avatarUrl" | "notificationPrefs">>,
+  ): Promise<UserProfile>;
+  /**
+   * Permanently delete the signed-in user's account and data. The password is
+   * re-checked first. Signs the user out.
+   */
+  deleteAccount(password: string): Promise<void>;
   /** Email a password-reset link. Succeeds even if no account exists (no enumeration). */
   sendPasswordReset(email: string): Promise<void>;
   /** (Re)send the verification email to the signed-in user. */

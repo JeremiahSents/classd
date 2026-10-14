@@ -42,6 +42,7 @@ const CLASS_REP: UserProfile = {
   avatarUrl: "https://www.notion.so/icons/user-circle-filled_gray.svg",
   createdAt: now(),
   emailVerified: true,
+  notificationPrefs: { newPosts: true, reminders: true },
 };
 
 let currentUser: UserProfile | null = CLASS_REP;
@@ -96,7 +97,7 @@ const visibleClasses = () => {
 
 export const mockApi: ClassdApi = {
   async signUpWithEmail(input: SignUpInput): Promise<AuthResult> {
-    currentUser = { id: id("u"), name: input.name ?? input.email.split("@")[0], email: input.email, role: input.role, avatarUrl: CLASS_REP.avatarUrl, createdAt: now(), emailVerified: false };
+    currentUser = { id: id("u"), name: input.name ?? input.email.split("@")[0], email: input.email, role: input.role, avatarUrl: CLASS_REP.avatarUrl, createdAt: now(), emailVerified: false, notificationPrefs: { newPosts: true, reminders: true } };
     emitAuth();
     return { user: currentUser, isNewUser: true };
   },
@@ -124,6 +125,10 @@ export const mockApi: ClassdApi = {
     return currentUser;
   },
 
+  async deleteAccount() {
+    currentUser = null;
+    emitAuth();
+  },
   async sendPasswordReset() {
     /* no-op in mock */
   },
