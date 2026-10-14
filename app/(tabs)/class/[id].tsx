@@ -18,12 +18,13 @@ import { TaskRow } from "@/components/class/task-row";
 import { MaterialRow } from "@/components/class/material-row";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { EmptySectionHint } from "@/components/ui/section-header";
-import { ANNOUNCEMENT_CATEGORY_LABEL } from "@/lib/types";
+import { AnnouncementCard } from "@/components/class/announcement-card";
+import { AnnouncementDetailModal } from "@/components/modals/announcement-detail-modal";
 import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
 import { confirmAction } from "@/lib/confirm";
 import { api, MAX_MATERIAL_BYTES, type Group } from "@/lib/api";
-import type { Material } from "@/lib/types";
+import type { Announcement, Material } from "@/lib/types";
 import { CreateGroupModal } from "@/components/modals/create-group-modal";
 import { useToast } from "@/components/ui/toast";
 
@@ -46,8 +47,10 @@ export default function ClassDetail() {
     isTaskComplete,
     toggleTaskComplete,
     refresh,
+    className,
+    canManageClass,
   } = useClasses();
-  const { role, user } = useSession();
+  const { user } = useSession();
   const toast = useToast();
 
   const [tab, setTab] = useState(0);
@@ -57,6 +60,7 @@ export default function ClassDetail() {
   const [createGroupVisible, setCreateGroupVisible] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
 
   const loadGroups = useCallback(async () => {
     try {
@@ -88,11 +92,9 @@ export default function ClassDetail() {
   const members = membersForClass(id);
 
   // Whoever is the assigned rep of THIS class (or an admin) can manage it.
-  // Rep status is recognised from either the class's classRepId or the
-  // caller's own member-doc role, so partially-synced data still works.
+  const canManage = canManageClass(id);
+  // set when the user is enrolled (admins manage without being members)
   const myMemberRole = members.find((m) => m.id === user?.id)?.role;
-  const canManage =
-    role === "admin" || classroom.classRepId === user?.id || myMemberRole === "classRep";
   const tasks = tasksForClass(id);
   const announcements = announcementsForClass(id);
   const materials = materialsForClass(id);
@@ -306,50 +308,11 @@ export default function ClassDetail() {
         {tab === 2 ? (
           announcements.length > 0 ? (
             announcements.map((a) => (
-              <View
+              <AnnouncementCard
                 key={a.id}
-                className="gap-1.5 rounded-2xl border border-border bg-card p-4"
-              >
-                <View className="flex-row items-center justify-between gap-3">
-                  <Text className="flex-1 text-base font-semibold text-foreground">
-                    {a.title}
-                  </Text>
-                  <Text className="text-xs text-muted-foreground">
-                    {a.timeLabel}
-                  </Text>
-                </View>
-                <View className="flex-row items-center gap-2">
-                  <View
-                    className={`rounded-full px-2 py-0.5 ${
-                      a.category === "cat"
-                        ? "bg-destructive/10"
-                        : a.category === "deadline"
-                          ? "bg-amber-500/10"
-                          : "bg-primary/10"
-                    }`}
-                  >
-                    <Text
-                      className={`text-[11px] font-semibold ${
-                        a.category === "cat"
-                          ? "text-destructive"
-                          : a.category === "deadline"
-                            ? "text-amber-600"
-                            : "text-primary"
-                      }`}
-                    >
-                      {ANNOUNCEMENT_CATEGORY_LABEL[a.category]}
-                    </Text>
-                  </View>
-                  {a.dueLabel ? (
-                    <Text className="text-xs font-medium text-muted-foreground">
-                      {a.dueLabel}
-                    </Text>
-                  ) : null}
-                </View>
-                {a.content ? (
-                  <Text className="text-sm text-muted-foreground">{a.content}</Text>
-                ) : null}
-              </View>
+                announcement={a}
+                onPress={() => setSelectedAnnouncement(a)}
+              />
             ))
           ) : (
             <EmptySectionHint
@@ -448,6 +411,11 @@ export default function ClassDetail() {
         classId={id}
         visible={addAnnouncementVisible}
         onClose={() => setAddAnnouncementVisible(false)}
+      />
+      <AnnouncementDetailModal
+        announcement={selectedAnnouncement}
+        className={className}
+        onClose={() => setSelectedAnnouncement(null)}
       />
       <CreateGroupModal
         classId={id}

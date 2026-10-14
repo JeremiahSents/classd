@@ -23,6 +23,7 @@ import {
   type Material as ApiMaterial,
   type Member as ApiMember,
   type Task as ApiTask,
+  type UpdateAnnouncementInput,
   type UploadFileInput,
 } from "@/lib/api";
 import { useSession } from "@/lib/session";
@@ -136,6 +137,8 @@ interface ClassesStore {
   announcementsForClass: (classId: string) => Announcement[];
   materialsForClass: (classId: string) => Material[];
   className: (classId: string) => string;
+  /** Admin, or the rep of this class — can post, edit and delete its content. */
+  canManageClass: (classId: string) => boolean;
 
   isTaskComplete: (taskId: string) => boolean;
   toggleTaskComplete: (taskId: string) => void;
@@ -162,6 +165,12 @@ interface ClassesStore {
     classId: string,
     input: { title: string; content: string; category: AnnouncementCategory; dueAt?: string },
   ) => Promise<Announcement>;
+  updateAnnouncement: (
+    classId: string,
+    announcementId: string,
+    patch: UpdateAnnouncementInput,
+  ) => Promise<Announcement>;
+  deleteAnnouncement: (classId: string, announcementId: string) => Promise<void>;
   /** Fetch a class's materials (called when the class screen opens). */
   loadMaterials: (classId: string) => Promise<void>;
   uploadMaterial: (classId: string, file: UploadFileInput) => Promise<Material>;
@@ -171,7 +180,7 @@ interface ClassesStore {
 const ClassesContext = createContext<ClassesStore | null>(null);
 
 export function ClassesProvider({ children }: { children: ReactNode }) {
-  const { isAuthenticated, user } = useSession();
+  const { isAuthenticated, user, role } = useSession();
 
   const [loading, setLoading] = useState(true);
   const [classes, setClasses] = useState<Classroom[]>([]);
@@ -271,6 +280,12 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
       announcementsForClass: (classId) => announcements.filter((a) => a.classId === classId),
       materialsForClass: (classId) => materialsByClass[classId] ?? [],
       className: (classId) => classes.find((c) => c.id === classId)?.name ?? "",
+      // rep status comes from either the class's classRepId or the user's own
+      // member-doc role, so partially-synced data still works
+      canManageClass: (classId) =>
+        role === "admin" ||
+        classes.find((c) => c.id === classId)?.classRepId === user?.id ||
+        membersByClass[classId]?.find((m) => m.id === user?.id)?.role === "classRep",
 
       isTaskComplete: (taskId) => completedTaskIds.includes(taskId),
       toggleTaskComplete: (taskId) => {
@@ -381,6 +396,21 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
         return announcement;
       },
 
+      updateAnnouncement: async (classId, announcementId, patch) => {
+        const announcement = toAnnouncement(
+          await api.updateAnnouncement(classId, announcementId, patch),
+        );
+        setAnnouncements((prev) => prev.map((x) => (x.id === announcementId ? announcement : x)));
+        void refresh(true);
+        return announcement;
+      },
+
+      deleteAnnouncement: async (classId, announcementId) => {
+        await api.deleteAnnouncement(classId, announcementId);
+        setAnnouncements((prev) => prev.filter((x) => x.id !== announcementId));
+        void refresh(true);
+      },
+
       loadMaterials: async (classId) => {
         try {
           const list = await api.listMaterials(classId);
@@ -411,7 +441,7 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
         }));
       },
     };
-  }, [loading, classes, tasks, announcements, groupTasks, groupCount, membersByClass, materialsByClass, completedTaskIds, refresh]);
+  }, [loading, classes, tasks, announcements, groupTasks, groupCount, membersByClass, materialsByClass, completedTaskIds, refresh, role, user?.id]);
 
   return <ClassesContext.Provider value={value}>{children}</ClassesContext.Provider>;
 }

@@ -202,6 +202,11 @@ export interface CreateAnnouncementInput {
   dueAt?: string; // ISO, optional
 }
 
+/** Edit an announcement. `dueAt: null` clears the due date. */
+export type UpdateAnnouncementInput = Partial<Omit<CreateAnnouncementInput, "dueAt">> & {
+  dueAt?: string | null;
+};
+
 export interface CreateGroupTaskInput {
   title: string;
   description: string;
@@ -294,6 +299,13 @@ export interface ClassdApi {
   /** All announcements across the caller's classes (home feed). */
   listMyAnnouncements(): Promise<Announcement[]>;
   createAnnouncement(classId: string, input: CreateAnnouncementInput): Promise<Announcement>;
+  /** Edit an existing announcement (class rep). Only provided fields change. */
+  updateAnnouncement(
+    classId: string,
+    announcementId: string,
+    patch: UpdateAnnouncementInput,
+  ): Promise<Announcement>;
+  deleteAnnouncement(classId: string, announcementId: string): Promise<void>; // class rep
 
   // ---- Materials ----
   listMaterials(classId: string): Promise<Material[]>;

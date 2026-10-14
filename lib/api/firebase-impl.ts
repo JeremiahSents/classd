@@ -65,6 +65,7 @@ import {
   type Role,
   type SignInInput,
   type SignUpInput,
+  type UpdateAnnouncementInput,
   type UploadFileInput,
   type UserProfile,
 } from "./contract";
@@ -954,6 +955,39 @@ export const firebaseApi: ClassdApi = {
         createdBy: uid,
         createdAt: new Date().toISOString(),
       };
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async updateAnnouncement(
+    classId: string,
+    announcementId: string,
+    patch: UpdateAnnouncementInput,
+  ): Promise<Announcement> {
+    requireUid();
+    try {
+      const ref = doc(db, "classes", classId, "announcements", announcementId);
+      const fields: Record<string, unknown> = {};
+      if (patch.title !== undefined) fields.title = patch.title.trim();
+      if (patch.content !== undefined) fields.content = patch.content;
+      if (patch.category !== undefined) fields.category = patch.category;
+      if (patch.dueAt === null) fields.dueAt = deleteField();
+      else if (patch.dueAt !== undefined) fields.dueAt = Timestamp.fromDate(new Date(patch.dueAt));
+      await updateDoc(ref, fields);
+
+      const snap = await getDoc(ref);
+      if (!snap.exists()) throw new ApiError("not-found", "Announcement not found");
+      return toAnnouncement(snap.id, classId, snap.data());
+    } catch (e) {
+      throw toApiError(e);
+    }
+  },
+
+  async deleteAnnouncement(classId: string, announcementId: string): Promise<void> {
+    requireUid();
+    try {
+      await deleteDoc(doc(db, "classes", classId, "announcements", announcementId));
     } catch (e) {
       throw toApiError(e);
     }

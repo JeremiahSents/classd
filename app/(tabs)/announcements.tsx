@@ -4,22 +4,19 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Megaphone01Icon, PlusSignIcon, Search01Icon } from "@hugeicons/core-free-icons";
 import { QuickAddAnnouncementModal } from "@/components/modals/quick-add-announcement-modal";
-import { ANNOUNCEMENT_CATEGORY_LABEL } from "@/lib/types";
+import { AnnouncementCard } from "@/components/class/announcement-card";
+import { AnnouncementDetailModal } from "@/components/modals/announcement-detail-modal";
+import type { Announcement } from "@/lib/types";
 import { useClasses } from "@/lib/classes-store";
-import { useSession } from "@/lib/session";
 
 export default function Announcements() {
-  const { announcements, classes, className, membersForClass } = useClasses();
-  const { user } = useSession();
+  const { announcements, classes, className, canManageClass } = useClasses();
   const [search, setSearch] = useState("");
   const [addVisible, setAddVisible] = useState(false);
+  const [selected, setSelected] = useState<Announcement | null>(null);
 
   // Classes this user reps — they can quick-add announcements to them.
-  const repClasses = classes.filter(
-    (c) =>
-      c.classRepId === user?.id ||
-      membersForClass(c.id).find((m) => m.id === user?.id)?.role === "classRep",
-  );
+  const repClasses = classes.filter((c) => canManageClass(c.id));
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -95,54 +92,18 @@ export default function Announcements() {
                 <Text className="text-slate-400">({classAnnouncements.length})</Text>
               </Text>
               {classAnnouncements.map((a) => (
-                <View
-                  key={a.id}
-                  className="gap-1.5 rounded-2xl border border-border bg-card p-4"
-                >
-                  <View className="flex-row items-center justify-between gap-3">
-                    <Text className="flex-1 text-base font-semibold text-foreground">
-                      {a.title}
-                    </Text>
-                    <Text className="text-xs text-muted-foreground">{a.timeLabel}</Text>
-                  </View>
-                  <View className="flex-row items-center gap-2">
-                    <View
-                      className={`rounded-full px-2 py-0.5 ${
-                        a.category === "cat"
-                          ? "bg-destructive/10"
-                          : a.category === "deadline"
-                            ? "bg-amber-500/10"
-                            : "bg-primary/10"
-                      }`}
-                    >
-                      <Text
-                        className={`text-[11px] font-semibold ${
-                          a.category === "cat"
-                            ? "text-destructive"
-                            : a.category === "deadline"
-                              ? "text-amber-600"
-                              : "text-primary"
-                        }`}
-                      >
-                        {ANNOUNCEMENT_CATEGORY_LABEL[a.category]}
-                      </Text>
-                    </View>
-                    {a.dueLabel ? (
-                      <Text className="text-xs font-medium text-muted-foreground">
-                        {a.dueLabel}
-                      </Text>
-                    ) : null}
-                  </View>
-                  {a.content ? (
-                    <Text className="text-sm text-muted-foreground">{a.content}</Text>
-                  ) : null}
-                </View>
+                <AnnouncementCard key={a.id} announcement={a} onPress={() => setSelected(a)} />
               ))}
             </View>
           ))}
         </ScrollView>
       )}
 
+      <AnnouncementDetailModal
+        announcement={selected}
+        className={className}
+        onClose={() => setSelected(null)}
+      />
       <QuickAddAnnouncementModal
         classes={repClasses}
         visible={addVisible}

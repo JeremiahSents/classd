@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   KeyboardAvoidingView,
   Modal,
@@ -14,11 +14,17 @@ import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { DateTimeField } from "@/components/ui/date-time-field";
 import { useToast } from "@/components/ui/toast";
-import { ANNOUNCEMENT_CATEGORY_LABEL, type AnnouncementCategory } from "@/lib/types";
+import {
+  ANNOUNCEMENT_CATEGORY_LABEL,
+  type Announcement,
+  type AnnouncementCategory,
+} from "@/lib/types";
 import { useClasses } from "@/lib/classes-store";
 
 interface AddAnnouncementModalProps {
   classId: string;
+  /** When set, the modal edits this announcement instead of posting a new one. */
+  announcement?: Announcement;
   visible: boolean;
   onClose: () => void;
 }
@@ -27,17 +33,30 @@ const CATEGORIES: AnnouncementCategory[] = ["general", "cat", "deadline"];
 
 export function AddAnnouncementModal({
   classId,
+  announcement,
   visible,
   onClose,
 }: AddAnnouncementModalProps) {
   const toast = useToast();
-  const { addAnnouncement } = useClasses();
+  const { addAnnouncement, updateAnnouncement } = useClasses();
+  const isEdit = !!announcement;
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [category, setCategory] = useState<AnnouncementCategory>("general");
   const [due, setDue] = useState<Date | null>(null); // optional
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // prefill from the announcement being edited each time the modal opens
+  useEffect(() => {
+    if (visible && announcement) {
+      setTitle(announcement.title);
+      setContent(announcement.content);
+      setCategory(announcement.category);
+      const d = announcement.dueAt ? new Date(announcement.dueAt) : null;
+      setDue(d && !isNaN(d.getTime()) ? d : null);
+    }
+  }, [visible, announcement]);
 
   function reset() {
     setTitle("");
@@ -59,12 +78,28 @@ export function AddAnnouncementModal({
     setError(null);
     setSubmitting(true);
     try {
-      await addAnnouncement(classId, { title: title.trim(), content, category, dueAt });
+      if (isEdit && announcement) {
+        await updateAnnouncement(announcement.classId, announcement.id, {
+          title: title.trim(),
+          content,
+          category,
+          // null clears a due date that was removed
+          dueAt: dueAt ?? null,
+        });
+      } else {
+        await addAnnouncement(classId, { title: title.trim(), content, category, dueAt });
+      }
       reset();
       onClose();
-      toast.success("Announcement posted!", "📣");
+      toast.success(isEdit ? "Announcement updated!" : "Announcement posted!", "📣");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not post announcement.");
+      setError(
+        e instanceof Error
+          ? e.message
+          : isEdit
+            ? "Could not update announcement."
+            : "Could not post announcement.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -85,7 +120,7 @@ export function AddAnnouncementModal({
           <View className="flex-row items-center justify-between border-b border-border p-4">
             <View className="w-8" />
             <Text className="text-base font-bold text-foreground">
-              New Announcement
+              {isEdit ? "Edit Announcement" : "New Announcement"}
             </Text>
             <Pressable
               accessibilityRole="button"
@@ -172,7 +207,7 @@ export function AddAnnouncementModal({
               ) : null}
 
               <Button
-                label="Post Announcement"
+                label={isEdit ? "Save Changes" : "Post Announcement"}
                 onPress={handleSave}
                 loading={submitting}
                 disabled={!title.trim() || !content.trim()}

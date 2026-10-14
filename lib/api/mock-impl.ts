@@ -270,6 +270,25 @@ export const mockApi: ClassdApi = {
     return a;
   },
 
+  async updateAnnouncement(_classId, announcementId, patch) {
+    requireAuth();
+    announcements = announcements.map((a) => {
+      if (a.id !== announcementId) return a;
+      const { dueAt, ...rest } = patch;
+      const next: Announcement = { ...a, ...rest };
+      if (dueAt === null) delete next.dueAt;
+      else if (dueAt !== undefined) next.dueAt = dueAt;
+      return next;
+    });
+    const updated = announcements.find((a) => a.id === announcementId);
+    if (!updated) throw new ApiError("not-found", "Announcement not found");
+    return updated;
+  },
+  async deleteAnnouncement(_classId, announcementId) {
+    requireAuth();
+    announcements = announcements.filter((a) => a.id !== announcementId);
+  },
+
   async listMaterials(classId) {
     return materials.filter((m) => m.classId === classId);
   },

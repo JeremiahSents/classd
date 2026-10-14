@@ -14,21 +14,18 @@ import {
 import { Button } from "@/components/ui/button";
 import { AddTaskModal } from "@/components/modals/add-task-modal";
 import { useClasses } from "@/lib/classes-store";
-import { useSession } from "@/lib/session";
 
 export default function TaskDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const {
     getTask,
-    getClass,
     className,
-    membersForClass,
+    canManageClass,
     isTaskComplete,
     toggleTaskComplete,
     deleteTask,
   } = useClasses();
-  const { role, user } = useSession();
 
   const [editVisible, setEditVisible] = useState(false);
   // two-tap confirm so it works identically on native and web
@@ -45,10 +42,7 @@ export default function TaskDetail() {
     );
   }
 
-  const classroom = getClass(task.classId);
-  const myMemberRole = membersForClass(task.classId).find((m) => m.id === user?.id)?.role;
-  const canManage =
-    role === "admin" || classroom?.classRepId === user?.id || myMemberRole === "classRep";
+  const canManage = canManageClass(task.classId);
   const completed = isTaskComplete(task.id);
 
   async function handleDelete() {
