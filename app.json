@@ -6,13 +6,13 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "classd",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "updates": {
       "url": "https://u.expo.dev/0af230af-b104-4918-b9f6-a42bc78d4322"
     },
     "runtimeVersion": {
-      "policy": "sdkVersion"
+      "policy": "fingerprint"
     },
     "ios": {
       "supportsTablet": true,
@@ -48,6 +48,14 @@
           "dark": {
             "backgroundColor": "#0B1020"
           }
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#4f46e5",
+          "defaultChannel": "default"
         }
       ],
       "expo-font",
