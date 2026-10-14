@@ -12,22 +12,13 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
+import { DateTimeField } from "@/components/ui/date-time-field";
 import { useToast } from "@/components/ui/toast";
 import { ANNOUNCEMENT_CATEGORY_LABEL, type AnnouncementCategory } from "@/lib/types";
 import type { Classroom } from "@/lib/classes";
 import { useClasses } from "@/lib/classes-store";
 
 const CATEGORIES: AnnouncementCategory[] = ["general", "cat", "deadline"];
-
-/** Combine a YYYY-MM-DD date and HH:MM time into an ISO string, or null. */
-function toIso(date: string, time: string): string | null {
-  const clean = date.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(clean)) return null;
-  const t = time.trim() || "23:59";
-  if (!/^\d{2}:\d{2}$/.test(t)) return null;
-  const d = new Date(`${clean}T${t}:00`);
-  return isNaN(d.getTime()) ? null : d.toISOString();
-}
 
 interface QuickAddAnnouncementModalProps {
   /** Classes the current user can post to (the ones they rep). */
@@ -47,8 +38,7 @@ export function QuickAddAnnouncementModal({
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [category, setCategory] = useState<AnnouncementCategory>("general");
-  const [dueDate, setDueDate] = useState(""); // optional YYYY-MM-DD
-  const [dueTime, setDueTime] = useState(""); // optional HH:MM
+  const [due, setDue] = useState<Date | null>(null); // optional
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,8 +51,7 @@ export function QuickAddAnnouncementModal({
     setTitle("");
     setContent("");
     setCategory("general");
-    setDueDate("");
-    setDueTime("");
+    setDue(null);
     setError(null);
   }
 
@@ -80,16 +69,8 @@ export function QuickAddAnnouncementModal({
       setError("Enter a title and a message.");
       return;
     }
-    // due date is optional — but if given, it must parse
-    let dueAt: string | undefined;
-    if (dueDate.trim()) {
-      const iso = toIso(dueDate, dueTime);
-      if (!iso) {
-        setError("Enter a valid due date (YYYY-MM-DD) or leave it empty.");
-        return;
-      }
-      dueAt = iso;
-    }
+    // due date is optional
+    const dueAt = due ? due.toISOString() : undefined;
     setError(null);
     setSubmitting(true);
     try {
@@ -211,31 +192,18 @@ export function QuickAddAnnouncementModal({
               </View>
 
               {/* Optional due date — e.g. when a CAT sits or a deadline falls */}
-              <View className="flex-row gap-3">
-                <View className="flex-[2] gap-2">
+              <View className="gap-2">
+                <View className="flex-row items-center justify-between">
                   <Text className="text-sm font-semibold text-foreground">
                     Due date (optional)
                   </Text>
-                  <TextInput
-                    value={dueDate}
-                    onChangeText={setDueDate}
-                    placeholder="YYYY-MM-DD"
-                    autoCapitalize="none"
-                    className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
-                    placeholderTextColor="#9ca3af"
-                  />
+                  {due ? (
+                    <Pressable onPress={() => setDue(null)} hitSlop={8}>
+                      <Text className="text-xs font-semibold text-primary">Clear</Text>
+                    </Pressable>
+                  ) : null}
                 </View>
-                <View className="flex-1 gap-2">
-                  <Text className="text-sm font-semibold text-foreground">Time</Text>
-                  <TextInput
-                    value={dueTime}
-                    onChangeText={setDueTime}
-                    placeholder="23:59"
-                    autoCapitalize="none"
-                    className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
-                    placeholderTextColor="#9ca3af"
-                  />
-                </View>
+                <DateTimeField value={due} onChange={setDue} placeholder="No due date" />
               </View>
 
               {error ? <Text className="text-sm font-medium text-red-500">{error}</Text> : null}

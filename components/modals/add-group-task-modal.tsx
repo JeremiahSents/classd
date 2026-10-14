@@ -12,6 +12,7 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { Cancel01Icon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
+import { DateTimeField } from "@/components/ui/date-time-field";
 import { useToast } from "@/components/ui/toast";
 import { api, type Member } from "@/lib/api";
 
@@ -23,22 +24,12 @@ interface Props {
   onCreated?: () => void;
 }
 
-function toIso(date: string, time: string): string | null {
-  const clean = date.trim();
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(clean)) return null;
-  const t = time.trim() || "23:59";
-  if (!/^\d{2}:\d{2}$/.test(t)) return null;
-  const d = new Date(`${clean}T${t}:00`);
-  return isNaN(d.getTime()) ? null : d.toISOString();
-}
-
 export function AddGroupTaskModal({ groupId, members, visible, onClose, onCreated }: Props) {
   const toast = useToast();
   const [assignedTo, setAssignedTo] = useState(members[0]?.id ?? "");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [dueDate, setDueDate] = useState("");
-  const [dueTime, setDueTime] = useState("");
+  const [due, setDue] = useState<Date | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,8 +40,7 @@ export function AddGroupTaskModal({ groupId, members, visible, onClose, onCreate
   function reset() {
     setTitle("");
     setDescription("");
-    setDueDate("");
-    setDueTime("");
+    setDue(null);
     setError(null);
   }
 
@@ -60,7 +50,6 @@ export function AddGroupTaskModal({ groupId, members, visible, onClose, onCreate
   }
 
   async function handleSave() {
-    const dueAt = toIso(dueDate, dueTime);
     const assignee = members.find((m) => m.id === assignedTo);
     if (!assignee) {
       setError("Pick who to assign.");
@@ -70,10 +59,11 @@ export function AddGroupTaskModal({ groupId, members, visible, onClose, onCreate
       setError("Enter a title.");
       return;
     }
-    if (!dueAt) {
-      setError("Enter a valid due date (YYYY-MM-DD).");
+    if (!due) {
+      setError("Pick a due date.");
       return;
     }
+    const dueAt = due.toISOString();
     setError(null);
     setSubmitting(true);
     try {
@@ -165,30 +155,7 @@ export function AddGroupTaskModal({ groupId, members, visible, onClose, onCreate
                 />
               </View>
 
-              <View className="flex-row gap-3">
-                <View className="flex-[2] gap-2">
-                  <Text className="text-sm font-semibold text-foreground">Due date *</Text>
-                  <TextInput
-                    value={dueDate}
-                    onChangeText={setDueDate}
-                    placeholder="YYYY-MM-DD"
-                    autoCapitalize="none"
-                    className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
-                    placeholderTextColor="#9ca3af"
-                  />
-                </View>
-                <View className="flex-1 gap-2">
-                  <Text className="text-sm font-semibold text-foreground">Time</Text>
-                  <TextInput
-                    value={dueTime}
-                    onChangeText={setDueTime}
-                    placeholder="23:59"
-                    autoCapitalize="none"
-                    className="rounded-xl border border-border bg-secondary/50 px-4 py-3 text-base text-foreground"
-                    placeholderTextColor="#9ca3af"
-                  />
-                </View>
-              </View>
+              <DateTimeField label="Due date *" value={due} onChange={setDue} />
 
               {error ? <Text className="text-sm font-medium text-red-500">{error}</Text> : null}
 
@@ -196,7 +163,7 @@ export function AddGroupTaskModal({ groupId, members, visible, onClose, onCreate
                 label="Assign task"
                 onPress={handleSave}
                 loading={submitting}
-                disabled={!title.trim() || !dueDate.trim() || members.length === 0}
+                disabled={!title.trim() || !due || members.length === 0}
               />
             </View>
           </ScrollView>
