@@ -1,88 +1,72 @@
 # Classd — Pre-deployment TODO
 
-Ordered by priority. Items in P0 block release; P1 should ship with v1.0; P2 can follow in an update.
+✅ = done in code. 👤 = needs you (accounts, consoles, devices or decisions).
 
-## P0 — Blockers (security & broken features)
+## P0 — Blockers
 
 ### Security
-- [ ] **Stop self-promotion to admin** — `firestore.rules:23` lets a user write their whole `users/{uid}` doc, including `role`. Restrict updates so `role` (and `email`) can't change; only allow `name`, `avatarUrl`, `expoPushTokens`.
-- [ ] **Restrict class creation to admins** — `firestore.rules:52` lets any signed-in user create a class. Add `isAdmin()` (or decide reps can create too and document it).
-- [ ] **Audit the rest of `firestore.rules`** — groups, group tasks, `codes/`, `sentNotifications/` (clients shouldn't read/write this at all).
-- [ ] **Write Storage rules** (`storage.rules`) for materials: only class members read, only rep/owner/admin write, file size + type limits.
-- [ ] **Protect `runRemindersNow`** — confirm the secret is set in `functions/.env` / Secret Manager and not committed. Consider deleting it before launch.
-- [ ] **Enable Firebase App Check** to block scripted abuse of Firestore/Functions.
+- [x] ✅ Stop self-promotion to admin (rules: role locked on create/update)
+- [x] ✅ Only admins create classes
+- [x] ✅ Join codes can't be scraped — joining runs in the `joinClass` function (rate limited)
+- [x] ✅ Members-only reads for classes, rosters, tasks, announcements, materials
+- [x] ✅ Server-only `sentNotifications` / `joinAttempts`
+- [x] ✅ `storage.rules` for materials (members read, managers write, 25 MB cap)
+- [x] ✅ Rules tests on the emulator (`pnpm test:rules`, 21 tests)
+- [ ] 👤 `runRemindersNow`: check `REMINDER_SECRET` is set and long, or delete the function after testing
+- [ ] 👤 Firebase App Check — needs the native `@react-native-firebase/app-check` setup plus Play Integrity / App Attest registration in the console
 
-### Broken / fake features
-- [ ] **Make Materials real** — `listMaterials`, `uploadMaterial`, `deleteMaterial` throw `notImplemented` (`lib/api/firebase-impl.ts:919-928`); `addMaterial` in `lib/classes-store.tsx:348` is local-only.
-  - [ ] Upload to Firebase Storage `classes/{classId}/materials/{id}`
-  - [ ] Firestore doc in `classes/{classId}/materials` (name, size, mimeType, url, uploadedBy, createdAt)
-  - [ ] Upload progress + error toast; open/download a material; delete (rep only)
-  - [ ] Optional: push notification "New material posted"
+### Features
+- [x] ✅ Real Materials: Storage upload, open, delete, push notification
 
 ### Release config
-- [ ] **Fix OTA update safety** — `app.json` uses `runtimeVersion.policy: "sdkVersion"`. Adding a native module (e.g. the new datetimepicker) doesn't change it, so `eas update` would push JS that crashes older builds. Switch to `"fingerprint"` (or `"appVersion"`) before the first store build.
-- [ ] **Add `expo-notifications` config plugin** to `app.json` (Android notification icon + color, default channel).
+- [x] ✅ `runtimeVersion` → `fingerprint`
+- [x] ✅ `expo-notifications` plugin + Android notification icon
 
-## P1 — Required for store approval / v1.0
+## P1 — Store approval / v1.0
 
 ### Store requirements
-- [ ] **Delete account** in Profile (Apple and Google both require it). Delete auth user + `users/{uid}` + completions + memberships (best done in a Cloud Function).
-- [ ] **Privacy policy & terms** — host a page, link it in the app (login screen + profile) and in store listings.
-- [ ] **Store assets** — app icon check, screenshots, descriptions, Play data-safety form, App Store privacy labels.
-- [ ] **Notification permission prompt** — explain why before the OS prompt; handle "denied" gracefully.
+- [x] ✅ Delete account (Settings → Delete account)
+- [x] ✅ In-app privacy policy (`app/privacy.tsx`, linked from login + Settings)
+- [ ] 👤 Host the privacy policy at a public URL for the store listings, and review the wording
+- [ ] 👤 Store assets: screenshots, descriptions, Play data-safety form, App Store privacy labels
+- [x] ✅ Explainer before the notification permission prompt
 
 ### Auth
-- [ ] **Forgot password** on the login screen (`sendPasswordResetEmail`).
-- [ ] **Email verification** after sign-up (or at least a banner until verified).
-- [ ] Friendlier auth error messages (weak password, email in use, network error).
+- [x] ✅ Forgot password
+- [x] ✅ Email verification (sent on sign-up + Home banner)
 
-### Missing actions (API exists, no UI)
-- [ ] **Leave class** — `api.leaveClass` exists but nothing in the UI calls it.
-- [ ] **Edit / delete announcements** — only tasks have edit/delete.
-- [ ] **Delete class** (admin/owner) and **delete group** (creator).
-- [ ] Confirm `removeMember` UI exists for reps and shows a confirmation dialog.
-- [ ] **Regenerate join code** (in case a code leaks).
+### Missing actions
+- [x] ✅ Leave class
+- [x] ✅ Edit / delete announcements
+- [x] ✅ Delete class (admin) and delete group (creator)
+- [x] ✅ Remove member (rep + admin, with confirmation)
+- [x] ✅ Generate a new join code (admin)
 
 ### Data freshness
-- [ ] **Pull-to-refresh** on Home, Classes, Tasks, Announcements, Groups.
-- [ ] **Live updates** — switch key lists to Firestore `onSnapshot` listeners (or at least refresh on app foreground).
-- [ ] Tapping a push notification deep-links to the task/announcement.
-
-### Uncommitted work
-- [ ] Test the `DateTimeField` refactor on Android + iOS, then commit it with the `@react-native-community/datetimepicker` dependency.
-- [ ] Decide on the deleted `.claude/skills/firebase-*` files, `ARCHITECTURE.md`, `PRESENTATION_SCRIPT.md` — commit or discard.
+- [x] ✅ Pull-to-refresh everywhere
+- [x] ✅ Refresh on app resume and when a push arrives
+- [ ] Live `onSnapshot` listeners (optional — resume/push refresh covers most cases)
+- [x] ✅ Tapping a push opens the task / class
 
 ## P2 — Polish
-
-### UX
-- [ ] Consistent loading skeletons, empty states, and error/retry states on every screen.
-- [ ] Root **error boundary** so a crash shows a friendly screen instead of a white screen.
-- [ ] Offline handling — banner when offline; enable Firestore offline persistence.
-- [ ] Dark mode pass (`userInterfaceStyle: "automatic"` is on — verify every screen).
-- [ ] Accessibility — labels on icon buttons, font scaling, contrast.
-- [ ] Haptics on complete/toggle actions.
-- [ ] Class cover images and schedules (fields exist in the data model but aren't used).
-- [ ] Notification settings in Profile (mute a class, turn off reminders).
+- [x] ✅ Root error boundary ("Something went wrong / Try again")
+- [ ] Offline banner (needs `@react-native-community/netinfo`). Note: the Firebase JS SDK has no persistent offline cache on React Native.
+- [ ] Dark mode — locked to light for now; needs hard-coded colours moved to theme tokens
+- [ ] Class cover images and schedules (in the data model, unused)
+- [ ] Haptics on complete/toggle
+- [ ] Accessibility pass (labels added on new controls; older screens not audited)
 
 ### Code health
-- [ ] Remove unused imports in `components/class/class-card.tsx:3-4` (the 4 lint warnings).
-- [ ] Remove `console.log` in `lib/push.ts:79,90`.
-- [ ] Update the stale header comment in `lib/api/firebase-impl.ts`.
-- [ ] Delete empty `apps/` and `packages/` folders.
-- [ ] Update `README.md` (drop "today's classes", add groups, admin, notifications, backend setup).
+- [x] ✅ Lint warnings, debug `console.log`s, stale comments, dead code, stale config
+- [x] ✅ README rewritten
+- [x] ✅ Unit tests (`pnpm test`) + CI (`.github/workflows/ci.yml`)
+- [ ] 👤 Crash reporting (e.g. Sentry) — needs an account/DSN
+- [ ] 👤 Separate dev and prod Firebase projects
+- [ ] 👤 Firebase budget alerts
 
-### Quality & ops
-- [ ] Unit tests: mapping helpers in `lib/classes-store.tsx`, `processReminders` in `functions/src/index.ts`.
-- [ ] Firestore rules tests with the emulator (`@firebase/rules-unit-testing`).
-- [ ] CI (GitHub Actions): `pnpm typecheck`, `pnpm lint`, functions build, rules tests.
-- [ ] Crash reporting (Sentry via `@sentry/react-native`) + basic analytics.
-- [ ] Verify all Firestore composite indexes are in `firestore.indexes.json` (check both it and `firebase.indexes.json` — consolidate into one).
-- [ ] Set Firebase budget alerts; check the hourly `deadlineReminders` cost at scale.
-- [ ] Separate dev / prod Firebase projects (so testing doesn't touch real users' data).
-
-## Launch checklist
-- [ ] All P0 + P1 done
+## Launch checklist (👤)
+- [ ] Enable Firebase Storage in the console (Blaze plan)
 - [ ] `firebase deploy --only firestore:rules,firestore:indexes,storage,functions`
-- [ ] Production EAS build tested on real devices (Android + iOS)
+- [ ] New EAS build (native config changed), then test on real Android + iOS devices
 - [ ] Internal testing track (Play) / TestFlight with a few real students
 - [ ] Submit for review
