@@ -1,46 +1,40 @@
 # classd
 
-classd is a mobile-first classroom management app built with Expo and React Native. It helps class representatives create classes and share class activity, while students can join classes, view their schedule, track tasks, and keep up with announcements.
+classd is a mobile app (Android/iOS) that helps university students keep up with their classes. Admins create classes and assign a class representative; the rep posts tasks, announcements and course materials; students join with a 6-digit code, track their work, and get push reminders before things are due.
 
 ## What it does
 
-- **Class management**: Class representatives can create classes, and students can join the classes they are enrolled in.
-- **Role-based experience**: Class representative and student views show the right actions for each role.
-- **Home dashboard**: Users can see today's classes, upcoming tasks, and recent updates in one place.
-- **Task tracking**: Students can mark tasks as complete from the app.
-- **Announcements**: Classes can surface updates and announcements for enrolled users.
+- **Classes**: admins create classes and assign a class rep. Students join with a 6-digit code and can leave at any time. Admins can issue a new join code or delete a class.
+- **Tasks**: reps post assignments with due dates; students mark them complete. Edit, delete, filter and search.
+- **Announcements**: general notices, CATs and deadlines, with optional due dates. Reps can edit or delete them.
+- **Materials**: reps upload files (up to 25 MB) that everyone in the class can open.
+- **Project groups**: students form one group per class, assign group tasks, and track them on the dashboard.
+- **Notifications**: push alerts for new posts plus due-soon and overdue reminders. Tapping one opens the task or class. Each kind can be turned off in Settings.
+- **Accounts**: email sign-up with verification, password reset, profile and avatar, and in-app account deletion.
 
 ## Tech stack
 
-- **Expo SDK 54** with Expo Router
-- **React Native 0.81** and React 19
-- **TypeScript**
-- **NativeWind** and Tailwind CSS for styling
-- **Firebase** and Firebase Cloud Functions support
+- **Expo SDK 54** with Expo Router, **React Native 0.81**, React 19, TypeScript
+- **NativeWind** (Tailwind CSS) for styling
+- **Firebase**: Auth, Firestore, Storage and Cloud Functions
 - **pnpm** for package management
 
 ## Requirements
 
-Before getting started, install:
-
-- **Node.js 20 or newer**
+- **Node.js 20 or newer** (CI uses 24)
 - **pnpm 9.15.9 or newer**
-- **Expo Go** on your Android or iOS device, or an Android/iOS simulator
+- **Java 21+** and the **Firebase CLI** (`npm i -g firebase-tools`) to run the security-rules tests
+- A development build for push notifications (they don't work in Expo Go)
 
 ## Getting started
 
-1. Clone the project and open it:
-
-   ```bash
-   git clone <repository-url>
-   cd classd
-   ```
-
-2. Install dependencies:
+1. Install dependencies:
 
    ```bash
    pnpm install
    ```
+
+2. Copy `.env.example` to `.env` and fill in the Firebase keys. Set `EXPO_PUBLIC_API_BACKEND=firebase` for the real backend, or `mock` to run on in-memory sample data.
 
 3. Start the Expo development server:
 
@@ -48,44 +42,54 @@ Before getting started, install:
    pnpm start
    ```
 
-4. Open the app:
+   Then press `a` (Android), `i` (iOS), or scan the QR code.
 
-   - **Expo Go**: Scan the QR code from the terminal.
-   - **Android emulator**: Press `a` in the Expo terminal, or run `pnpm android`.
-   - **iOS simulator**: Press `i` in the Expo terminal, or run `pnpm ios`.
-   - **Web**: Run `pnpm web`.
+## Scripts
 
-## Available scripts
+| Script | What it does |
+| --- | --- |
+| `pnpm start` / `android` / `ios` / `web` | Start Expo (with a cleared cache) |
+| `pnpm typecheck` | TypeScript checks |
+| `pnpm lint` | Expo lint |
+| `pnpm test` | Unit tests (`tests/unit`) |
+| `pnpm test:rules` | Firestore security-rules tests on the emulator (`tests/rules`) |
+| `pnpm format` | Format with Prettier |
+| `pnpm eas:*` | EAS builds, updates and store submissions — see `package.json` |
 
-- **`pnpm start`**: Start Expo with a cleared cache.
-- **`pnpm android`**: Start Expo and open Android.
-- **`pnpm ios`**: Start Expo and open iOS.
-- **`pnpm web`**: Start Expo for web.
-- **`pnpm lint`**: Run Expo lint checks.
-- **`pnpm typecheck`**: Run TypeScript checks.
-- **`pnpm format`**: Format TypeScript and TSX files with Prettier.
+CI (`.github/workflows/ci.yml`) runs the typecheck, lint, unit tests, the Cloud Functions build and the rules tests on every push and pull request.
 
-## Firebase functions
+## Backend
 
-Firebase Cloud Functions live in the `functions` folder.
+Everything the app can do is defined in `lib/api/contract.ts` and implemented against Firebase in `lib/api/firebase-impl.ts`. Screens never call Firebase directly.
+
+| Piece | File |
+| --- | --- |
+| Firestore security rules | `firestore.rules` |
+| Storage security rules (materials) | `storage.rules` |
+| Indexes | `firestore.indexes.json` |
+| Cloud Functions | `functions/src/index.ts` |
+
+The Cloud Functions send push notifications (new posts, hourly due/overdue reminders), handle joining a class by code and deleting an account, and clean up when a class, group or membership is deleted.
+
+Deploy everything with:
 
 ```bash
-cd functions
-npm install
-npm run build
-npm run serve
+firebase deploy --only firestore:rules,firestore:indexes,storage,functions
 ```
 
-Use `npm run deploy` inside `functions` when you are ready to deploy functions to Firebase.
+The functions need the Blaze plan (scheduled functions and outbound requests to Expo's push service).
 
 ## Project structure
 
-- **`app`**: Expo Router screens and navigation routes.
-- **`components`**: Reusable UI, class, home, and modal components.
-- **`lib`**: App state and shared logic.
-- **`functions`**: Firebase Cloud Functions source.
-- **`assets`**: Images, icons, fonts, and other static assets.
+- **`app`**: Expo Router screens: `(auth)` login, `(tabs)` the main app, `(admin)` the admin area.
+- **`components`**: UI building blocks, rows, home sections and modals.
+- **`lib`**: session and data stores, the API layer, and helpers.
+- **`functions`**: Firebase Cloud Functions.
+- **`tests`**: unit tests and security-rules tests.
+- **`assets`**: icons, splash image and fonts.
 
 ## Notes
 
-Use the package scripts instead of running `npx expo start` directly. The scripts include the Expo startup flags this project expects.
+- Use the package scripts instead of `npx expo start`; they include the startup flags this project expects.
+- `runtimeVersion` uses the `fingerprint` policy, so an `eas update` only reaches builds with matching native code. After adding a native module, ship a new build.
+- Admin accounts are created by setting `role: "admin"` on the user's `users/{uid}` document in the Firebase console. The app can't do this, by design.

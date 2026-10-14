@@ -115,7 +115,6 @@ interface ClassesStore {
 
   refresh: (silent?: boolean) => Promise<void>;
   joinClass: (code: string) => Promise<Classroom | null>;
-  addClass: (name: string) => Promise<Classroom>;
   assignCR: (classId: string, memberId: string) => void;
   removeMember: (classId: string, memberId: string) => Promise<void>;
   /** Leave a class the current user is enrolled in. */
@@ -308,12 +307,6 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
           if (e instanceof ApiError && e.code === "not-found") return null;
           throw e;
         }
-      },
-
-      addClass: async (name) => {
-        const c = await api.createClass({ name });
-        await refresh();
-        return toClassroom(c);
       },
 
       assignCR: (classId, memberId) => {

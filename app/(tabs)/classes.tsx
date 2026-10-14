@@ -13,7 +13,7 @@ import { useClasses } from "@/lib/classes-store";
 
 export default function Classes() {
   const router = useRouter();
-  const { loading, classes, refresh } = useClasses();
+  const { loading, classes, membersForClass, refresh } = useClasses();
   const refreshControl = useRefreshControl(() => refresh(true));
   const [joinVisible, setJoinVisible] = useState(false);
 
@@ -56,6 +56,7 @@ export default function Classes() {
             <ClassCard
               key={classroom.id}
               classroom={classroom}
+              memberCount={membersForClass(classroom.id).length}
               onPress={() =>
                 router.push({
                   pathname: "/(tabs)/class/[id]",

@@ -1,17 +1,14 @@
 import { Pressable, Text, View, type PressableProps } from "react-native";
 import { Image } from "expo-image";
-import { HugeiconsIcon } from "@hugeicons/react-native";
-import { Folder01Icon, ChartHistogramIcon, MoreVerticalIcon } from "@hugeicons/core-free-icons";
 import type { Classroom } from "@/lib/classes";
 
 interface ClassCardProps extends Omit<PressableProps, "children"> {
   classroom: Classroom;
+  /** Number of enrolled members. */
+  memberCount: number;
 }
 
-export function ClassCard({ classroom, ...props }: ClassCardProps) {
-  // Deterministic student count based on class id (15 to 34)
-  const studentsCount = (classroom.id.charCodeAt(classroom.id.length - 1) % 20) + 15;
-
+export function ClassCard({ classroom, memberCount, ...props }: ClassCardProps) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -35,7 +32,7 @@ export function ClassCard({ classroom, ...props }: ClassCardProps) {
         </Text>
 
         <Text className="text-[14px] font-medium text-white/80" numberOfLines={1}>
-          {studentsCount} Students
+          {memberCount} {memberCount === 1 ? "member" : "members"}
         </Text>
       </View>
     </Pressable>
