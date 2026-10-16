@@ -23,7 +23,9 @@ import {
   UserGroupIcon,
   UserIcon,
 } from "@hugeicons/core-free-icons";
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+// expo-router (SDK 58+) ships its own tab navigator; its tab bar gets an
+// emitter + navigateToTab instead of a navigation prop
+import type { BottomTabBarProps } from "expo-router/js-tabs";
 
 /* ------------------------------------------------------------------ */
 /*  Icon map                                                          */
@@ -77,7 +79,7 @@ const glass = isLiquidGlassAvailable();
 /* ------------------------------------------------------------------ */
 /*  Tab bar                                                           */
 /* ------------------------------------------------------------------ */
-export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+export function FloatingTabBar({ state, descriptors, emitter, navigateToTab }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
   const theme = scheme === "dark" ? DARK : LIGHT;
@@ -133,13 +135,13 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
               iconColor={focused ? theme.icon : theme.iconInactive}
               activePillColor={theme.activePill}
               onPress={() => {
-                const event = navigation.emit({
+                const event = emitter.emit({
                   type: "tabPress",
                   target: route.key,
                   canPreventDefault: true,
                 });
                 if (!isCurrentRoute && !event.defaultPrevented) {
-                  navigation.navigate(route.name);
+                  navigateToTab(route.key);
                 }
               }}
             />
@@ -237,7 +239,7 @@ const styles = StyleSheet.create({
     elevation: 14,
   },
   fill: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     borderRadius: 999,
   },
   tab: {

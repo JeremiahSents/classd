@@ -18,7 +18,6 @@ import {
   type Member,
   type Task,
   type Announcement,
-  type Role,
   type SignInInput,
   type SignUpInput,
   type UserProfile,

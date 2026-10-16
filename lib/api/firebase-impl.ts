@@ -64,7 +64,6 @@ import {
   type Group,
   type GroupTask,
   type GroupTaskStatus,
-  type Role,
   type SignInInput,
   type SignUpInput,
   type UpdateAnnouncementInput,

@@ -1,5 +1,11 @@
 import { forwardRef } from "react";
-import { Text, TextInput, View, type TextInputProps } from "react-native";
+import {
+  Text,
+  TextInput,
+  View,
+  type TextInputInstance,
+  type TextInputProps,
+} from "react-native";
 import { cn } from "@/lib/utils";
 
 interface InputProps extends TextInputProps {
@@ -7,7 +13,7 @@ interface InputProps extends TextInputProps {
   containerClassName?: string;
 }
 
-export const Input = forwardRef<TextInput, InputProps>(function Input(
+export const Input = forwardRef<TextInputInstance, InputProps>(function Input(
   { label, containerClassName, className, ...props },
   ref,
 ) {

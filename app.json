@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "classd",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "updates": {
       "url": "https://u.expo.dev/0af230af-b104-4918-b9f6-a42bc78d4322"
     },
@@ -28,7 +27,6 @@
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/adaptive-icon.png"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
