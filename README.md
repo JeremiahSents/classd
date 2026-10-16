@@ -13,7 +13,7 @@ classd is a mobile app (Android/iOS) that helps university students keep up with
 
 ## Tech stack
 
-- **Expo SDK 58** with Expo Router, **React Native 0.88**, React 19.3, TypeScript
+- **Expo SDK 57** with Expo Router, **React Native 0.86**, React 19.2, TypeScript
 - **NativeWind** (Tailwind CSS) for styling
 - **Firebase**: Auth, Firestore and Cloud Functions
 - **pnpm** for package management

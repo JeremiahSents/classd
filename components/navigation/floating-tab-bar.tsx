@@ -23,8 +23,8 @@ import {
   UserGroupIcon,
   UserIcon,
 } from "@hugeicons/core-free-icons";
-// expo-router (SDK 58+) ships its own tab navigator; its tab bar gets an
-// emitter + navigateToTab instead of a navigation prop
+// expo-router ships its own tab navigator. (From SDK 58 its tab bar gets
+// emitter + navigateToTab instead of navigation — update this on upgrade.)
 import type { BottomTabBarProps } from "expo-router/js-tabs";
 
 /* ------------------------------------------------------------------ */
@@ -79,7 +79,7 @@ const glass = isLiquidGlassAvailable();
 /* ------------------------------------------------------------------ */
 /*  Tab bar                                                           */
 /* ------------------------------------------------------------------ */
-export function FloatingTabBar({ state, descriptors, emitter, navigateToTab }: BottomTabBarProps) {
+export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
   const theme = scheme === "dark" ? DARK : LIGHT;
@@ -135,13 +135,13 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab }: B
               iconColor={focused ? theme.icon : theme.iconInactive}
               activePillColor={theme.activePill}
               onPress={() => {
-                const event = emitter.emit({
+                const event = navigation.emit({
                   type: "tabPress",
                   target: route.key,
                   canPreventDefault: true,
                 });
                 if (!isCurrentRoute && !event.defaultPrevented) {
-                  navigateToTab(route.key);
+                  navigation.navigate(route.name);
                 }
               }}
             />
