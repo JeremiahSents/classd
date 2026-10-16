@@ -53,3 +53,6 @@ google-services.json
 
 # Firebase emulator logs
 firestore-debug.log
+
+# Local Firebase emulator data (pnpm emulators)
+.emulator-data/

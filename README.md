@@ -43,6 +43,37 @@ classd is a mobile app (Android/iOS) that helps university students keep up with
 
    Then press `a` (Android), `i` (iOS), or scan the QR code.
 
+## Testing locally (free, no live data)
+
+The Firebase Emulator Suite runs Auth, Firestore and the Cloud Functions on your computer, so you can test everything without touching the live project or paying anything.
+
+1. Start an Android emulator (Android Studio → Device Manager → ▶ Pixel 9 Pro).
+2. Terminal 1, start the local backend and leave it running:
+
+   ```bash
+   pnpm emulators
+   ```
+
+3. Terminal 2, load demo accounts and classes (this resets the local data):
+
+   ```bash
+   pnpm seed:emulator
+   ```
+
+4. Terminal 3, start the app pointed at the local backend:
+
+   ```bash
+   pnpm start:emulator
+   ```
+
+Log in with `aisha@demo.classd.app` (student), `rep@demo.classd.app` (class rep) or `admin@demo.classd.app` (admin), password `Demo123!pass`. Join code `333333` is a class nobody has joined yet.
+
+- Browse and edit the data at http://localhost:4000. For example, set someone's `role` to `admin`, or flip `emailVerified` under Authentication.
+- Password-reset and verification emails aren't sent. The emulator prints the link in terminal 1 instead.
+- Data is saved to `.emulator-data/` when you stop the emulators with Ctrl+C.
+- To use a phone instead, keep it on the same Wi-Fi and allow ports 9099, 8080 and 5001 through Windows Firewall.
+- Push notifications don't work in Expo Go. Test those with an EAS build.
+
 ## Scripts
 
 | Script | What it does |
