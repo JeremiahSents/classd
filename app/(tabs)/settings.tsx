@@ -63,7 +63,7 @@ export default function Settings() {
           <View className="rounded-3xl border border-border bg-card p-2">
             <PrefRow
               label="New posts"
-              hint="New tasks, announcements and materials in your classes"
+              hint="New tasks and announcements in your classes"
               value={prefs.newPosts}
               disabled={saving}
               onChange={(v) => togglePref("newPosts", v)}

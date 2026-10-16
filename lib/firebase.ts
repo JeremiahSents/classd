@@ -2,7 +2,7 @@
 //
 // All values come from EXPO_PUBLIC_* env vars so they are bundled into the
 // client at build time (see .env.example). Firebase web API keys are not
-// secrets — access is controlled by Firestore/Storage security rules — but we
+// secrets — access is controlled by Firestore security rules — but we
 // still keep them in env so different builds (dev/staging/prod) can point at
 // different projects.
 //
@@ -18,7 +18,6 @@ import { getAuth, initializeAuth, type Auth } from "firebase/auth";
 import { getReactNativePersistence } from "firebase/auth";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { getFirestore, type Firestore } from "firebase/firestore";
-import { getStorage, type FirebaseStorage } from "firebase/storage";
 import { getFunctions, type Functions } from "firebase/functions";
 
 const firebaseConfig = {
@@ -48,7 +47,6 @@ function resolveAuth(): Auth {
 
 export const auth: Auth = resolveAuth();
 export const db: Firestore = getFirestore(app);
-export const storage: FirebaseStorage = getStorage(app);
 export const functions: Functions = getFunctions(app);
 
 export default app;

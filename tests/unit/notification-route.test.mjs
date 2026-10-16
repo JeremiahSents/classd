@@ -27,9 +27,8 @@ test("announcement reminder opens its class, not a task", () => {
   );
 });
 
-test("announcement and material posts open their class", () => {
+test("announcement posts open their class", () => {
   assert.deepEqual(routeForNotification({ classId: "c1", announcementId: "a1" }), cls("c1"));
-  assert.deepEqual(routeForNotification({ classId: "c2", materialId: "m1" }), cls("c2"));
 });
 
 test("unknown payloads are ignored", () => {

@@ -15,7 +15,7 @@ export function routeForNotification(
   // new-task push carries taskId; deadline reminders carry kind + docId
   const taskId = str(data.taskId) ?? (data.kind === "task" ? str(data.docId) : undefined);
   if (taskId) return { pathname: "/(tabs)/task/[id]", params: { id: taskId } };
-  // announcements and materials open their class
+  // announcements open their class
   const classId = str(data.classId);
   if (classId) return { pathname: "/(tabs)/class/[id]", params: { id: classId } };
   return null;

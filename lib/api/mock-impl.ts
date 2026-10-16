@@ -18,11 +18,9 @@ import {
   type Member,
   type Task,
   type Announcement,
-  type Material,
   type Role,
   type SignInInput,
   type SignUpInput,
-  type UploadFileInput,
   type UserProfile,
 } from "./contract";
 
@@ -75,10 +73,6 @@ let tasks: Task[] = [
 let announcements: Announcement[] = [
   { id: "n1", classId: "math150", title: "Midterm moved to Friday", content: "Rescheduled to Friday 9am.", category: "deadline", createdBy: "u-classrep", createdAt: now() },
   { id: "n2", classId: "cs204", title: "Guest lecture Thursday", content: "Industry speaker on graph databases.", category: "general", createdBy: "u-classrep", createdAt: now() },
-];
-
-let materials: Material[] = [
-  { id: "mat1", classId: "bio101", name: "Lecture 3 - Cell Membrane.pdf", sizeBytes: 2_400_000, mimeType: "application/pdf", url: "", storagePath: "materials/bio101/mat1", uploadedBy: "u-classrep", createdAt: now() },
 ];
 
 let enrolledClassIds = ["bio101", "cs204"];
@@ -308,18 +302,5 @@ export const mockApi: ClassdApi = {
   async deleteAnnouncement(_classId, announcementId) {
     requireAuth();
     announcements = announcements.filter((a) => a.id !== announcementId);
-  },
-
-  async listMaterials(classId) {
-    return materials.filter((m) => m.classId === classId);
-  },
-  async uploadMaterial(classId, file: UploadFileInput) {
-    const u = requireAuth();
-    const m: Material = { id: id("mat"), classId, name: file.name, sizeBytes: file.sizeBytes, mimeType: file.mimeType, url: file.uri, storagePath: `materials/${classId}/${file.name}`, uploadedBy: u.id, createdAt: now() };
-    materials = [m, ...materials];
-    return m;
-  },
-  async deleteMaterial(classId, materialId) {
-    materials = materials.filter((m) => !(m.classId === classId && m.id === materialId));
   },
 };

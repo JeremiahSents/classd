@@ -1,13 +1,12 @@
 # classd
 
-classd is a mobile app (Android/iOS) that helps university students keep up with their classes. Admins create classes and assign a class representative; the rep posts tasks, announcements and course materials; students join with a 6-digit code, track their work, and get push reminders before things are due.
+classd is a mobile app (Android/iOS) that helps university students keep up with their classes. Admins create classes and assign a class representative; the rep posts tasks and announcements; students join with a 6-digit code, track their work, and get push reminders before things are due.
 
 ## What it does
 
 - **Classes**: admins create classes and assign a class rep. Students join with a 6-digit code and can leave at any time. Admins can issue a new join code or delete a class.
 - **Tasks**: reps post assignments with due dates; students mark them complete. Edit, delete, filter and search.
 - **Announcements**: general notices, CATs and deadlines, with optional due dates. Reps can edit or delete them.
-- **Materials**: reps upload files (up to 25 MB) that everyone in the class can open.
 - **Project groups**: students form one group per class, assign group tasks, and track them on the dashboard.
 - **Notifications**: push alerts for new posts plus due-soon and overdue reminders. Tapping one opens the task or class. Each kind can be turned off in Settings.
 - **Accounts**: email sign-up with verification, password reset, profile and avatar, and in-app account deletion.
@@ -16,7 +15,7 @@ classd is a mobile app (Android/iOS) that helps university students keep up with
 
 - **Expo SDK 54** with Expo Router, **React Native 0.81**, React 19, TypeScript
 - **NativeWind** (Tailwind CSS) for styling
-- **Firebase**: Auth, Firestore, Storage and Cloud Functions
+- **Firebase**: Auth, Firestore and Cloud Functions
 - **pnpm** for package management
 
 ## Requirements
@@ -65,7 +64,6 @@ Everything the app can do is defined in `lib/api/contract.ts` and implemented ag
 | Piece | File |
 | --- | --- |
 | Firestore security rules | `firestore.rules` |
-| Storage security rules (materials) | `storage.rules` |
 | Indexes | `firestore.indexes.json` |
 | Cloud Functions | `functions/src/index.ts` |
 
@@ -74,7 +72,7 @@ The Cloud Functions send push notifications (new posts, hourly due/overdue remin
 Deploy everything with:
 
 ```bash
-firebase deploy --only firestore:rules,firestore:indexes,storage,functions
+firebase deploy --only firestore:rules,firestore:indexes,functions
 ```
 
 The functions need the Blaze plan (scheduled functions and outbound requests to Expo's push service).

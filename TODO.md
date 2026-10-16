@@ -8,15 +8,14 @@
 - [x] ✅ Stop self-promotion to admin (rules: role locked on create/update)
 - [x] ✅ Only admins create classes
 - [x] ✅ Join codes can't be scraped — joining runs in the `joinClass` function (rate limited)
-- [x] ✅ Members-only reads for classes, rosters, tasks, announcements, materials
+- [x] ✅ Members-only reads for classes, rosters, tasks, announcements
 - [x] ✅ Server-only `sentNotifications` / `joinAttempts`
-- [x] ✅ `storage.rules` for materials (members read, managers write, 25 MB cap)
 - [x] ✅ Rules tests on the emulator (`pnpm test:rules`, 21 tests)
 - [ ] 👤 `runRemindersNow`: check `REMINDER_SECRET` is set and long, or delete the function after testing
 - [ ] 👤 Firebase App Check — needs the native `@react-native-firebase/app-check` setup plus Play Integrity / App Attest registration in the console
 
 ### Features
-- [x] ✅ Real Materials: Storage upload, open, delete, push notification
+- [ ] Materials (file uploads) — built, then removed for now; restore from commit `f90aec3` (needs Firebase Storage + `storage.rules`)
 
 ### Release config
 - [x] ✅ `runtimeVersion` → `fingerprint`
@@ -65,8 +64,7 @@
 - [ ] 👤 Firebase budget alerts
 
 ## Launch checklist (👤)
-- [ ] Enable Firebase Storage in the console (Blaze plan)
-- [ ] `firebase deploy --only firestore:rules,firestore:indexes,storage,functions`
+- [ ] `firebase deploy --only firestore:rules,firestore:indexes,functions`
 - [ ] New EAS build (native config changed), then test on real Android + iOS devices
 - [ ] Internal testing track (Play) / TestFlight with a few real students
 - [ ] Submit for review

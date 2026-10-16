@@ -88,7 +88,7 @@ export default function AdminClassDetail() {
     const ok = await confirmAction({
       title: `Delete ${cls?.name ?? "this class"}?`,
       message:
-        "This permanently removes the class with all its members, tasks, announcements, materials and groups.",
+        "This permanently removes the class with all its members, tasks, announcements and groups.",
       confirmLabel: "Delete class",
     });
     if (!ok) return;

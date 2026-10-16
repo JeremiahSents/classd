@@ -1,9 +1,8 @@
 import { useCallback, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import * as DocumentPicker from "expo-document-picker";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import {
   ArrowLeft01Icon,
@@ -15,7 +14,6 @@ import { AddTaskModal } from "@/components/modals/add-task-modal";
 import { AddAnnouncementModal } from "@/components/modals/add-announcement-modal";
 import { MemberRow } from "@/components/class/member-row";
 import { TaskRow } from "@/components/class/task-row";
-import { MaterialRow } from "@/components/class/material-row";
 import { SegmentedTabs } from "@/components/ui/segmented-tabs";
 import { EmptySectionHint } from "@/components/ui/section-header";
 import { AnnouncementCard } from "@/components/class/announcement-card";
@@ -24,12 +22,14 @@ import { useRefreshControl } from "@/components/ui/refresh-control";
 import { useClasses } from "@/lib/classes-store";
 import { useSession } from "@/lib/session";
 import { confirmAction } from "@/lib/confirm";
-import { api, MAX_MATERIAL_BYTES, type Group } from "@/lib/api";
-import type { Announcement, Material } from "@/lib/types";
+import { api, type Group } from "@/lib/api";
+import type { Announcement } from "@/lib/types";
 import { CreateGroupModal } from "@/components/modals/create-group-modal";
 import { useToast } from "@/components/ui/toast";
 
-const TABS = ["Tasks", "Materials", "Updates", "Members", "Groups"];
+const TABS = ["Tasks", "Updates", "Members", "Groups"];
+// indexes into TABS, so the checks below read by name
+const TAB = { tasks: 0, updates: 1, members: 2, groups: 3 } as const;
 
 export default function ClassDetail() {
   const router = useRouter();
@@ -39,10 +39,6 @@ export default function ClassDetail() {
     membersForClass,
     tasksForClass,
     announcementsForClass,
-    materialsForClass,
-    loadMaterials,
-    uploadMaterial,
-    deleteMaterial,
     removeMember,
     leaveClass,
     isTaskComplete,
@@ -60,7 +56,6 @@ export default function ClassDetail() {
   const [addAnnouncementVisible, setAddAnnouncementVisible] = useState(false);
   const [createGroupVisible, setCreateGroupVisible] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
-  const [uploading, setUploading] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
 
   const loadGroups = useCallback(async () => {
@@ -76,12 +71,9 @@ export default function ClassDetail() {
     useCallback(() => {
       void refresh(true);
       void loadGroups();
-      void loadMaterials(id);
-    }, [refresh, loadGroups, loadMaterials, id]),
+    }, [refresh, loadGroups]),
   );
-  const refreshControl = useRefreshControl(() =>
-    Promise.all([refresh(true), loadGroups(), loadMaterials(id)]),
-  );
+  const refreshControl = useRefreshControl(() => Promise.all([refresh(true), loadGroups()]));
 
   const classroom = getClass(id);
 
@@ -101,57 +93,6 @@ export default function ClassDetail() {
   const myMemberRole = members.find((m) => m.id === user?.id)?.role;
   const tasks = tasksForClass(id);
   const announcements = announcementsForClass(id);
-  const materials = materialsForClass(id);
-
-  async function pickFile() {
-    const result = await DocumentPicker.getDocumentAsync({
-      multiple: false,
-      copyToCacheDirectory: true,
-    });
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    if (asset.size !== undefined && asset.size > MAX_MATERIAL_BYTES) {
-      toast.error("Files must be 25 MB or smaller.");
-      return;
-    }
-    setUploading(true);
-    try {
-      await uploadMaterial(id, {
-        uri: asset.uri,
-        name: asset.name,
-        mimeType: asset.mimeType,
-        sizeBytes: asset.size,
-      });
-      toast.success("Material uploaded!", "📎");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Upload failed. Please try again.");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  async function openMaterial(material: Material) {
-    try {
-      await Linking.openURL(material.url);
-    } catch {
-      toast.error("Couldn't open this file.");
-    }
-  }
-
-  async function handleDeleteMaterial(material: Material) {
-    const ok = await confirmAction({
-      title: "Delete this file?",
-      message: `"${material.name}" will be removed for everyone in the class.`,
-      confirmLabel: "Delete",
-    });
-    if (!ok) return;
-    try {
-      await deleteMaterial(id, material.id);
-      toast.success("File deleted", "🗑️");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not delete the file.");
-    }
-  }
 
   async function handleRemoveMember(memberId: string, memberName: string) {
     const ok = await confirmAction({
@@ -185,12 +126,9 @@ export default function ClassDetail() {
   }
 
   function handleAdd() {
-    if (tab === 0) setAddTaskVisible(true);
-    else if (tab === 1) {
-      if (!uploading) void pickFile();
-    }
-    else if (tab === 2) setAddAnnouncementVisible(true);
-    else if (tab === 3) setInviteVisible(true);
+    if (tab === TAB.tasks) setAddTaskVisible(true);
+    else if (tab === TAB.updates) setAddAnnouncementVisible(true);
+    else if (tab === TAB.members) setInviteVisible(true);
     else setCreateGroupVisible(true); // Groups tab — any member can create
   }
 
@@ -230,15 +168,19 @@ export default function ClassDetail() {
             ID {classroom.id.slice(0, 8).toUpperCase()}
           </Text>
         </View>
-        {canManage || tab === 4 ? (
+        {canManage || tab === TAB.groups ? (
           <Pressable
             accessibilityRole="button"
             onPress={handleAdd}
             className="h-11 flex-row items-center gap-2 rounded-full bg-primary px-4 active:opacity-90"
           >
-            <HugeiconsIcon icon={tab === 3 ? UserAdd01Icon : PlusSignIcon} size={18} color="#fff" />
+            <HugeiconsIcon
+              icon={tab === TAB.members ? UserAdd01Icon : PlusSignIcon}
+              size={18}
+              color="#fff"
+            />
             <Text className="text-sm font-semibold text-primary-foreground">
-              {tab === 3 ? "Invite" : "Add"}
+              {tab === TAB.members ? "Invite" : "Add"}
             </Text>
           </Pressable>
         ) : null}
@@ -256,7 +198,7 @@ export default function ClassDetail() {
         showsVerticalScrollIndicator={false}
       >
         {/* Tasks */}
-        {tab === 0 ? (
+        {tab === TAB.tasks ? (
           tasks.length > 0 ? (
             tasks.map((t) => (
               <TaskRow
@@ -278,39 +220,8 @@ export default function ClassDetail() {
           )
         ) : null}
 
-        {/* Materials */}
-        {tab === 1 && uploading ? (
-          <View className="flex-row items-center gap-3 rounded-2xl border border-dashed border-border p-4">
-            <ActivityIndicator color="#4f46e5" />
-            <Text className="text-sm font-medium text-muted-foreground">Uploading…</Text>
-          </View>
-        ) : null}
-        {tab === 1 ? (
-          materials.length > 0 ? (
-            materials.map((m) => (
-              <MaterialRow
-                key={m.id}
-                name={m.name}
-                sizeLabel={m.sizeLabel}
-                addedLabel={m.addedLabel}
-                mimeType={m.mimeType}
-                onPress={() => openMaterial(m)}
-                onDelete={canManage ? () => handleDeleteMaterial(m) : undefined}
-              />
-            ))
-          ) : uploading ? null : (
-            <EmptySectionHint
-              text={
-                canManage
-                  ? "No materials yet — tap Add to upload a file"
-                  : "No materials yet"
-              }
-            />
-          )
-        ) : null}
-
         {/* Announcements */}
-        {tab === 2 ? (
+        {tab === TAB.updates ? (
           announcements.length > 0 ? (
             announcements.map((a) => (
               <AnnouncementCard
@@ -331,7 +242,7 @@ export default function ClassDetail() {
         ) : null}
 
         {/* Members */}
-        {tab === 3 ? (
+        {tab === TAB.members ? (
           members.length > 0 ? (
             <View className="gap-3">
               {members.map((member) => {
@@ -364,7 +275,7 @@ export default function ClassDetail() {
             <EmptySectionHint text="No one has joined with the code yet" />
           )
         ) : null}
-        {tab === 3 && myMemberRole ? (
+        {tab === TAB.members && myMemberRole ? (
           <Pressable
             accessibilityRole="button"
             onPress={handleLeave}
@@ -375,7 +286,7 @@ export default function ClassDetail() {
         ) : null}
 
         {/* Groups */}
-        {tab === 4 ? (
+        {tab === TAB.groups ? (
           groups.length > 0 ? (
             groups.map((g) => (
               <Pressable

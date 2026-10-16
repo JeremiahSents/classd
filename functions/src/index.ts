@@ -17,7 +17,6 @@ import { onDocumentCreated, onDocumentDeleted } from "firebase-functions/v2/fire
 import * as logger from "firebase-functions/logger";
 import { initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { getStorage } from "firebase-admin/storage";
 import {
   getFirestore,
   Timestamp,
@@ -280,24 +279,6 @@ export const onAnnouncementPosted = onDocumentCreated(
   },
 );
 
-export const onMaterialPosted = onDocumentCreated(
-  "classes/{classId}/materials/{materialId}",
-  async (event) => {
-    const material = event.data?.data();
-    if (!material) return;
-    await notifyClassMembers(
-      event.params.classId,
-      "New class material",
-      String(material.name ?? "A new file was shared"),
-      {
-        classId: event.params.classId,
-        materialId: event.params.materialId,
-        type: "new_material",
-      },
-    );
-  },
-);
-
 /* ------------------------------------------------------------------ *
  * Join a class by code. Runs server-side so students never need read
  * access to the classes collection — join codes can't be scraped.
@@ -366,16 +347,12 @@ async function deleteGroupsInClass(classId: string): Promise<void> {
   await Promise.all(groups.docs.map((g) => db.recursiveDelete(g.ref)));
 }
 
-// A class was deleted: remove its members, tasks, announcements, materials
-// (records and files) and project groups.
+// A class was deleted: remove its members, tasks, announcements and project
+// groups.
 export const onClassDeleted = onDocumentDeleted("classes/{classId}", async (event) => {
   const classId = event.params.classId;
   await db.recursiveDelete(db.collection("classes").doc(classId));
   await deleteGroupsInClass(classId);
-  await getStorage()
-    .bucket()
-    .deleteFiles({ prefix: `classes/${classId}/` })
-    .catch((e) => logger.warn("Material file cleanup failed", { classId, error: String(e) }));
 });
 
 // A group was deleted: remove its members and tasks.

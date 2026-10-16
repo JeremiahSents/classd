@@ -15,7 +15,7 @@ const SECTIONS: { title: string; body: string[] }[] = [
     title: "What we collect",
     body: [
       "Account details: your name, email address and chosen avatar.",
-      "Class activity: the classes and project groups you join, tasks you mark complete, and anything class reps post (tasks, announcements and uploaded materials).",
+      "Class activity: the classes and project groups you join, tasks you mark complete, and anything class reps post (tasks and announcements).",
       "A push-notification token for your device, so we can send you reminders.",
       "Your notification preferences.",
     ],

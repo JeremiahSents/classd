@@ -1,7 +1,7 @@
 // Unit tests for the label helpers in lib/format.ts. Run: pnpm test
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { dueLabel, formatSize, relativeTime } from "../../lib/format.ts";
+import { dueLabel, relativeTime } from "../../lib/format.ts";
 
 const NOW = Date.parse("2026-06-15T12:00:00.000Z");
 const MIN = 60_000;
@@ -38,15 +38,5 @@ describe("dueLabel", () => {
   test("overdue", () => {
     assert.equal(dueLabel(iso(-HOUR), NOW), "Overdue");
     assert.equal(dueLabel(iso(-2 * DAY - HOUR), NOW), "Overdue by 2d");
-  });
-});
-
-describe("formatSize", () => {
-  test("bytes, KB and MB", () => {
-    assert.equal(formatSize(undefined), undefined);
-    assert.equal(formatSize(0), "0 B");
-    assert.equal(formatSize(512), "512 B");
-    assert.equal(formatSize(14 * 1024), "14 KB");
-    assert.equal(formatSize(2.4 * 1024 * 1024), "2.4 MB");
   });
 });

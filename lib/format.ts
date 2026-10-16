@@ -1,4 +1,4 @@
-// Human-readable labels for timestamps and file sizes. Pure functions with no
+// Human-readable labels for timestamps. Pure functions with no
 // imports, so they're unit-tested directly with Node (tests/unit/).
 
 const DAY_MS = 86_400_000;
@@ -28,12 +28,4 @@ export function dueLabel(iso: string, now: number = Date.now()): string {
   if (days < 2) return "Due tomorrow";
   if (days < 7) return `Due in ${days} days`;
   return `Due ${new Date(iso).toLocaleDateString()}`;
-}
-
-/** "512 B", "14 KB", "2.4 MB". */
-export function formatSize(bytes?: number): string | undefined {
-  if (bytes === undefined) return undefined;
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

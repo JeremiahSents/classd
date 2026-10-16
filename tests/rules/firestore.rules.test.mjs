@@ -180,8 +180,8 @@ describe("classes", () => {
 });
 
 describe("class content", () => {
-  test("the rep posts tasks, announcements and materials; students can't", async () => {
-    for (const sub of ["tasks", "announcements", "materials"]) {
+  test("the rep posts tasks and announcements; students can't", async () => {
+    for (const sub of ["tasks", "announcements"]) {
       await assertSucceeds(setDoc(doc(db(REP), "classes", "c1", sub, "new"), { title: "x" }));
       await assertFails(setDoc(doc(db(STUDENT), "classes", "c1", sub, "new2"), { title: "x" }));
     }

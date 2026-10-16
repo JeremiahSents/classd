@@ -98,19 +98,14 @@ service cloud.firestore {
                       && (memberId == request.auth.uid || canManageClass(classId));
       }
 
-      // tasks, announcements & materials: class members read; the class rep,
-      // owner, or an admin writes.
+      // tasks & announcements: class members read; the class rep, owner, or an
+      // admin writes.
       match /tasks/{taskId} {
         allow read: if canReadClass(classId);
         allow write: if canManageClass(classId);
       }
 
       match /announcements/{announcementId} {
-        allow read: if canReadClass(classId);
-        allow write: if canManageClass(classId);
-      }
-
-      match /materials/{materialId} {
         allow read: if canReadClass(classId);
         allow write: if canManageClass(classId);
       }

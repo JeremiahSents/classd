@@ -1,6 +1,6 @@
 /**
  * Firebase implementation of ClassdApi — every method talks to Firebase Auth,
- * Firestore, Storage, or a Cloud Function (`functions/src/index.ts`).
+ * Firestore, or a Cloud Function (`functions/src/index.ts`).
  *
  * Firestore data model (see ARCHITECTURE.md for full detail):
  *   users/{uid}
@@ -8,7 +8,6 @@
  *   classes/{classId}/members/{uid}
  *   classes/{classId}/tasks/{taskId}
  *   classes/{classId}/announcements/{announcementId}
- *   classes/{classId}/materials/{materialId}   (file in Storage at storagePath)
  *   users/{uid}/completions/{taskId}    (per-user task completion)
  *
  * Conventions:
@@ -52,7 +51,6 @@ import {
 } from "firebase/firestore";
 import {
   ApiError,
-  MAX_MATERIAL_BYTES,
   type ClassdApi,
   type AuthResult,
   type Class,
@@ -63,7 +61,6 @@ import {
   type Member,
   type Task,
   type Announcement,
-  type Material,
   type Group,
   type GroupTask,
   type GroupTaskStatus,
@@ -71,17 +68,10 @@ import {
   type SignInInput,
   type SignUpInput,
   type UpdateAnnouncementInput,
-  type UploadFileInput,
   type UserProfile,
 } from "./contract";
 import { httpsCallable } from "firebase/functions";
-import {
-  deleteObject,
-  getDownloadURL,
-  ref as storageRef,
-  uploadBytes,
-} from "firebase/storage";
-import { auth, db, functions, storage } from "@/lib/firebase";
+import { auth, db, functions } from "@/lib/firebase";
 import { getFaceFor } from "@/lib/avatars";
 
 /* ------------------------------------------------------------------ *
@@ -160,10 +150,6 @@ function toApiError(e: unknown): ApiError {
         return new ApiError("permission-denied", e.message);
       case "functions/resource-exhausted":
         return new ApiError("unknown", e.message);
-      case "storage/unauthorized":
-        return new ApiError("permission-denied", "You don't have permission to do that.");
-      case "storage/quota-exceeded":
-        return new ApiError("unknown", "Storage is full. Please contact your administrator.");
       default:
         return new ApiError("unknown", "Something went wrong. Please try again.");
     }
@@ -264,21 +250,6 @@ function toAnnouncement(id: string, classId: string, data: DocumentData): Announ
       data.category === "cat" || data.category === "deadline" ? data.category : "general",
     ...(data.dueAt ? { dueAt: tsToIso(data.dueAt) } : {}),
     createdBy: data.createdBy ?? "",
-    createdAt: tsToIso(data.createdAt),
-  };
-}
-
-/** Shape a classes/{id}/materials/{id} document into a Material. */
-function toMaterial(id: string, classId: string, data: DocumentData): Material {
-  return {
-    id,
-    classId,
-    name: data.name ?? "",
-    ...(typeof data.sizeBytes === "number" ? { sizeBytes: data.sizeBytes } : {}),
-    ...(data.mimeType ? { mimeType: data.mimeType } : {}),
-    url: data.url ?? "",
-    storagePath: data.storagePath ?? "",
-    uploadedBy: data.uploadedBy ?? "",
     createdAt: tsToIso(data.createdAt),
   };
 }
@@ -1070,81 +1041,6 @@ export const firebaseApi: ClassdApi = {
     requireUid();
     try {
       await deleteDoc(doc(db, "classes", classId, "announcements", announcementId));
-    } catch (e) {
-      throw toApiError(e);
-    }
-  },
-
-  // ---- Materials ----
-  async listMaterials(classId: string): Promise<Material[]> {
-    try {
-      const snap = await getDocs(collection(db, "classes", classId, "materials"));
-      return snap.docs.map((d) => toMaterial(d.id, classId, d.data()));
-    } catch (e) {
-      throw toApiError(e);
-    }
-  },
-
-  async uploadMaterial(classId: string, file: UploadFileInput): Promise<Material> {
-    const uid = requireUid();
-    if (file.sizeBytes !== undefined && file.sizeBytes > MAX_MATERIAL_BYTES) {
-      throw new ApiError("invalid-argument", "Files must be 25 MB or smaller.");
-    }
-    try {
-      const ref = doc(collection(db, "classes", classId, "materials"));
-      // prefix with the doc id so two files with the same name never collide
-      const safeName = file.name.replace(/[^\w.\- ]+/g, "_");
-      const storagePath = `classes/${classId}/materials/${ref.id}-${safeName}`;
-      const objectRef = storageRef(storage, storagePath);
-
-      // read the picked file from the device, then upload it
-      const blob = await (await fetch(file.uri)).blob();
-      await uploadBytes(
-        objectRef,
-        blob,
-        file.mimeType ? { contentType: file.mimeType } : undefined,
-      );
-      const url = await getDownloadURL(objectRef);
-
-      const sizeBytes = file.sizeBytes ?? blob.size;
-      await setDoc(ref, {
-        name: file.name,
-        sizeBytes,
-        ...(file.mimeType ? { mimeType: file.mimeType } : {}),
-        url,
-        storagePath,
-        uploadedBy: uid,
-        createdAt: serverTimestamp(),
-      });
-      return {
-        id: ref.id,
-        classId,
-        name: file.name,
-        sizeBytes,
-        ...(file.mimeType ? { mimeType: file.mimeType } : {}),
-        url,
-        storagePath,
-        uploadedBy: uid,
-        createdAt: new Date().toISOString(),
-      };
-    } catch (e) {
-      throw toApiError(e);
-    }
-  },
-
-  async deleteMaterial(classId: string, materialId: string): Promise<void> {
-    requireUid();
-    try {
-      const ref = doc(db, "classes", classId, "materials", materialId);
-      const snap = await getDoc(ref);
-      const storagePath = snap.exists() ? (snap.data().storagePath as string | undefined) : undefined;
-      if (storagePath) {
-        // the file may already be gone; still remove the record
-        await deleteObject(storageRef(storage, storagePath)).catch((e: unknown) => {
-          if (!(e instanceof FirebaseError && e.code === "storage/object-not-found")) throw e;
-        });
-      }
-      await deleteDoc(ref);
     } catch (e) {
       throw toApiError(e);
     }

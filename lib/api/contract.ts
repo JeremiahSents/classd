@@ -4,11 +4,10 @@
  * The frontend ONLY talks to the backend through this interface. There are two
  * implementations:
  *   - `mock-impl.ts`     in-memory seed data (current prototype behaviour)
- *   - `firebase-impl.ts` real Firebase (auth + Firestore + Storage) — TO BUILD
+ *   - `firebase-impl.ts` real Firebase (Auth + Firestore + Cloud Functions)
  *
- * Backend dev: implement every method in `firebase-impl.ts` so it satisfies
- * this interface. When done, flip EXPO_PUBLIC_API_BACKEND=firebase. The UI does
- * not change.
+ * EXPO_PUBLIC_API_BACKEND picks which one runs (see index.ts). The UI does not
+ * change between them.
  *
  * Conventions:
  *  - All methods are async (return Promises).
@@ -59,7 +58,7 @@ export type ApiErrorCode =
 
 /** Which push notifications a user gets. Both default to on. */
 export interface NotificationPrefs {
-  /** New tasks, announcements and materials in their classes. */
+  /** New tasks and announcements in their classes. */
   newPosts: boolean;
   /** Due-soon and overdue reminders. */
   reminders: boolean;
@@ -131,20 +130,6 @@ export interface Announcement {
   /** Optional — e.g. when a CAT sits or a deadline falls. ISO. */
   dueAt?: string;
   createdBy: string; // uid
-  createdAt: string; // ISO
-}
-
-export interface Material {
-  id: string;
-  classId: string;
-  name: string;
-  sizeBytes?: number;
-  mimeType?: string;
-  /** Public/download URL from Cloud Storage. */
-  url: string;
-  /** Storage object path, needed for deletion. */
-  storagePath: string;
-  uploadedBy: string; // uid
   createdAt: string; // ISO
 }
 
@@ -224,18 +209,6 @@ export interface CreateGroupTaskInput {
   dueAt: string; // ISO
   assignedTo: string; // uid of a group member
   assignedToName: string;
-}
-
-/** Largest material upload allowed (keep in sync with storage.rules). */
-export const MAX_MATERIAL_BYTES = 25 * 1024 * 1024;
-
-/** A file selected from the device, ready to upload. */
-export interface UploadFileInput {
-  /** Local uri from expo-document-picker. */
-  uri: string;
-  name: string;
-  mimeType?: string;
-  sizeBytes?: number;
 }
 
 /* ------------------------------------------------------------------ *
@@ -332,10 +305,4 @@ export interface ClassdApi {
     patch: UpdateAnnouncementInput,
   ): Promise<Announcement>;
   deleteAnnouncement(classId: string, announcementId: string): Promise<void>; // class rep
-
-  // ---- Materials ----
-  listMaterials(classId: string): Promise<Material[]>;
-  /** Uploads the file to Storage, then records metadata. */
-  uploadMaterial(classId: string, file: UploadFileInput): Promise<Material>;
-  deleteMaterial(classId: string, materialId: string): Promise<void>;
 }

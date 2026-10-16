@@ -3,9 +3,6 @@
 // Data is loaded from the backend when a user signs in and refreshed after
 // mutations. UI-shaped types (with human labels like "Due tomorrow") are mapped
 // from the API's ISO-timestamp shapes here, so screens stay presentation-only.
-//
-// Materials are loaded per class, on demand (`loadMaterials`), since they're
-// only shown on the class screen.
 import { AppState } from "react-native";
 import {
   createContext,
@@ -21,16 +18,14 @@ import {
   ApiError,
   type Announcement as ApiAnnouncement,
   type Class as ApiClass,
-  type Material as ApiMaterial,
   type Member as ApiMember,
   type Task as ApiTask,
   type UpdateAnnouncementInput,
-  type UploadFileInput,
 } from "@/lib/api";
-import { dueLabel, formatSize, relativeTime } from "@/lib/format";
+import { dueLabel, relativeTime } from "@/lib/format";
 import { useSession } from "@/lib/session";
 import type { Classroom } from "@/lib/classes";
-import type { Announcement, AnnouncementCategory, GroupTaskItem, Material, Member, Task } from "@/lib/types";
+import type { Announcement, AnnouncementCategory, GroupTaskItem, Member, Task } from "@/lib/types";
 
 /* ------------------------------------------------------------------ *
  * API -> UI mappers
@@ -67,17 +62,6 @@ const toAnnouncement = (a: ApiAnnouncement): Announcement => ({
   ...(a.dueAt ? { dueLabel: dueLabel(a.dueAt), dueAt: a.dueAt } : {}),
 });
 
-const toMaterial = (m: ApiMaterial): Material => ({
-  id: m.id,
-  classId: m.classId,
-  name: m.name,
-  sizeLabel: formatSize(m.sizeBytes),
-  mimeType: m.mimeType,
-  url: m.url,
-  addedLabel: relativeTime(m.createdAt),
-  createdAt: m.createdAt,
-});
-
 const toMember = (m: ApiMember): Member => ({
   id: m.id,
   name: m.name,
@@ -104,7 +88,6 @@ interface ClassesStore {
   membersForClass: (classId: string) => Member[];
   tasksForClass: (classId: string) => Task[];
   announcementsForClass: (classId: string) => Announcement[];
-  materialsForClass: (classId: string) => Material[];
   className: (classId: string) => string;
   /** Admin, or the rep of this class — can post, edit and delete its content. */
   canManageClass: (classId: string) => boolean;
@@ -139,10 +122,6 @@ interface ClassesStore {
     patch: UpdateAnnouncementInput,
   ) => Promise<Announcement>;
   deleteAnnouncement: (classId: string, announcementId: string) => Promise<void>;
-  /** Fetch a class's materials (called when the class screen opens). */
-  loadMaterials: (classId: string) => Promise<void>;
-  uploadMaterial: (classId: string, file: UploadFileInput) => Promise<Material>;
-  deleteMaterial: (classId: string, materialId: string) => Promise<void>;
 }
 
 const ClassesContext = createContext<ClassesStore | null>(null);
@@ -158,7 +137,6 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
   const [groupTasks, setGroupTasks] = useState<GroupTaskItem[]>([]);
   const [groupCount, setGroupCount] = useState(0);
   const [completedTaskIds, setCompletedTaskIds] = useState<string[]>([]);
-  const [materialsByClass, setMaterialsByClass] = useState<Record<string, Material[]>>({});
 
   const refresh = useCallback(async (silent = false) => {
     if (!isAuthenticated) {
@@ -169,7 +147,6 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
       setGroupTasks([]);
       setGroupCount(0);
       setCompletedTaskIds([]);
-      setMaterialsByClass({});
       setLoading(false);
       return;
     }
@@ -255,7 +232,6 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
       membersForClass: (classId) => membersByClass[classId] ?? [],
       tasksForClass: (classId) => tasks.filter((t) => t.classId === classId),
       announcementsForClass: (classId) => announcements.filter((a) => a.classId === classId),
-      materialsForClass: (classId) => materialsByClass[classId] ?? [],
       className: (classId) => classes.find((c) => c.id === classId)?.name ?? "",
       // rep status comes from either the class's classRepId or the user's own
       // member-doc role, so partially-synced data still works
@@ -382,37 +358,8 @@ export function ClassesProvider({ children }: { children: ReactNode }) {
         void refresh(true);
       },
 
-      loadMaterials: async (classId) => {
-        try {
-          const list = await api.listMaterials(classId);
-          // newest first (ISO sorts chronologically)
-          const sorted = [...list]
-            .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
-            .map(toMaterial);
-          setMaterialsByClass((prev) => ({ ...prev, [classId]: sorted }));
-        } catch (e) {
-          console.warn("[classes-store] listMaterials failed", e);
-        }
-      },
-
-      uploadMaterial: async (classId, file) => {
-        const material = toMaterial(await api.uploadMaterial(classId, file));
-        setMaterialsByClass((prev) => ({
-          ...prev,
-          [classId]: [material, ...(prev[classId] ?? [])],
-        }));
-        return material;
-      },
-
-      deleteMaterial: async (classId, materialId) => {
-        await api.deleteMaterial(classId, materialId);
-        setMaterialsByClass((prev) => ({
-          ...prev,
-          [classId]: (prev[classId] ?? []).filter((m) => m.id !== materialId),
-        }));
-      },
     };
-  }, [loading, classes, tasks, announcements, groupTasks, groupCount, membersByClass, materialsByClass, completedTaskIds, refresh, role, user?.id]);
+  }, [loading, classes, tasks, announcements, groupTasks, groupCount, membersByClass, completedTaskIds, refresh, role, user?.id]);
 
   return <ClassesContext.Provider value={value}>{children}</ClassesContext.Provider>;
 }
