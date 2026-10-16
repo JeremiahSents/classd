@@ -228,16 +228,16 @@ export const runRemindersNow = onRequest(async (req, res) => {
  * posts a new task or announcement (functional requirement ix).
  * ------------------------------------------------------------------ */
 
-async function notifyClassMembers(
-  classId: string,
+/** Push a new-post notification to these users (honours their "New posts" setting). */
+async function notifyUsers(
+  uids: string[],
   title: string,
   body: string,
   data: Record<string, string>,
 ): Promise<void> {
-  const members = await db.collection("classes").doc(classId).collection("members").get();
   const messages: ExpoMessage[] = [];
-  for (const member of members.docs) {
-    const userSnap = await db.doc(`users/${member.id}`).get();
+  for (const uid of uids) {
+    const userSnap = await db.doc(`users/${uid}`).get();
     if (!wantsNotification(userSnap, "newPosts")) continue;
     const tokens: string[] = userSnap.get("expoPushTokens") ?? [];
     for (const token of tokens) {
@@ -245,6 +245,16 @@ async function notifyClassMembers(
     }
   }
   if (messages.length > 0) await sendExpoPush(messages);
+}
+
+async function notifyClassMembers(
+  classId: string,
+  title: string,
+  body: string,
+  data: Record<string, string>,
+): Promise<void> {
+  const members = await db.collection("classes").doc(classId).collection("members").get();
+  await notifyUsers(members.docs.map((m) => m.id), title, body, data);
 }
 
 export const onTaskPosted = onDocumentCreated(
@@ -275,6 +285,30 @@ export const onAnnouncementPosted = onDocumentCreated(
         announcementId: event.params.announcementId,
         type: "new_announcement",
       },
+    );
+  },
+);
+
+// A group task was created: tell every member of the group, whoever it's
+// assigned to (except the person who created it).
+export const onGroupTaskPosted = onDocumentCreated(
+  "groups/{groupId}/tasks/{taskId}",
+  async (event) => {
+    const task = event.data?.data();
+    if (!task) return;
+    const { groupId, taskId } = event.params;
+    const groupRef = db.collection("groups").doc(groupId);
+    const [group, members] = await Promise.all([
+      groupRef.get(),
+      groupRef.collection("groupMembers").get(),
+    ]);
+    const groupName = String(group.get("name") ?? "your group");
+    const assignee = task.assignedToName ? ` · assigned to ${task.assignedToName}` : "";
+    await notifyUsers(
+      members.docs.map((m) => m.id).filter((uid) => uid !== task.createdBy),
+      `New group task — ${groupName}`,
+      `${String(task.title ?? "A new task")}${assignee}`,
+      { groupId, groupTaskId: taskId, type: "new_group_task" },
     );
   },
 );
