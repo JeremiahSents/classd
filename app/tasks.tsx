@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import { ArrowLeft01Icon, CheckmarkCircle02Icon, Search01Icon } from "@hugeicons/core-free-icons";
 import { TaskRow } from "@/components/class/task-row";
@@ -50,7 +51,7 @@ export default function Tasks() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
-          onPress={() => router.back()}
+          onPress={goBack}
           className="h-10 w-10 items-center justify-center rounded-full active:bg-secondary"
         >
           <HugeiconsIcon icon={ArrowLeft01Icon} size={26} color="#111" />
@@ -106,7 +107,7 @@ export default function Tasks() {
                   completed={isTaskComplete(t.id)}
                   onToggle={() => toggleTaskComplete(t.id)}
                   onPress={() =>
-                    router.push({ pathname: "/(tabs)/task/[id]", params: { id: t.id } })
+                    router.push({ pathname: "/task/[id]", params: { id: t.id } })
                   }
                 />
               ))}

@@ -55,12 +55,20 @@ export default function RootLayout() {
           <ToastProvider>
             <StatusBar style="dark" />
             {Platform.OS !== "web" ? <NotificationRouter /> : null}
-            <Stack screenOptions={{ headerShown: false }}>
+            <Stack screenOptions={{ headerShown: false, gestureEnabled: true }}>
               <Stack.Screen name="index" />
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(tabs)" />
               <Stack.Screen name="(admin)" />
               <Stack.Screen name="privacy" />
+              {/* Detail screens sit on the root stack above the tabs, so back
+                  returns to the previous screen and the iOS edge swipe works */}
+              <Stack.Screen name="class/[id]" />
+              <Stack.Screen name="task/[id]" />
+              <Stack.Screen name="group/[id]" />
+              <Stack.Screen name="tasks" />
+              <Stack.Screen name="group-tasks" />
+              <Stack.Screen name="settings" />
             </Stack>
           </ToastProvider>
         </ClassesProvider>

@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import {
   ArrowLeft01Icon,
@@ -119,7 +120,7 @@ export default function ClassDetail() {
     try {
       await leaveClass(id);
       toast.success("You left the class", "👋");
-      router.replace("/(tabs)/classes");
+      router.dismissTo("/(tabs)/classes");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not leave the class.");
     }
@@ -146,7 +147,7 @@ export default function ClassDetail() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel="Back"
-              onPress={() => router.back()}
+              onPress={goBack}
               className="h-10 w-10 items-center justify-center rounded-full bg-black/30 active:bg-black/50"
             >
               <HugeiconsIcon icon={ArrowLeft01Icon} size={26} color="#fff" />
@@ -209,7 +210,7 @@ export default function ClassDetail() {
                 completed={canManage ? undefined : isTaskComplete(t.id)}
                 onToggle={canManage ? undefined : () => toggleTaskComplete(t.id)}
                 onPress={() =>
-                  router.push({ pathname: "/(tabs)/task/[id]", params: { id: t.id } })
+                  router.push({ pathname: "/task/[id]", params: { id: t.id } })
                 }
               />
             ))
@@ -294,7 +295,7 @@ export default function ClassDetail() {
                 accessibilityRole="button"
                 onPress={() =>
                   // cast: typed routes regenerate for group/[id] on next `expo start`
-                  router.push({ pathname: "/(tabs)/group/[id]", params: { id: g.id } } as never)
+                  router.push({ pathname: "/group/[id]", params: { id: g.id } } as never)
                 }
                 className="gap-1 rounded-2xl border border-border bg-card p-4 active:bg-secondary"
               >

@@ -10,7 +10,8 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import {
   ArrowLeft01Icon,
@@ -36,7 +37,6 @@ import { confirmAction } from "@/lib/confirm";
 const TABS = ["Tasks", "Members"];
 
 export default function GroupDetail() {
-  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useSession();
   const { className, refresh } = useClasses();
@@ -109,7 +109,7 @@ export default function GroupDetail() {
       setRenameVisible(false);
       toast.success("Group deleted", "🗑️");
       void refresh(true); // drop its tasks from the dashboard
-      router.back();
+      goBack();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not delete the group.");
     } finally {
@@ -171,7 +171,7 @@ export default function GroupDetail() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
-          onPress={() => router.back()}
+          onPress={goBack}
           className="h-10 w-10 items-center justify-center rounded-full active:bg-secondary"
         >
           <HugeiconsIcon icon={ArrowLeft01Icon} size={26} color="#111" />

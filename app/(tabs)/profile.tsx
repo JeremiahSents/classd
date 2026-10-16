@@ -64,7 +64,7 @@ export default function Profile() {
       label: "App Settings",
       icon: Settings01Icon,
       // cast: typed routes regenerate for settings on next `expo start`
-      onPress: () => router.push("/(tabs)/settings" as never),
+      onPress: () => router.push("/settings" as never),
     },
     {
       label: "Sign Out",

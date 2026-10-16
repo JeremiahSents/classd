@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import {
   Appointment01Icon,
@@ -16,7 +17,6 @@ import { AddTaskModal } from "@/components/modals/add-task-modal";
 import { useClasses } from "@/lib/classes-store";
 
 export default function TaskDetail() {
-  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const {
     getTask,
@@ -54,7 +54,7 @@ export default function TaskDetail() {
     setDeleting(true);
     try {
       await deleteTask(task.classId, task.id);
-      router.back();
+      goBack();
     } finally {
       setDeleting(false);
       setConfirmingDelete(false);
@@ -67,7 +67,7 @@ export default function TaskDetail() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
-          onPress={() => router.back()}
+          onPress={goBack}
           className="h-10 w-10 items-center justify-center rounded-full active:bg-secondary"
         >
           <HugeiconsIcon icon={ArrowLeft01Icon} size={26} color="#111" />

@@ -38,20 +38,6 @@ const ICONS: Record<string, IconSvgElement> = {
   profile: UserIcon,
 };
 
-/**
- * Detail screens live inside the tab navigator but aren't tabs themselves.
- * Map each one to the tab it belongs to so that tab's pill stays highlighted
- * while the detail screen is open.
- */
-const PARENT_TAB: Record<string, string> = {
-  "class/[id]": "classes",
-  "group/[id]": "groups",
-  "task/[id]": "index",
-  tasks: "index",
-  "group-tasks": "index",
-  settings: "profile",
-};
-
 /* ------------------------------------------------------------------ */
 /*  Theme                                                             */
 /* ------------------------------------------------------------------ */
@@ -84,12 +70,8 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
   const scheme = useColorScheme();
   const theme = scheme === "dark" ? DARK : LIGHT;
 
-  // Only show routes that have an explicit icon — hides detail screens like class/[id]
+  // Only show routes that have an explicit icon
   const visibleRoutes = state.routes.filter((route) => route.name in ICONS);
-
-  // Resolve the active route to its tab: detail screens highlight their parent.
-  const activeName = state.routes[state.index].name;
-  const activeTabName = PARENT_TAB[activeName] ?? activeName;
 
   return (
     <View
@@ -120,12 +102,8 @@ export function FloatingTabBar({ state, descriptors, navigation }: BottomTabBarP
         {/* Tabs */}
         {visibleRoutes.map((route) => {
           const icon = ICONS[route.name] ?? Home01Icon;
-          // highlighted when it's the active route OR the parent of the
-          // active detail screen (e.g. Classes stays lit on class/[id])
-          const focused = route.name === activeTabName;
-          // navigation must still fire when a detail screen is open, even
-          // though the parent tab is visually focused
           const isCurrentRoute = state.routes[state.index].key === route.key;
+          const focused = isCurrentRoute;
 
           return (
             <TabItem

@@ -94,7 +94,7 @@ export default function Home() {
   const pendingGroupTasks = groupTasks.filter((t) => !t.completed).slice(0, 5);
 
   function navigateToTask(taskId: string) {
-    router.push({ pathname: "/(tabs)/task/[id]", params: { id: taskId } });
+    router.push({ pathname: "/task/[id]", params: { id: taskId } });
   }
 
   if (loading) {
@@ -153,7 +153,7 @@ export default function Home() {
             onTaskPress={navigateToTask}
             onSeeAll={() =>
               // cast: typed routes regenerate for tasks on next `expo start`
-              router.push("/(tabs)/tasks" as never)
+              router.push("/tasks" as never)
             }
           />
 
@@ -164,11 +164,11 @@ export default function Home() {
               onToggle={toggleGroupTask}
               onTaskPress={(groupId) =>
                 // cast: typed routes regenerate for group/[id] on next `expo start`
-                router.push({ pathname: "/(tabs)/group/[id]", params: { id: groupId } } as never)
+                router.push({ pathname: "/group/[id]", params: { id: groupId } } as never)
               }
               onSeeAll={() =>
                 // cast: typed routes regenerate for group-tasks on next `expo start`
-                router.push("/(tabs)/group-tasks" as never)
+                router.push("/group-tasks" as never)
               }
             />
           ) : null}

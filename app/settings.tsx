@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import Constants from "expo-constants";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import {
@@ -43,7 +44,7 @@ export default function Settings() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
-          onPress={() => router.back()}
+          onPress={goBack}
           className="h-10 w-10 items-center justify-center rounded-full active:bg-secondary"
         >
           <HugeiconsIcon icon={ArrowLeft01Icon} size={26} color="#111" />

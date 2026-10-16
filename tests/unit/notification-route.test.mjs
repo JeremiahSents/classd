@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { routeForNotification } from "../../lib/notification-route.ts";
 
-const task = (id) => ({ pathname: "/(tabs)/task/[id]", params: { id } });
-const cls = (id) => ({ pathname: "/(tabs)/class/[id]", params: { id } });
-const group = (id) => ({ pathname: "/(tabs)/group/[id]", params: { id } });
+const task = (id) => ({ pathname: "/task/[id]", params: { id } });
+const cls = (id) => ({ pathname: "/class/[id]", params: { id } });
+const group = (id) => ({ pathname: "/group/[id]", params: { id } });
 
 test("new-task push opens the task", () => {
   assert.deepEqual(

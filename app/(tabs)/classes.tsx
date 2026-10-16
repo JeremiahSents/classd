@@ -59,7 +59,7 @@ export default function Classes() {
               memberCount={membersForClass(classroom.id).length}
               onPress={() =>
                 router.push({
-                  pathname: "/(tabs)/class/[id]",
+                  pathname: "/class/[id]",
                   params: { id: classroom.id },
                 })
               }

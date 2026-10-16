@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { goBack } from "@/lib/navigation";
 import { HugeiconsIcon } from "@hugeicons/react-native";
 import {
   ArrowLeft01Icon,
@@ -99,7 +100,7 @@ export default function GroupTasks() {
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Back"
-          onPress={() => router.back()}
+          onPress={goBack}
           className="h-10 w-10 items-center justify-center rounded-full active:bg-secondary"
         >
           <HugeiconsIcon icon={ArrowLeft01Icon} size={26} color="#111" />
@@ -153,7 +154,7 @@ export default function GroupTasks() {
                   task={t}
                   onToggle={() => toggleGroupTask(t.groupId, t.id)}
                   onPress={() =>
-                    router.push({ pathname: "/(tabs)/group/[id]", params: { id: t.groupId } } as never)
+                    router.push({ pathname: "/group/[id]", params: { id: t.groupId } } as never)
                   }
                 />
               ))}
